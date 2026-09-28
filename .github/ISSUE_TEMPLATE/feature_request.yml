@@ -1,0 +1,14 @@
+name: Feature request
+description: Suggest an idea for this project
+title: "Feature: "
+labels: [needs triage, feature]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this feature request!
+  - type: textarea
+    attributes:
+      label: Suggested solution
+      description: Describe the solution you'd like.
+      
