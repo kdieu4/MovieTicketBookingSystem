@@ -1,0 +1,78 @@
+{
+  "info": {
+    "_postman_id": "b1f2c3d4-5e6a-4b7c-8d9e-0a1b2c3d4e5f",
+    "name": "MTBS - User Service (Issue #3)",
+    "description": "Kiem thu User Service tuan nay.\n\nChi 1 endpoint: GET /api/users/{id}\n- User ton tai       -> 200 OK\n- User khong ton tai -> 404 Not Found\n- ID khong phai so   -> 400 Bad Request\n\nPham vi tuan nay CHUA dung Authentication / JWT / Role.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:8081" }],
+  "item": [
+    {
+      "name": "GET user ton tai -> 200 OK",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/api/users/1", "host": ["{{baseUrl}}"], "path": ["api", "users", "1"] },
+        "description": "User id=1 (Nguyen Van An) ton tai trong du lieu mau data.sql."
+      },
+      "response": [
+        {
+          "name": "200 OK - User ton tai",
+          "originalRequest": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/users/1", "host": ["{{baseUrl}}"], "path": ["api", "users", "1"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"id\": 1,\n  \"fullName\": \"Nguyen Van An\",\n  \"email\": \"an.nguyen@mtbs.vn\",\n  \"phoneNumber\": \"0901000001\",\n  \"createdAt\": \"2026-10-03T10:00:00\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "GET user khong ton tai -> 404 Not Found",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/api/users/999999", "host": ["{{baseUrl}}"], "path": ["api", "users", "999999"] }
+      },
+      "response": [
+        {
+          "name": "404 Not Found - User khong ton tai",
+          "originalRequest": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/users/999999", "host": ["{{baseUrl}}"], "path": ["api", "users", "999999"] }
+          },
+          "status": "Not Found",
+          "code": 404,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Khong tim thay user voi id = 999999\",\n  \"timestamp\": \"2026-10-03T10:00:05\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "GET ID khong hop le -> 400 Bad Request",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/api/users/abc", "host": ["{{baseUrl}}"], "path": ["api", "users", "abc"] }
+      },
+      "response": [
+        {
+          "name": "400 Bad Request - ID khong phai so",
+          "originalRequest": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/users/abc", "host": ["{{baseUrl}}"], "path": ["api", "users", "abc"] }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"ID khong hop le\",\n  \"timestamp\": \"2026-10-03T10:00:08\"\n}"
+        }
+      ]
+    }
+  ]
+}
