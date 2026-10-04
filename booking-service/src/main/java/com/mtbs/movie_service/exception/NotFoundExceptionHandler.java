@@ -5,7 +5,6 @@
 package com.mtbs.movie_service.exception;
 
 import com.mtbs.movie_service.domain.dto.response.ErrorResponse;
-
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +20,9 @@ public class NotFoundExceptionHandler {
     @ExceptionHandler({
             MovieNotFoundException.class,
             ShowtimeNotFoundException.class,
-            RoomNotFoundException.class
+            RoomNotFoundException.class,
+            SeatNotFoundException.class,
+            CinemaNotFoundException.class
     })
     public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex, HttpServletRequest request) {
         return ErrorResponseFactory.build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
