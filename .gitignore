@@ -1,2 +1,10 @@
 booking-service/bin/
 .vscode/
+
+# Environment variables
+.env
+**/.env
+
+# IntelliJ IDEA
+.idea/
+*.iml
