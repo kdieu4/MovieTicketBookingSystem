@@ -4,6 +4,7 @@
  */
 package com.mtbs.movie_service.domain.entity;
 
+import com.mtbs.movie_service.domain.entity.enums.RoomType; // Import Enum RoomType
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -39,9 +40,10 @@ public class Room {
     @Column(name = "total_seats")
     private Short totalSeats;
  
+    @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "room_type", columnDefinition = "room_type_enum")
-    private String roomType;
+    private RoomType roomType;
  
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
