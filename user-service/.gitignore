@@ -1,0 +1,13 @@
+# Bien moi truong chua thong tin bi mat (mat khau DB, JWT secret)
+.env
+.env.local
+
+# Build output
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.log
+.DS_Store

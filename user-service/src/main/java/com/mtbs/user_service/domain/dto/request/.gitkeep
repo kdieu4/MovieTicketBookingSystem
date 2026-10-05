@@ -1,0 +1,3 @@
+# Thu muc nay duoc tao theo cau truc yeu cau cua issue #3.
+# Pham vi tuan nay chua co request DTO (chi GET /api/users/{id}),
+# nen thu muc dang rong. File nay giup git giu lai thu muc.
