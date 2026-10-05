@@ -1,5 +1,7 @@
 package com.mtbs.booking_service.domain.dto.response;
 
+import com.mtbs.booking_service.domain.entity.BookingStatus;
+
 import java.util.List;
 
 public class BookingResponse {
@@ -14,7 +16,7 @@ public class BookingResponse {
 
     private double amount;
 
-    private String status;
+    private BookingStatus status;
 
     public BookingResponse() {
     }
@@ -59,11 +61,11 @@ public class BookingResponse {
         this.amount = amount;
     }
 
-    public String getStatus() {
+    public BookingStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(BookingStatus status) {
         this.status = status;
     }
 }

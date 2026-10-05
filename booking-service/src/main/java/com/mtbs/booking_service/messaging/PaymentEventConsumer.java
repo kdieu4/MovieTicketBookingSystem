@@ -1,7 +1,9 @@
 package com.mtbs.booking_service.messaging;
 
 import com.mtbs.booking_service.domain.entity.Booking;
+import com.mtbs.booking_service.domain.entity.BookingStatus;
 import com.mtbs.booking_service.repository.BookingRepository;
+
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
@@ -14,11 +16,8 @@ public class PaymentEventConsumer {
         this.bookingRepository = bookingRepository;
     }
 
-    @RabbitListener(
-            queues = RabbitMQConfig.PAYMENT_COMPLETED_QUEUE
-    )
-    public void handlePaymentCompleted(
-            PaymentCompletedEvent event) {
+    @RabbitListener(queues = RabbitMQConfig.PAYMENT_COMPLETED_QUEUE)
+    public void handlePaymentCompleted(PaymentCompletedEvent event) {
 
         Booking booking = bookingRepository
                 .findById(event.getBookingId())
@@ -28,8 +27,13 @@ public class PaymentEventConsumer {
             return;
         }
 
-        booking.setStatus("CONFIRMED");
+        booking.setStatus(BookingStatus.PAID);
 
         bookingRepository.save(booking);
+
+        System.out.println(
+                "Booking " + booking.getBookingId()
+                        + " updated to PAID"
+        );
     }
 }

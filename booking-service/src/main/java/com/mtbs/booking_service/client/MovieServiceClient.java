@@ -21,7 +21,7 @@ public class MovieServiceClient {
 
     public MovieServiceClient() {
         this.restClient = RestClient.builder()
-                .baseUrl("http://localhost:8081")
+                .baseUrl("http://localhost:8083")
                 .build();
     }
 
@@ -50,7 +50,7 @@ public class MovieServiceClient {
         } catch (RestClientException ex) {
 
             throw new ServiceUnavailableException(
-                    "Không thể kết nối đến Movie Service"
+                    "Không thể kết nối đến Movie Service" + ex.getMessage()
             );
         }
     }

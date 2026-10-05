@@ -18,7 +18,7 @@ public class PaymentEventProducer {
         PaymentCompletedEvent event = PaymentCompletedEvent.from(payment);
 
         rabbitTemplate.convertAndSend(
-                RabbitMQConfig.PAYMENT_EXCHANGE,
+                RabbitMQConfig.BOOKING_EXCHANGE,
                 RabbitMQConfig.PAYMENT_COMPLETED_ROUTING_KEY,
                 event
         );
