@@ -13,15 +13,16 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 
 @Component
 public class MovieServiceClient {
 
     private final RestClient restClient;
 
-    public MovieServiceClient() {
+    public MovieServiceClient(@Value("${movie-service.base-url}") String baseUrl) {
         this.restClient = RestClient.builder()
-                .baseUrl("http://localhost:8083")
+                .baseUrl(baseUrl)
                 .build();
     }
 

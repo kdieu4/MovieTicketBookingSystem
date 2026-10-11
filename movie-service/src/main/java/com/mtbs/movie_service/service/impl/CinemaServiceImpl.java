@@ -4,6 +4,7 @@
  */
 package com.mtbs.movie_service.service.impl;
 
+import com.mtbs.movie_service.domain.dto.request.CinemaRequest;
 import com.mtbs.movie_service.domain.dto.response.CinemaResponse;
 import com.mtbs.movie_service.domain.entity.Cinema;
 import com.mtbs.movie_service.exception.CinemaNotFoundException;
@@ -26,19 +27,51 @@ public class CinemaServiceImpl implements CinemaService {
     private final CinemaRepository cinemaRepository;
 
     @Override
-    @Transactional(readOnly = true)
     public List<CinemaResponse> getAllCinemas() {
-        return cinemaRepository.findAll().stream()
+        return cinemaRepository.findAll()
+                .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Override
-    @Transactional(readOnly = true)
     public CinemaResponse getCinemaById(Long cinemaId) {
-        Cinema cinema = cinemaRepository.findById(cinemaId)
-                .orElseThrow(() -> new CinemaNotFoundException(cinemaId));
+        Cinema cinema = findCinemaOrThrow(cinemaId);
         return toResponse(cinema);
+    }
+
+    @Override
+    @Transactional
+    public CinemaResponse createCinema(CinemaRequest request) {
+        Cinema cinema = new Cinema();
+        cinema.setName(request.name());
+        cinema.setAddress(request.address());
+        cinema.setCity(request.city());
+        cinema.setPhoneNumber(request.phoneNumber());
+        return toResponse(cinemaRepository.save(cinema));
+    }
+
+    @Override
+    @Transactional
+    public CinemaResponse updateCinema(Long cinemaId, CinemaRequest request) {
+        Cinema cinema = findCinemaOrThrow(cinemaId);
+        cinema.setName(request.name());
+        cinema.setAddress(request.address());
+        cinema.setCity(request.city());
+        cinema.setPhoneNumber(request.phoneNumber());
+        return toResponse(cinemaRepository.save(cinema));
+    }
+
+    @Override
+    @Transactional
+    public void deleteCinema(Long cinemaId) {
+        Cinema cinema = findCinemaOrThrow(cinemaId);
+        cinemaRepository.delete(cinema);
+    }
+
+    private Cinema findCinemaOrThrow(Long cinemaId) {
+        return cinemaRepository.findById(cinemaId)
+                .orElseThrow(() -> new CinemaNotFoundException(cinemaId));
     }
 
     private CinemaResponse toResponse(Cinema cinema) {

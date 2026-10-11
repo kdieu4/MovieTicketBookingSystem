@@ -12,5 +12,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * @author quanghieu
  */
 public interface GenreRepository extends JpaRepository<Genre, Long> {
-    
+    boolean existsByName(String name);
 }
