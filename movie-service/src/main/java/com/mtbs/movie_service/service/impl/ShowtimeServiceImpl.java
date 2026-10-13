@@ -6,6 +6,7 @@ package com.mtbs.movie_service.service.impl;
 
 import com.mtbs.movie_service.domain.dto.request.ShowtimeRequest;
 import com.mtbs.movie_service.domain.dto.response.ShowtimeResponse;
+import com.mtbs.movie_service.domain.entity.Cinema;
 import com.mtbs.movie_service.domain.entity.Movie;
 import com.mtbs.movie_service.domain.entity.Room;
 import com.mtbs.movie_service.domain.entity.Showtime;
@@ -38,6 +39,17 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     @Transactional(readOnly = true)
     public List<ShowtimeResponse> getAllShowtimes() {
         return showtimeRepository.findAll().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ShowtimeResponse> getShowtimesByMovieId(Long movieId) {
+        if (!movieRepository.existsById(movieId)) {
+            throw new MovieNotFoundException(movieId);
+        }
+        return showtimeRepository.findByMovie_MovieId(movieId).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -94,10 +106,19 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     }
 
     private ShowtimeResponse toResponse(Showtime showtime) {
+        Room room = showtime.getRoom();
+        Cinema cinema = room != null ? room.getCinema() : null;
+
         return new ShowtimeResponse(
                 showtime.getShowtimeId(),
-                showtime.getMovie().getMovieId(),
-                showtime.getRoom().getRoomId(),
+                showtime.getMovie() != null ? showtime.getMovie().getMovieId() : null,
+                room != null ? room.getRoomId() : null,
+                room != null ? room.getName() : null,
+                room != null ? room.getRoomType() : null,
+                cinema != null ? cinema.getCinemaId() : null,
+                cinema != null ? cinema.getName() : null,
+                cinema != null ? cinema.getAddress() : null,
+                cinema != null ? cinema.getCity() : null,
                 showtime.getStartTime(),
                 showtime.getEndTime(),
                 showtime.getBasePrice(),

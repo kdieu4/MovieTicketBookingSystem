@@ -4,16 +4,16 @@
  */
 package com.mtbs.movie_service.domain.entity;
 
-import com.mtbs.movie_service.domain.entity.enums.RoomType; // Import Enum RoomType
+import com.mtbs.movie_service.domain.entity.enums.RoomType;
+import com.mtbs.movie_service.domain.entity.enums.RoomTypeConverter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
- 
+
 import java.time.OffsetDateTime;
+
 /**
  *
  * @author quanghieu
@@ -29,35 +29,34 @@ public class Room {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "room_id")
     private Long roomId;
- 
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cinema_id", nullable = false)
     private Cinema cinema;
- 
+
     @Column(name = "name", nullable = false)
     private String name;
- 
+
     @Column(name = "total_seats")
     private Short totalSeats;
- 
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "room_type", columnDefinition = "room_type_enum")
+
+    @Convert(converter = RoomTypeConverter.class)
+    @Column(name = "room_type")
     private RoomType roomType;
- 
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
- 
+
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
- 
+
     @PrePersist
     protected void onCreate() {
         OffsetDateTime now = OffsetDateTime.now();
         this.createdAt = now;
         this.updatedAt = now;
     }
- 
+
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = OffsetDateTime.now();

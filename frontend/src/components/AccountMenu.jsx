@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 
 export default function AccountMenu() {
@@ -31,7 +32,7 @@ export default function AccountMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Tài khoản"
-        className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-separator)] bg-[var(--color-fill-secondary)] text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
+        className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-separator)] bg-[var(--color-fill-secondary)] text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
       >
         <UserIcon />
       </button>
@@ -39,14 +40,26 @@ export default function AccountMenu() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 z-40 mt-2 w-56 overflow-hidden rounded-xl border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] shadow-lg"
+          className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-translucent-card)] p-1.5 shadow-[var(--shadow-high)] backdrop-blur-xl transition-all"
         >
-          <MenuItem onClick={() => setOpen(false)}>Thông tin cá nhân</MenuItem>
-          <MenuItem onClick={() => setOpen(false)}>Cài đặt</MenuItem>
+          <Link
+            to="/thong-tin-ca-nhan"
+            onClick={() => setOpen(false)}
+            className="block w-full rounded-[var(--radius-xs)] px-3 py-2 text-left text-xs font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-fill-tertiary)]"
+          >
+            Thông tin cá nhân
+          </Link>
+          <Link
+            to="/cai-dat"
+            onClick={() => setOpen(false)}
+            className="block w-full rounded-[var(--radius-xs)] px-3 py-2 text-left text-xs font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-fill-tertiary)]"
+          >
+            Cài đặt tài khoản
+          </Link>
 
-          <div className="border-t border-[var(--color-border-separator)] px-3 py-3">
-            <p className="text-xs text-[var(--color-text-secondary)]">Giao diện</p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="mt-1 border-t border-[var(--color-border-separator)] px-2.5 pt-2.5 pb-1">
+            <p className="text-[11px] font-semibold tracking-wider text-[var(--color-text-secondary)] uppercase">Giao diện</p>
+            <div className="mt-2 grid grid-cols-2 gap-1 rounded-[var(--radius-sm)] bg-[var(--color-fill-secondary)] p-1">
               <ThemeOption label="Sáng" active={theme === 'light'} onClick={() => setTheme('light')} />
               <ThemeOption label="Tối" active={theme === 'dark'} onClick={() => setTheme('dark')} />
             </div>
@@ -57,29 +70,16 @@ export default function AccountMenu() {
   );
 }
 
-function MenuItem({ children, onClick }) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={onClick}
-      className="block w-full px-4 py-2.5 text-left text-sm text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-fill-tertiary)]"
-    >
-      {children}
-    </button>
-  );
-}
-
 function ThemeOption({ label, active, onClick }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] ${
+      className={`h-7 rounded-[var(--radius-xs)] text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] ${
         active
-          ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on-primary)]'
-          : 'bg-[var(--color-fill-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+          ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
+          : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
       }`}
     >
       {label}

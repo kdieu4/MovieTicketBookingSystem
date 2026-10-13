@@ -7,6 +7,7 @@ package com.mtbs.movie_service.controller;
 import com.mtbs.movie_service.domain.dto.request.SeatRequest;
 import com.mtbs.movie_service.domain.dto.response.SeatResponse;
 import com.mtbs.movie_service.service.SeatService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,36 +20,39 @@ import java.util.List;
  * @author quanghieu
  */
 @RestController
+@RequestMapping("/api")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class SeatController {
 
     private final SeatService seatService;
 
-    @GetMapping("/api/rooms/{roomId}/seats")
-    public ResponseEntity<List<SeatResponse>> getSeatsByRoom(@PathVariable Long roomId) {
+    @GetMapping("/getSeatsByRoomId")
+    public ResponseEntity<List<SeatResponse>> getSeatsByRoom(@RequestParam Long roomId) {
         return ResponseEntity.ok(seatService.getSeatsByRoomId(roomId));
     }
 
-    @GetMapping("/api/seats/{id}")
-    public ResponseEntity<SeatResponse> getSeatById(@PathVariable Long id) {
-        return ResponseEntity.ok(seatService.getSeatById(id));
+    @GetMapping("/getSeatById")
+    public ResponseEntity<SeatResponse> getSeatById(@RequestParam Long seatId) {
+        return ResponseEntity.ok(seatService.getSeatById(seatId));
     }
 
-    @PostMapping("/api/seats")
+    @PostMapping("/createSeat")
     public ResponseEntity<SeatResponse> createSeat(@Valid @RequestBody SeatRequest request) {
         SeatResponse response = seatService.createSeat(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PutMapping("/api/seats/{id}")
+    @PutMapping("/updateSeat")
     public ResponseEntity<SeatResponse> updateSeat(
-            @PathVariable Long id, @Valid @RequestBody SeatRequest request) {
-        return ResponseEntity.ok(seatService.updateSeat(id, request));
+            @RequestParam Long seatId,
+            @Valid @RequestBody SeatRequest request) {
+        return ResponseEntity.ok(seatService.updateSeat(seatId, request));
     }
 
-    @DeleteMapping("/api/seats/{id}")
-    public ResponseEntity<Void> deleteSeat(@PathVariable Long id) {
-        seatService.deleteSeat(id);
+    @DeleteMapping("/deleteSeat")
+    public ResponseEntity<Void> deleteSeat(@RequestParam Long seatId) {
+        seatService.deleteSeat(seatId);
         return ResponseEntity.noContent().build();
     }
 }

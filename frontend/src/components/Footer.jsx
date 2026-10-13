@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { BRAND_NAME } from '../styles/tokens';
 
 const FOOTER_LINKS = [
@@ -11,19 +12,21 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-[var(--color-border-separator)]">
-      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6 text-sm text-[var(--color-text-tertiary)] sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-        <span className="font-medium text-[var(--color-text-primary)]">{BRAND_NAME}</span>
+    <footer className="border-t border-[var(--color-border-separator)] bg-[var(--color-bg-primary)]">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 text-xs text-[var(--color-text-tertiary)] sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+        <Link to="/" className="font-semibold tracking-tight text-[var(--color-text-primary)] hover:opacity-80">
+          {BRAND_NAME} Cinema
+        </Link>
 
-        <nav className="flex flex-wrap gap-x-5 gap-y-2">
+        <nav className="flex flex-wrap gap-x-6 gap-y-2">
           {FOOTER_LINKS.map((link) => (
-            <a key={link.href} href={link.href} className="hover:text-[var(--color-text-primary)]">
+            <Link key={link.href} to={link.href} className="transition-colors hover:text-[var(--color-text-primary)]">
               {link.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
-        <span>© {year} {BRAND_NAME} Cinema</span>
+        <span>© {year} {BRAND_NAME}. Bảo lưu mọi quyền.</span>
       </div>
     </footer>
   );

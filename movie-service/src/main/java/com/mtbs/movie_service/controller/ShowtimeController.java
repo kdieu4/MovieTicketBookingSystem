@@ -19,40 +19,44 @@ import java.util.List;
  *
  * @author quanghieu
  */
-
-
 @RestController
-@RequestMapping("/api/showtimes")
+@RequestMapping("/api")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class ShowtimeController {
 
     private final ShowtimeService showtimeService;
 
-    @GetMapping
-    public ResponseEntity<List<ShowtimeResponse>> getAllShowtimes() {
+    @GetMapping("/getShowtimes")
+    public ResponseEntity<List<ShowtimeResponse>> getAllShowtimes(
+            @RequestParam(required = false) Long movieId) {
+        if (movieId != null) {
+            return ResponseEntity.ok(showtimeService.getShowtimesByMovieId(movieId));
+        }
         return ResponseEntity.ok(showtimeService.getAllShowtimes());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ShowtimeResponse> getShowtimeById(@PathVariable Long id) {
-        return ResponseEntity.ok(showtimeService.getShowtimeById(id));
+    @GetMapping("/getShowtimeById")
+    public ResponseEntity<ShowtimeResponse> getShowtimeById(@RequestParam Long showtimeId) {
+        return ResponseEntity.ok(showtimeService.getShowtimeById(showtimeId));
     }
 
-    @PostMapping
+    @PostMapping("/createShowtime")
     public ResponseEntity<ShowtimeResponse> createShowtime(@Valid @RequestBody ShowtimeRequest request) {
         ShowtimeResponse response = showtimeService.createShowtime(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/updateShowtime")
     public ResponseEntity<ShowtimeResponse> updateShowtime(
-            @PathVariable Long id, @Valid @RequestBody ShowtimeRequest request) {
-        return ResponseEntity.ok(showtimeService.updateShowtime(id, request));
+            @RequestParam Long showtimeId,
+            @Valid @RequestBody ShowtimeRequest request) {
+        return ResponseEntity.ok(showtimeService.updateShowtime(showtimeId, request));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteShowtime(@PathVariable Long id) {
-        showtimeService.deleteShowtime(id);
+    @DeleteMapping("/deleteShowtime")
+    public ResponseEntity<Void> deleteShowtime(@RequestParam Long showtimeId) {
+        showtimeService.deleteShowtime(showtimeId);
         return ResponseEntity.noContent().build();
     }
 }

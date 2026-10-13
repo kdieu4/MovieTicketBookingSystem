@@ -12,14 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 /**
@@ -27,39 +20,39 @@ import java.util.List;
  * @author quanghieu
  */
 @RestController
-@RequestMapping("/api/genres")
+@RequestMapping("/api")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class GenreController {
 
     private final GenreService genreService;
 
-    @GetMapping
+    @GetMapping("/getGenres")
     public ResponseEntity<List<GenreResponse>> getAllGenres() {
         return ResponseEntity.ok(genreService.getAllGenres());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<GenreResponse> getGenreById(@PathVariable Long id) {
-        return ResponseEntity.ok(genreService.getGenreById(id));
+    @GetMapping("/getGenreById")
+    public ResponseEntity<GenreResponse> getGenreById(@RequestParam Long genreId) {
+        return ResponseEntity.ok(genreService.getGenreById(genreId));
     }
 
-    @PostMapping
+    @PostMapping("/createGenre")
     public ResponseEntity<GenreResponse> createGenre(@Valid @RequestBody GenreRequest request) {
         GenreResponse response = genreService.createGenre(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/updateGenre")
     public ResponseEntity<GenreResponse> updateGenre(
-            @PathVariable Long id,
-            @Valid @RequestBody GenreRequest request
-    ) {
-        return ResponseEntity.ok(genreService.updateGenre(id, request));
+            @RequestParam Long genreId,
+            @Valid @RequestBody GenreRequest request) {
+        return ResponseEntity.ok(genreService.updateGenre(genreId, request));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteGenre(@PathVariable Long id) {
-        genreService.deleteGenre(id);
+    @DeleteMapping("/deleteGenre")
+    public ResponseEntity<Void> deleteGenre(@RequestParam Long genreId) {
+        genreService.deleteGenre(genreId);
         return ResponseEntity.noContent().build();
     }
 }

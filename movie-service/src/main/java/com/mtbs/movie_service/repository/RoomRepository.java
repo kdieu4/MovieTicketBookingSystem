@@ -5,12 +5,15 @@
 package com.mtbs.movie_service.repository;
 
 import com.mtbs.movie_service.domain.entity.Room;
-
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
 /**
  *
  * @author quanghieu
  */
 public interface RoomRepository extends JpaRepository<Room, Long> {
-    
+
+    List<Room> findByCinema_CinemaId(Long cinemaId);
 }

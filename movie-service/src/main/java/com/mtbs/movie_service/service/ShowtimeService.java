@@ -3,24 +3,26 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Interface.java to edit this template
  */
 package com.mtbs.movie_service.service;
- 
+
 import com.mtbs.movie_service.domain.dto.request.ShowtimeRequest;
 import com.mtbs.movie_service.domain.dto.response.ShowtimeResponse;
- 
+
 import java.util.List;
 /**
  *
  * @author quanghieu
  */
 public interface ShowtimeService {
- 
+
     List<ShowtimeResponse> getAllShowtimes();
- 
+
+    List<ShowtimeResponse> getShowtimesByMovieId(Long movieId);
+
     ShowtimeResponse getShowtimeById(Long showtimeId);
- 
+
     ShowtimeResponse createShowtime(ShowtimeRequest request);
- 
+
     ShowtimeResponse updateShowtime(Long showtimeId, ShowtimeRequest request);
- 
+
     void deleteShowtime(Long showtimeId);
 }

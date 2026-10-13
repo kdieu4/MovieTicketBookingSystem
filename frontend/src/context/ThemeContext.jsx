@@ -19,10 +19,13 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     const root = document.documentElement;
-    const tokens = themes[theme];
+    const tokens = themes[theme] || themes[DEFAULT_THEME];
+
+    // Cập nhật toàn bộ CSS Custom Properties lên thẻ html
     Object.entries(tokens).forEach(([key, value]) => {
       root.style.setProperty(key, value);
     });
+
     root.style.colorScheme = theme;
     root.setAttribute('data-theme', theme);
     window.localStorage.setItem(STORAGE_KEY, theme);

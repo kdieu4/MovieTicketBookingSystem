@@ -10,41 +10,54 @@ export default function HomePage() {
   const [nowShowing, setNowShowing] = useState([]);
   const [comingSoon, setComingSoon] = useState([]);
   const [genres, setGenres] = useState([]);
+  
   const [loadingNowShowing, setLoadingNowShowing] = useState(true);
+  const [loadingComingSoon, setLoadingComingSoon] = useState(true);
   const [error, setError] = useState(null);
 
-  // Tải toàn bộ phim đang chiếu một lần; việc lọc theo thể loại khi bấm tab
-  // được NowShowingSection xử lý ở client, không gọi lại API mỗi lần đổi tab.
   useEffect(() => {
     let cancelled = false;
 
-    async function loadInitialData() {
-      try {
-        const [nowShowingData, comingSoonData, genresData] = await Promise.all([
-          fetchNowShowingMovies(),
-          fetchComingSoonMovies(),
-          fetchGenres(),
-        ]);
-        if (cancelled) return;
-        setNowShowing(nowShowingData);
-        setComingSoon(comingSoonData);
-        setGenres(genresData);
-      } catch (err) {
-        if (!cancelled) setError(err);
-      } finally {
+    // 1. Tải danh sách phim đang chiếu (Ưu tiên số 1 - Hiển thị ngay khi có data)
+    fetchNowShowingMovies()
+      .then((data) => {
+        if (!cancelled) setNowShowing(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setError('Không thể tải danh sách phim đang chiếu.');
+      })
+      .finally(() => {
         if (!cancelled) setLoadingNowShowing(false);
-      }
-    }
+      });
 
-    loadInitialData();
+    // 2. Tải danh sách thể loại song song (Không chặn render danh sách phim)
+    fetchGenres()
+      .then((data) => {
+        if (!cancelled) setGenres(data);
+      })
+      .catch(() => {
+        // Lỗi thể loại không ảnh hưởng đến việc xem danh sách phim chính
+      });
+
+    // 3. Tải danh sách phim sắp chiếu (Ưu tiên thấp hơn)
+    fetchComingSoonMovies()
+      .then((data) => {
+        if (!cancelled) setComingSoon(data);
+      })
+      .catch(() => {
+        // Lỗi phim sắp chiếu xử lý độc lập
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingComingSoon(false);
+      });
+
     return () => {
       cancelled = true;
     };
   }, []);
 
   function handleSelectShowtime(movie) {
-    // Điều hướng sang luồng chọn suất chiếu / chọn ghế, ví dụ:
-    // navigate(`/phim/${movie.id}/suat-chieu`)
+    // Điều hướng sang trang chọn suất chiếu
   }
 
   const featuredMovie = nowShowing[0]
@@ -56,10 +69,10 @@ export default function HomePage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
+    <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-primary)] selection:text-[var(--color-brand-on-primary)] transition-colors duration-200">
       <Header />
 
-      <main>
+      <main className="pb-8">
         <HeroSection
           featuredMovie={featuredMovie}
           movieTitles={nowShowing.map((m) => m.title)}
@@ -67,9 +80,10 @@ export default function HomePage() {
 
         {error && (
           <div className="mx-auto mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
-            <p className="rounded-lg border border-[var(--color-system-error)] bg-[var(--color-bg-tertiary)] px-4 py-3 text-sm text-[var(--color-system-error)]">
-              Không tải được dữ liệu phim. Vui lòng thử lại sau.
-            </p>
+            <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-system-error)]/40 bg-[var(--color-system-error)]/10 px-4 py-3 text-sm font-medium text-[var(--color-system-error)] backdrop-blur-md">
+              <span className="h-2 w-2 rounded-full bg-[var(--color-system-error)]" />
+              <p>{error}</p>
+            </div>
           </div>
         )}
 
@@ -80,7 +94,7 @@ export default function HomePage() {
           onSelectShowtime={handleSelectShowtime}
         />
 
-        <ComingSoonSection movies={comingSoon} />
+        <ComingSoonSection movies={comingSoon} loading={loadingComingSoon} />
       </main>
 
       <Footer />
