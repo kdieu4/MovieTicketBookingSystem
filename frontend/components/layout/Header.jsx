@@ -23,7 +23,7 @@ export default function Header() {
   const navRef = useRef(null);
   const itemRefs = useRef([]);
 
-  const activeIndex = NAV_LINKS.findIndex((link) => 
+  const activeIndex = NAV_LINKS.findIndex((link) =>
     link.href === '/' ? pathname === '/' : pathname?.startsWith(link.href)
   );
 
@@ -50,7 +50,7 @@ export default function Header() {
     <header className="sticky top-0 z-40 border-b border-[var(--color-border-separator)] bg-[var(--color-bg-translucent-header)] backdrop-blur-xl backdrop-saturate-180 transition-colors duration-200">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         
-        {/* Logo Brand */}
+        {/* Brand Logo */}
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2.5 text-[var(--color-text-primary)] transition-opacity hover:opacity-80">
             <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-brand-primary)]">
@@ -60,14 +60,14 @@ export default function Header() {
           </Link>
         </div>
 
-        {/* Floating Navigation Bar Căn Chỉnh Viền */}
+        {/* Floating Navigation Bar Center */}
         <nav className="hidden md:flex items-center">
           <div
             ref={navRef}
             onMouseLeave={() => setHoverIndex(null)}
-            className="relative flex items-center rounded-full border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)]/90 p-1 shadow-sm backdrop-blur-md"
+            className="relative flex items-center rounded-full border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-1 shadow-sm backdrop-blur-md"
           >
-            {/* Sliding Active Indicator */}
+            {/* Sliding Indicator */}
             <div
               className="absolute top-1 bottom-1 rounded-full bg-[var(--color-fill-secondary)] transition-all duration-300 ease-out"
               style={{
@@ -99,7 +99,7 @@ export default function Header() {
           </div>
         </nav>
 
-        {/* Right Actions */}
+        {/* Search & Actions Right */}
         <div className="flex items-center gap-3">
           <form
             onSubmit={handleSearchSubmit}

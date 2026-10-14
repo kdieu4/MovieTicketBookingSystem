@@ -27,9 +27,9 @@ export default function RootLayout({
     <html
       lang="vi"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased overflow-x-clip`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col overflow-x-clip">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

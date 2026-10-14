@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Header from '@/components/layout/Header';
+import FeaturedSection from '@/components/home/FeaturedSection';
 import HeroSection from '@/components/home/HeroSection';
 import NowShowingSection from '@/components/home/NowShowingSection';
 import ComingSoonSection from '@/components/home/ComingSoonSection';
@@ -35,17 +36,13 @@ export default function HomePage() {
       .then((data) => {
         if (!cancelled) setGenres(data);
       })
-      .catch(() => {
-        // Lỗi thể loại không ảnh hưởng đến danh sách phim chính
-      });
+      .catch(() => {});
 
     fetchComingSoonMovies()
       .then((data) => {
         if (!cancelled) setComingSoon(data);
       })
-      .catch(() => {
-        // Lỗi phim sắp chiếu xử lý độc lập
-      })
+      .catch(() => {})
       .finally(() => {
         if (!cancelled) setLoadingComingSoon(false);
       });
@@ -55,30 +52,15 @@ export default function HomePage() {
     };
   }, []);
 
-  function handleSelectShowtime(movie) {
-    // Điều hướng sang trang chọn suất chiếu (làm sau)
-  }
-
-  const featuredMovie = nowShowing[0]
-    ? {
-        ...nowShowing[0],
-        trailerUrl: nowShowing[0].trailerUrl ?? null,
-        bookingUrl: `/phim/${nowShowing[0].id}/suat-chieu`,
-      }
-    : null;
+  function handleSelectShowtime(movie) {}
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-primary)] selection:text-[var(--color-brand-on-primary)] transition-colors duration-200">
+    <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-primary)] selection:text-[var(--color-brand-on-primary)] transition-colors duration-200 overflow-visible">
       <Header />
 
-      <main className="pb-8">
-        <HeroSection
-          featuredMovie={featuredMovie}
-          movieTitles={nowShowing.map((m) => m.title)}
-        />
-
+      <main className="pb-8 space-y-6 overflow-visible">
         {error && (
-          <div className="mx-auto mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto pt-4 max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-system-error)]/40 bg-[var(--color-system-error)]/10 px-4 py-3 text-sm font-medium text-[var(--color-system-error)] backdrop-blur-md">
               <span className="h-2 w-2 rounded-full bg-[var(--color-system-error)]" />
               <p>{error}</p>
@@ -86,6 +68,21 @@ export default function HomePage() {
           </div>
         )}
 
+        {/* 1. KHỐI PHIM NỔI BẬT */}
+        <FeaturedSection
+          movies={nowShowing}
+          loading={loadingNowShowing}
+          onSelectShowtime={handleSelectShowtime}
+        />
+
+        {/* 2. THANH TÌM SUẤT CHIẾU NHANH (HERO SECTION) */}
+        <HeroSection
+          movies={nowShowing}
+          movieTitles={nowShowing.map((m) => m.title)}
+          onSelectShowtime={handleSelectShowtime}
+        />
+
+        {/* 3. KHỐI PHIM ĐANG CHIẾU & BỘ LỌC */}
         <NowShowingSection
           movies={nowShowing}
           genres={genres}
@@ -93,6 +90,7 @@ export default function HomePage() {
           onSelectShowtime={handleSelectShowtime}
         />
 
+        {/* 4. KHỐI PHIM SẮP CHIẾU */}
         <ComingSoonSection movies={comingSoon} loading={loadingComingSoon} />
       </main>
 

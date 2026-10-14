@@ -68,14 +68,9 @@ export default function HomePage() {
     <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-primary)] selection:text-[var(--color-brand-on-primary)] transition-colors duration-200">
       <Header />
 
-      <main className="pb-8">
-        <HeroSection
-          featuredMovie={featuredMovie}
-          movieTitles={nowShowing.map((m) => m.title)}
-        />
-
+      <main className="pb-8 space-y-6">
         {error && (
-          <div className="mx-auto mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto pt-4 max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-system-error)]/40 bg-[var(--color-system-error)]/10 px-4 py-3 text-sm font-medium text-[var(--color-system-error)] backdrop-blur-md">
               <span className="h-2 w-2 rounded-full bg-[var(--color-system-error)]" />
               <p>{error}</p>
@@ -83,6 +78,7 @@ export default function HomePage() {
           </div>
         )}
 
+        {/* 1. Phần Phim đang chiếu / Phim nổi bật */}
         <NowShowingSection
           movies={nowShowing}
           genres={genres}
@@ -90,6 +86,15 @@ export default function HomePage() {
           onSelectShowtime={handleSelectShowtime}
         />
 
+        {/* 2. Thanh tìm suất chiếu nhanh (HeroSection) nằm bên dưới */}
+        <HeroSection
+          movies={nowShowing}
+          featuredMovie={featuredMovie}
+          movieTitles={nowShowing.map((m) => m.title)}
+          onSelectShowtime={handleSelectShowtime}
+        />
+
+        {/* 3. Phần Phim sắp chiếu */}
         <ComingSoonSection movies={comingSoon} loading={loadingComingSoon} />
       </main>
 
