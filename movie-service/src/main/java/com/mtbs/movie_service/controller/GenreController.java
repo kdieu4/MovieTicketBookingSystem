@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 /**
  *
  * @author quanghieu
@@ -33,8 +34,8 @@ public class GenreController {
     }
 
     @GetMapping("/getGenreById")
-    public ResponseEntity<GenreResponse> getGenreById(@RequestParam Long genreId) {
-        return ResponseEntity.ok(genreService.getGenreById(genreId));
+    public ResponseEntity<GenreResponse> getGenreById(@RequestParam Long id) {
+        return ResponseEntity.ok(genreService.getGenreById(id));
     }
 
     @PostMapping("/createGenre")
@@ -45,14 +46,14 @@ public class GenreController {
 
     @PutMapping("/updateGenre")
     public ResponseEntity<GenreResponse> updateGenre(
-            @RequestParam Long genreId,
+            @RequestParam Long id,
             @Valid @RequestBody GenreRequest request) {
-        return ResponseEntity.ok(genreService.updateGenre(genreId, request));
+        return ResponseEntity.ok(genreService.updateGenre(id, request));
     }
 
     @DeleteMapping("/deleteGenre")
-    public ResponseEntity<Void> deleteGenre(@RequestParam Long genreId) {
-        genreService.deleteGenre(genreId);
+    public ResponseEntity<Void> deleteGenre(@RequestParam Long id) {
+        genreService.deleteGenre(id);
         return ResponseEntity.noContent().build();
     }
 }

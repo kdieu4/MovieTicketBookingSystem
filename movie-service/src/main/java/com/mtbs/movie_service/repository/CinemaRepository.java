@@ -7,10 +7,13 @@ package com.mtbs.movie_service.repository;
 import com.mtbs.movie_service.domain.entity.Cinema;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 /**
  *
  * @author quanghieu
  */
+@Repository
 public interface CinemaRepository extends JpaRepository<Cinema, Long> {
-    
+
+    boolean existsByNameAndAddress(String name, String address);
 }

@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+/* Khai báo keyframes & animation class cho Tailwind CSS v4 */
+@theme {
+  /* Animation mở */
+  @keyframes popup-scale-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.9) translateY(16px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  /* Animation đóng */
+  @keyframes popup-scale-out {
+    0% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(0.9) translateY(16px);
+    }
+  }
+
+  /* Backdrop mở */
+  @keyframes backdrop-fade-in {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  /* Backdrop đóng */
+  @keyframes backdrop-fade-out {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  --animate-backdrop-in: backdrop-fade-in 0.2s ease-out forwards;
+  --animate-backdrop-out: backdrop-fade-out 0.2s ease-in forwards;
+  --animate-popup-in: popup-scale-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-popup-out: popup-scale-out 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@layer base {
+  :root {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-fill-primary);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-fill-secondary);
+  }
+}

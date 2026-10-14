@@ -37,8 +37,8 @@ public class MovieController {
     }
 
     @GetMapping("/getMovieById")
-    public ResponseEntity<MovieResponse> getMovieById(@RequestParam Long movieId) {
-        return ResponseEntity.ok(movieService.getMovieById(movieId));
+    public ResponseEntity<MovieResponse> getMovieById(@RequestParam Long id) {
+        return ResponseEntity.ok(movieService.getMovieById(id));
     }
 
     @PostMapping("/createMovie")
@@ -49,14 +49,14 @@ public class MovieController {
 
     @PutMapping("/updateMovie")
     public ResponseEntity<MovieResponse> updateMovie(
-            @RequestParam Long movieId,
+            @RequestParam Long id,
             @Valid @RequestBody MovieRequest request) {
-        return ResponseEntity.ok(movieService.updateMovie(movieId, request));
+        return ResponseEntity.ok(movieService.updateMovie(id, request));
     }
 
     @DeleteMapping("/deleteMovie")
-    public ResponseEntity<Void> deleteMovie(@RequestParam Long movieId) {
-        movieService.deleteMovie(movieId);
+    public ResponseEntity<Void> deleteMovie(@RequestParam Long id) {
+        movieService.deleteMovie(id);
         return ResponseEntity.noContent().build();
     }
 }

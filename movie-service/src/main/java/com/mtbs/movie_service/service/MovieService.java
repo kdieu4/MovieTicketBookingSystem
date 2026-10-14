@@ -4,16 +4,15 @@
  */
 package com.mtbs.movie_service.service;
 
-/**
- *
- * @author quanghieu
- */
 import com.mtbs.movie_service.domain.dto.request.MovieRequest;
 import com.mtbs.movie_service.domain.dto.response.MovieResponse;
 import com.mtbs.movie_service.domain.entity.enums.MovieStatus;
 
 import java.util.List;
-
+/**
+ *
+ * @author quanghieu
+ */
 public interface MovieService {
 
     MovieResponse getMovieById(Long movieId);

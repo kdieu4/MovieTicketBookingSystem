@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 /**
  *
  * @author quanghieu
@@ -37,8 +38,8 @@ public class ShowtimeController {
     }
 
     @GetMapping("/getShowtimeById")
-    public ResponseEntity<ShowtimeResponse> getShowtimeById(@RequestParam Long showtimeId) {
-        return ResponseEntity.ok(showtimeService.getShowtimeById(showtimeId));
+    public ResponseEntity<ShowtimeResponse> getShowtimeById(@RequestParam Long id) {
+        return ResponseEntity.ok(showtimeService.getShowtimeById(id));
     }
 
     @PostMapping("/createShowtime")
@@ -49,14 +50,14 @@ public class ShowtimeController {
 
     @PutMapping("/updateShowtime")
     public ResponseEntity<ShowtimeResponse> updateShowtime(
-            @RequestParam Long showtimeId,
+            @RequestParam Long id,
             @Valid @RequestBody ShowtimeRequest request) {
-        return ResponseEntity.ok(showtimeService.updateShowtime(showtimeId, request));
+        return ResponseEntity.ok(showtimeService.updateShowtime(id, request));
     }
 
     @DeleteMapping("/deleteShowtime")
-    public ResponseEntity<Void> deleteShowtime(@RequestParam Long showtimeId) {
-        showtimeService.deleteShowtime(showtimeId);
+    public ResponseEntity<Void> deleteShowtime(@RequestParam Long id) {
+        showtimeService.deleteShowtime(id);
         return ResponseEntity.noContent().build();
     }
 }

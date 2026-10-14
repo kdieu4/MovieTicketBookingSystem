@@ -6,23 +6,21 @@ package com.mtbs.movie_service.service.impl;
 
 import com.mtbs.movie_service.domain.dto.request.ShowtimeRequest;
 import com.mtbs.movie_service.domain.dto.response.ShowtimeResponse;
-import com.mtbs.movie_service.domain.entity.Cinema;
-import com.mtbs.movie_service.domain.entity.Movie;
-import com.mtbs.movie_service.domain.entity.Room;
-import com.mtbs.movie_service.domain.entity.Showtime;
+import com.mtbs.movie_service.domain.entity.*;
+import com.mtbs.movie_service.domain.entity.enums.SeatStatus;
 import com.mtbs.movie_service.exception.MovieNotFoundException;
 import com.mtbs.movie_service.exception.RoomNotFoundException;
 import com.mtbs.movie_service.exception.ShowtimeNotFoundException;
-import com.mtbs.movie_service.repository.MovieRepository;
-import com.mtbs.movie_service.repository.RoomRepository;
-import com.mtbs.movie_service.repository.ShowtimeRepository;
+import com.mtbs.movie_service.repository.*;
 import com.mtbs.movie_service.service.ShowtimeService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.List;
+
 /**
  *
  * @author quanghieu
@@ -34,6 +32,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     private final ShowtimeRepository showtimeRepository;
     private final MovieRepository movieRepository;
     private final RoomRepository roomRepository;
+    private final SeatRepository seatRepository;
+    private final ShowtimeSeatRepository showtimeSeatRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -64,15 +64,31 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     @Transactional
     public ShowtimeResponse createShowtime(ShowtimeRequest request) {
         Showtime showtime = new Showtime();
-        applyRequest(showtime, request);
-        return toResponse(showtimeRepository.save(showtime));
+        applyRequest(showtime, request, null);
+        Showtime savedShowtime = showtimeRepository.save(showtime);
+
+        // Tự động sinh danh sách ghế cho suất chiếu này (showtime_seats)
+        List<Seat> roomSeats = seatRepository.findByRoom_RoomId(savedShowtime.getRoom().getRoomId());
+        if (!roomSeats.isEmpty()) {
+            List<ShowtimeSeat> showtimeSeats = roomSeats.stream()
+                    .map(seat -> ShowtimeSeat.builder()
+                            .showtime(savedShowtime)
+                            .seat(seat)
+                            .status(SeatStatus.AVAILABLE)
+                            .updatedAt(OffsetDateTime.now())
+                            .build())
+                    .toList();
+            showtimeSeatRepository.saveAll(showtimeSeats);
+        }
+
+        return toResponse(savedShowtime);
     }
 
     @Override
     @Transactional
     public ShowtimeResponse updateShowtime(Long showtimeId, ShowtimeRequest request) {
         Showtime showtime = findShowtimeOrThrow(showtimeId);
-        applyRequest(showtime, request);
+        applyRequest(showtime, request, showtimeId);
         return toResponse(showtimeRepository.save(showtime));
     }
 
@@ -87,9 +103,20 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 .orElseThrow(() -> new ShowtimeNotFoundException(showtimeId));
     }
 
-    private void applyRequest(Showtime showtime, ShowtimeRequest request) {
+    private void applyRequest(Showtime showtime, ShowtimeRequest request, Long currentShowtimeId) {
         if (!request.endTime().isAfter(request.startTime())) {
             throw new IllegalArgumentException("endTime phải sau startTime");
+        }
+
+        // Kiểm tra trùng lịch chiếu trong phòng
+        boolean isOverlapped = showtimeRepository.existsOverlappingShowtime(
+                request.roomId(),
+                request.startTime(),
+                request.endTime(),
+                currentShowtimeId
+        );
+        if (isOverlapped) {
+            throw new IllegalArgumentException("Phòng chiếu đã có suất chiếu khác trong khoảng thời gian này");
         }
 
         Movie movie = movieRepository.findById(request.movieId())

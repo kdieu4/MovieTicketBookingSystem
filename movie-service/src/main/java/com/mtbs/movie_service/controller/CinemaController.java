@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 /**
  *
  * @author quanghieu
@@ -33,8 +34,8 @@ public class CinemaController {
     }
 
     @GetMapping("/getCinemaById")
-    public ResponseEntity<CinemaResponse> getCinemaById(@RequestParam Long cinemaId) {
-        return ResponseEntity.ok(cinemaService.getCinemaById(cinemaId));
+    public ResponseEntity<CinemaResponse> getCinemaById(@RequestParam Long id) {
+        return ResponseEntity.ok(cinemaService.getCinemaById(id));
     }
 
     @PostMapping("/createCinema")
@@ -45,14 +46,14 @@ public class CinemaController {
 
     @PutMapping("/updateCinema")
     public ResponseEntity<CinemaResponse> updateCinema(
-            @RequestParam Long cinemaId,
+            @RequestParam Long id,
             @Valid @RequestBody CinemaRequest request) {
-        return ResponseEntity.ok(cinemaService.updateCinema(cinemaId, request));
+        return ResponseEntity.ok(cinemaService.updateCinema(id, request));
     }
 
     @DeleteMapping("/deleteCinema")
-    public ResponseEntity<Void> deleteCinema(@RequestParam Long cinemaId) {
-        cinemaService.deleteCinema(cinemaId);
+    public ResponseEntity<Void> deleteCinema(@RequestParam Long id) {
+        cinemaService.deleteCinema(id);
         return ResponseEntity.noContent().build();
     }
 }

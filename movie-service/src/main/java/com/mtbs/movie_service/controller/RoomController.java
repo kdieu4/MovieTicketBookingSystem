@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 /**
  *
  * @author quanghieu
@@ -36,8 +37,8 @@ public class RoomController {
     }
 
     @GetMapping("/getRoomById")
-    public ResponseEntity<RoomResponse> getRoomById(@RequestParam Long roomId) {
-        return ResponseEntity.ok(roomService.getRoomById(roomId));
+    public ResponseEntity<RoomResponse> getRoomById(@RequestParam Long id) {
+        return ResponseEntity.ok(roomService.getRoomById(id));
     }
 
     @PostMapping("/createRoom")
@@ -48,14 +49,14 @@ public class RoomController {
 
     @PutMapping("/updateRoom")
     public ResponseEntity<RoomResponse> updateRoom(
-            @RequestParam Long roomId,
+            @RequestParam Long id,
             @Valid @RequestBody RoomRequest request) {
-        return ResponseEntity.ok(roomService.updateRoom(roomId, request));
+        return ResponseEntity.ok(roomService.updateRoom(id, request));
     }
 
     @DeleteMapping("/deleteRoom")
-    public ResponseEntity<Void> deleteRoom(@RequestParam Long roomId) {
-        roomService.deleteRoom(roomId);
+    public ResponseEntity<Void> deleteRoom(@RequestParam Long id) {
+        roomService.deleteRoom(id);
         return ResponseEntity.noContent().build();
     }
 }

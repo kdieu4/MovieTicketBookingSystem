@@ -30,7 +30,10 @@ public class MovieSpecifications {
             if (genreIds == null || genreIds.isEmpty()) {
                 return null;
             }
-            query.distinct(true);
+            // Chỉ apply distinct khi query trả về Entity (tránh lỗi khi Spring JPA chạy count query cho Pageable)
+            if (Long.class != query.getResultType()) {
+                query.distinct(true);
+            }
             Join<Movie, Genre> genres = root.join("genres");
             return genres.get("genreId").in(genreIds);
         };
@@ -39,6 +42,6 @@ public class MovieSpecifications {
     public static Specification<Movie> titleContains(String title) {
         return (root, query, cb) -> (title == null || title.isBlank())
                 ? null
-                : cb.like(cb.lower(root.get("title")), "%" + title.toLowerCase() + "%");
+                : cb.like(cb.lower(root.get("title")), "%" + title.trim().toLowerCase() + "%");
     }
 }

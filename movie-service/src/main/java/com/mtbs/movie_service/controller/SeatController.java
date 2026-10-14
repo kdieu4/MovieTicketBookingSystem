@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 /**
  *
  * @author quanghieu
@@ -33,8 +34,8 @@ public class SeatController {
     }
 
     @GetMapping("/getSeatById")
-    public ResponseEntity<SeatResponse> getSeatById(@RequestParam Long seatId) {
-        return ResponseEntity.ok(seatService.getSeatById(seatId));
+    public ResponseEntity<SeatResponse> getSeatById(@RequestParam Long id) {
+        return ResponseEntity.ok(seatService.getSeatById(id));
     }
 
     @PostMapping("/createSeat")
@@ -45,14 +46,14 @@ public class SeatController {
 
     @PutMapping("/updateSeat")
     public ResponseEntity<SeatResponse> updateSeat(
-            @RequestParam Long seatId,
+            @RequestParam Long id,
             @Valid @RequestBody SeatRequest request) {
-        return ResponseEntity.ok(seatService.updateSeat(seatId, request));
+        return ResponseEntity.ok(seatService.updateSeat(id, request));
     }
 
     @DeleteMapping("/deleteSeat")
-    public ResponseEntity<Void> deleteSeat(@RequestParam Long seatId) {
-        seatService.deleteSeat(seatId);
+    public ResponseEntity<Void> deleteSeat(@RequestParam Long id) {
+        seatService.deleteSeat(id);
         return ResponseEntity.noContent().build();
     }
 }

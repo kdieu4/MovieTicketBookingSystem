@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+
 /**
  *
  * @author quanghieu
@@ -27,6 +28,7 @@ public class GenreServiceImpl implements GenreService {
     private final GenreRepository genreRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public List<GenreResponse> getAllGenres() {
         return genreRepository.findAll()
                 .stream()
@@ -35,6 +37,7 @@ public class GenreServiceImpl implements GenreService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public GenreResponse getGenreById(Long genreId) {
         Genre genre = findGenreOrThrow(genreId);
         return toResponse(genre);
@@ -43,6 +46,9 @@ public class GenreServiceImpl implements GenreService {
     @Override
     @Transactional
     public GenreResponse createGenre(GenreRequest request) {
+        if (genreRepository.existsByName(request.name())) {
+            throw new IllegalArgumentException("Tên thể loại đã tồn tại: " + request.name());
+        }
         Genre genre = new Genre();
         genre.setName(request.name());
         return toResponse(genreRepository.save(genre));
@@ -52,6 +58,9 @@ public class GenreServiceImpl implements GenreService {
     @Transactional
     public GenreResponse updateGenre(Long genreId, GenreRequest request) {
         Genre genre = findGenreOrThrow(genreId);
+        if (!genre.getName().equals(request.name()) && genreRepository.existsByName(request.name())) {
+            throw new IllegalArgumentException("Tên thể loại đã tồn tại: " + request.name());
+        }
         genre.setName(request.name());
         return toResponse(genreRepository.save(genre));
     }
