@@ -41,6 +41,19 @@ public class CinemaServiceImpl implements CinemaService {
     }
 
     @Override
+    public List<String> getAllCities() {
+        return cinemaRepository.findDistinctCities();
+    }
+
+    @Override
+    public List<CinemaResponse> getCinemasByCity(String city) {
+        return cinemaRepository.findByCityIgnoreCase(city)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Override
     @Transactional
     public CinemaResponse createCinema(CinemaRequest request) {
         Cinema cinema = new Cinema();

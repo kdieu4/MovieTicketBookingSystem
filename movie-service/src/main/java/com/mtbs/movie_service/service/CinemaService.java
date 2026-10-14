@@ -18,6 +18,10 @@ public interface CinemaService {
 
     CinemaResponse getCinemaById(Long cinemaId);
 
+    List<String> getAllCities();
+
+    List<CinemaResponse> getCinemasByCity(String city);
+
     CinemaResponse createCinema(CinemaRequest request);
 
     CinemaResponse updateCinema(Long cinemaId, CinemaRequest request);

@@ -15,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
 /**
  *
  * @author quanghieu
@@ -36,6 +35,16 @@ public class CinemaController {
     @GetMapping("/getCinemaById")
     public ResponseEntity<CinemaResponse> getCinemaById(@RequestParam Long id) {
         return ResponseEntity.ok(cinemaService.getCinemaById(id));
+    }
+
+    @GetMapping("/getCities")
+    public ResponseEntity<List<String>> getAllCities() {
+        return ResponseEntity.ok(cinemaService.getAllCities());
+    }
+
+    @GetMapping("/getCinemasByCity")
+    public ResponseEntity<List<CinemaResponse>> getCinemasByCity(@RequestParam String city) {
+        return ResponseEntity.ok(cinemaService.getCinemasByCity(city));
     }
 
     @PostMapping("/createCinema")
