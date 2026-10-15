@@ -1,4 +1,4 @@
-                                                                            /*
+/*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Interface.java to edit this template
  */
@@ -26,4 +26,6 @@ public interface MovieService {
     void deleteMovie(Long movieId);
 
     List<MovieResponse> searchMovies(MovieStatus status, List<Long> genreIds, String title);
+
+    List<MovieResponse> searchByKeyword(String keyword, int limit);
 }

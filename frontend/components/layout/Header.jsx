@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { BRAND_NAME } from '@/styles/tokens';
 import AccountMenu from '@/components/account/AccountMenu';
 
@@ -13,15 +13,74 @@ const NAV_LINKS = [
   { label: 'Ưu đãi', href: '/uu-dai' },
 ];
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8083';
+const SEARCH_LIMIT = 6;
+const SEARCH_DEBOUNCE_MS = 250;
+const PANEL_BORDER = 2; // 1px viền trên + 1px viền dưới
+
+const SEARCH_ANIMATIONS = `
+@keyframes hdr-item-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes hdr-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes hdr-load {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(260%); }
+}
+.hdr-item { animation: hdr-item-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.hdr-fade { animation: hdr-fade-in 240ms ease-out both; }
+.hdr-bar { animation: hdr-load 1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .hdr-item, .hdr-fade, .hdr-bar { animation: none !important; }
+}
+`;
+
+function normalize(text) {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase();
+}
+
+function Highlight({ text, query }) {
+  const source = (text ?? '').normalize('NFC');
+  const keyword = query.trim();
+  const index = keyword ? normalize(source).indexOf(normalize(keyword)) : -1;
+  if (index < 0) return <>{source}</>;
+  const end = index + keyword.length;
+  return (
+    <>
+      {source.slice(0, index)}
+      <mark className="bg-transparent text-[var(--color-brand-primary)]">
+        {source.slice(index, end)}
+      </mark>
+      {source.slice(end)}
+    </>
+  );
+}
+
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [activeResult, setActiveResult] = useState(-1);
+  const [results, setResults] = useState([]);
+  const [status, setStatus] = useState('idle'); // idle | loading | done | error
   const pathname = usePathname();
+  const router = useRouter();
 
   const [hoverIndex, setHoverIndex] = useState(null);
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0, opacity: 0 });
   const navRef = useRef(null);
   const itemRefs = useRef([]);
+  const searchBoxRef = useRef(null);
+  const panelInnerRef = useRef(null);
 
   const activeIndex = NAV_LINKS.findIndex((link) =>
     link.href === '/' ? pathname === '/' : pathname?.startsWith(link.href)
@@ -29,27 +88,147 @@ export default function Header() {
 
   const targetIndex = hoverIndex !== null ? hoverIndex : (activeIndex >= 0 ? activeIndex : 0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const currentItem = itemRefs.current[targetIndex];
-    if (currentItem && navRef.current) {
-      const navRect = navRef.current.getBoundingClientRect();
-      const itemRect = currentItem.getBoundingClientRect();
+    if (currentItem) {
       setIndicatorStyle({
-        left: itemRect.left - navRect.left,
-        width: itemRect.width,
+        left: currentItem.offsetLeft,
+        width: currentItem.offsetWidth,
         opacity: 1,
       });
     }
   }, [targetIndex, pathname]);
 
+  // ---- Tìm kiếm qua API ----
+  const keyword = searchValue.trim();
+  const hasQuery = keyword.length > 0;
+  const showPanel = searchFocused && hasQuery;
+
+  useEffect(() => {
+    if (!keyword) {
+      setResults([]);
+      setStatus('idle');
+      return;
+    }
+
+    setStatus('loading');
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE}/api/searchMovies?keyword=${encodeURIComponent(keyword)}&limit=${SEARCH_LIMIT}`,
+          { signal: controller.signal }
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        setResults(await res.json());
+        setStatus('done');
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error('searchMovies lỗi:', error);
+          setResults([]);
+          setStatus('error');
+        }
+      }
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [keyword]);
+
+  // Giữ panel trong DOM đủ lâu để chạy hiệu ứng đóng
+  const [panelRendered, setPanelRendered] = useState(false);
+  const [panelVisible, setPanelVisible] = useState(false);
+
+  useEffect(() => {
+    if (showPanel) {
+      setPanelRendered(true);
+      const raf = requestAnimationFrame(() => setPanelVisible(true));
+      return () => cancelAnimationFrame(raf);
+    }
+    setPanelVisible(false);
+    const timer = setTimeout(() => setPanelRendered(false), 200);
+    return () => clearTimeout(timer);
+  }, [showPanel]);
+
+  // Đo chiều cao nội dung để panel co giãn mượt khi kết quả thay đổi
+  const [panelHeight, setPanelHeight] = useState(null);
+
+  useLayoutEffect(() => {
+    if (!panelRendered) {
+      setPanelHeight(null);
+      return;
+    }
+    const el = panelInnerRef.current;
+    if (!el) return;
+    const measure = () => setPanelHeight(el.offsetHeight + PANEL_BORDER);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [panelRendered]);
+
+  useEffect(() => {
+    setActiveResult(-1);
+  }, [results]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(event.target)) {
+        setSearchFocused(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  function closeSearch() {
+    setSearchFocused(false);
+    setSearchValue('');
+  }
+
+  function openMovie(movie) {
+    router.push(`/phim/${movie.movieId}`);
+    closeSearch();
+  }
+
   function handleSearchSubmit(event) {
     event.preventDefault();
+    if (activeResult >= 0 && results[activeResult]) {
+      openMovie(results[activeResult]);
+      return;
+    }
+    if (hasQuery) {
+      router.push(`/phim?q=${encodeURIComponent(keyword)}`);
+      closeSearch();
+    }
   }
+
+  function handleSearchKeyDown(event) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveResult((i) => (results.length ? (i + 1) % results.length : -1));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveResult((i) => (results.length ? (i <= 0 ? results.length - 1 : i - 1) : -1));
+    } else if (event.key === 'Escape') {
+      setSearchFocused(false);
+      event.currentTarget.blur();
+    }
+  }
+
+  const isLoading = status === 'loading';
+  const showSkeleton = isLoading && results.length === 0;
+  const showEmpty = status === 'done' && results.length === 0;
+  const showError = status === 'error';
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--color-border-separator)] bg-[var(--color-bg-translucent-header)] backdrop-blur-xl backdrop-saturate-180 transition-colors duration-200">
+      <style>{SEARCH_ANIMATIONS}</style>
+
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        
+
         {/* Brand Logo */}
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2.5 text-[var(--color-text-primary)] transition-opacity hover:opacity-80">
@@ -65,11 +244,10 @@ export default function Header() {
           <div
             ref={navRef}
             onMouseLeave={() => setHoverIndex(null)}
-            className="relative flex items-center rounded-full border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-1 shadow-sm backdrop-blur-md"
+            className="relative flex items-center overflow-hidden rounded-full border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-1 shadow-[0_1px_3px_rgba(0,0,0,0.06)] backdrop-blur-md"
           >
-            {/* Sliding Indicator */}
             <div
-              className="absolute top-1 bottom-1 rounded-full bg-[var(--color-fill-secondary)] transition-all duration-300 ease-out"
+              className="pointer-events-none absolute bottom-1 left-0 top-1 rounded-full bg-[var(--color-fill-secondary)] transition-all duration-300 ease-out"
               style={{
                 transform: `translateX(${indicatorStyle.left}px)`,
                 width: `${indicatorStyle.width}px`,
@@ -101,33 +279,171 @@ export default function Header() {
 
         {/* Search & Actions Right */}
         <div className="flex items-center gap-3">
-          <form
-            onSubmit={handleSearchSubmit}
-            className="hidden items-center gap-2 rounded-full border border-[var(--color-border-separator)] bg-[var(--color-fill-tertiary)] px-3.5 py-1.5 transition-all focus-within:border-[var(--color-brand-primary)] focus-within:bg-[var(--color-bg-tertiary)] sm:flex"
-          >
-            <SearchIcon />
-            <input
-              type="search"
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              placeholder="Tìm phim, diễn viên..."
-              className="w-36 bg-transparent text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none lg:w-48"
-            />
-          </form>
+          <div ref={searchBoxRef} className="relative hidden sm:block">
+            <form
+              onSubmit={handleSearchSubmit}
+              role="search"
+              className={`flex items-center gap-2 rounded-full border bg-[var(--color-fill-tertiary)] px-3.5 py-1.5 transition-[border-color,background-color,box-shadow] duration-300 ${
+                searchFocused
+                  ? 'border-[var(--color-brand-primary)] bg-[var(--color-bg-tertiary)] shadow-[0_0_0_3px_rgba(0,122,255,0.12)]'
+                  : 'border-[var(--color-border-separator)]'
+              }`}
+            >
+              <SearchIcon />
+              <input
+                type="search"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="Tìm phim, đạo diễn..."
+                role="combobox"
+                aria-expanded={showPanel}
+                aria-controls="search-results"
+                aria-autocomplete="list"
+                className="w-40 bg-transparent text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none lg:w-64"
+              />
+            </form>
+
+            {/*
+              Menu gợi ý: mép phải thẳng với ô tìm kiếm. Từ màn hình lg trở lên
+              ô tìm kiếm rộng bằng menu nên hai mép trái phải đều thẳng hàng.
+            */}
+            {panelRendered && (
+              <div
+                id="search-results"
+                role="listbox"
+                style={{ height: panelHeight ?? 'auto' }}
+                className={`absolute right-0 top-full z-50 mt-2 w-[max(100%,19rem)] max-w-[calc(100vw-2rem)] origin-top overflow-hidden rounded-2xl border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] shadow-[0_12px_40px_rgba(0,0,0,0.14)] backdrop-blur-xl transition-[height,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                  panelVisible
+                    ? 'translate-y-0 scale-100 opacity-100'
+                    : '-translate-y-2 scale-[0.97] opacity-0'
+                }`}
+              >
+                {/* Thanh tiến trình khi đang tìm */}
+                <div
+                  aria-hidden="true"
+                  className={`pointer-events-none absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden transition-opacity duration-300 ${
+                    isLoading ? 'opacity-100' : 'opacity-0'
+                  }`}
+                >
+                  <div className="hdr-bar h-full w-2/5 rounded-full bg-[var(--color-brand-primary)]" />
+                </div>
+
+                <div ref={panelInnerRef} className="p-2">
+                  {results.length > 0 && (
+                    <>
+                      <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+                        Phim phù hợp
+                      </p>
+                      <ul
+                        className={`transition-opacity duration-200 ${
+                          isLoading ? 'opacity-60' : 'opacity-100'
+                        }`}
+                      >
+                        {results.map((movie, i) => (
+                          <li
+                            key={movie.movieId}
+                            className="hdr-item"
+                            style={{ animationDelay: `${i * 40}ms` }}
+                          >
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={activeResult === i}
+                              onMouseEnter={() => setActiveResult(i)}
+                              onClick={() => openMovie(movie)}
+                              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors duration-150 ${
+                                activeResult === i ? 'bg-[var(--color-fill-tertiary)]' : ''
+                              }`}
+                            >
+                              <MoviePoster movie={movie} />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm font-semibold leading-5 text-[var(--color-text-primary)]">
+                                  <Highlight text={movie.title} query={searchValue} />
+                                </span>
+                                <span className="block truncate text-xs leading-5 text-[var(--color-text-secondary)]">
+                                  {movie.director ? (
+                                    <Highlight text={movie.director} query={searchValue} />
+                                  ) : (
+                                    'Chưa có đạo diễn'
+                                  )}
+                                  {movie.releaseDate ? ` · ${movie.releaseDate.slice(0, 4)}` : ''}
+                                </span>
+                                {movie.genres?.length > 0 && (
+                                  <span className="block truncate text-[11px] leading-4 text-[var(--color-text-tertiary)]">
+                                    {movie.genres.map((g) => g.name).join(', ')}
+                                  </span>
+                                )}
+                              </span>
+                              <ArrowIcon
+                                className={`shrink-0 text-[var(--color-text-tertiary)] transition-all duration-200 ${
+                                  activeResult === i ? 'translate-x-0 opacity-100' : '-translate-x-1 opacity-0'
+                                }`}
+                              />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <div className="mx-3 my-1.5 h-px bg-[var(--color-border-separator)]" />
+
+                      <Link
+                        href={`/phim?q=${encodeURIComponent(keyword)}`}
+                        onClick={closeSearch}
+                        className="flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-semibold text-[var(--color-brand-primary)] transition-colors duration-150 hover:bg-[var(--color-fill-tertiary)]"
+                      >
+                        <span className="truncate">Xem tất cả kết quả cho "{keyword}"</span>
+                        <ArrowIcon className="ml-2 shrink-0" />
+                      </Link>
+                    </>
+                  )}
+
+                  {showSkeleton && (
+                    <ul className="hdr-fade" aria-label="Đang tìm kiếm">
+                      {[0, 1, 2].map((n) => (
+                        <li key={n} className="flex items-center gap-3 rounded-xl px-3 py-2">
+                          <span className="h-14 w-10 shrink-0 animate-pulse rounded-md bg-[var(--color-fill-secondary)]" />
+                          <span className="flex-1 space-y-2">
+                            <span className="block h-3 w-3/4 animate-pulse rounded bg-[var(--color-fill-secondary)]" />
+                            <span className="block h-2.5 w-1/2 animate-pulse rounded bg-[var(--color-fill-tertiary)]" />
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {showEmpty && (
+                    <div className="hdr-fade px-3 py-6 text-center">
+                      <p className="text-sm font-medium text-[var(--color-text-primary)]">
+                        Không tìm thấy kết quả
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
+                        Thử tên phim hoặc tên đạo diễn khác
+                      </p>
+                    </div>
+                  )}
+
+                  {showError && (
+                    <div className="hdr-fade px-3 py-6 text-center">
+                      <p className="text-sm font-medium text-[var(--color-text-primary)]">
+                        Không kết nối được máy chủ
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
+                        Kiểm tra movie-service và thử lại
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           <button
             type="button"
             className="hidden h-9 items-center justify-center rounded-full bg-[var(--color-brand-primary)] px-4 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-primary-hover)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] sm:inline-flex"
           >
             Đăng nhập
-          </button>
-
-          <button
-            type="button"
-            aria-label="Phim yêu thích"
-            className="hidden h-9 w-9 items-center justify-center rounded-full text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-fill-tertiary)] hover:text-[var(--color-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] sm:inline-flex"
-          >
-            <HeartIcon />
           </button>
 
           <div className="hidden sm:block">
@@ -170,6 +486,29 @@ export default function Header() {
   );
 }
 
+function MoviePoster({ movie }) {
+  const [failed, setFailed] = useState(false);
+
+  if (movie.posterUrl && !failed) {
+    return (
+      <img
+        src={movie.posterUrl}
+        alt=""
+        onError={() => setFailed(true)}
+        className="h-14 w-10 shrink-0 rounded-md bg-[var(--color-fill-secondary)] object-cover"
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-14 w-10 shrink-0 items-center justify-center rounded-md bg-[var(--color-fill-secondary)] text-sm font-bold text-[var(--color-brand-primary)]"
+    >
+      {movie.title?.charAt(0)}
+    </span>
+  );
+}
+
 function SearchIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -179,15 +518,10 @@ function SearchIcon() {
   );
 }
 
-function HeartIcon() {
+function ArrowIcon({ className = '' }) {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <path
-        d="M9 15.5s-6-3.6-6-8.1C3 4.9 4.8 3.3 7 3.3c1 0 2 0.6 2 2 0-1.4 1-2 2-2 2.2 0 4 1.6 4 4.1 0 4.5-6 8.1-6 8.1Z"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className={className}>
+      <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

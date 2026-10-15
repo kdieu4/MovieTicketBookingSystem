@@ -1,16 +1,30 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import TrailerModal from '../movie/TrailerModal';
+
+const FONT_STACK =
+  '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif';
+
+const META_CHIP =
+  'inline-flex items-center rounded-md bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-700 border border-gray-200';
 
 export default function FeaturedSection({ movies = [], loading, onSelectShowtime }) {
   const [selectedMovieIndex, setSelectedMovieIndex] = useState(0);
+  const [isTrailerOpen, setIsTrailerOpen] = useState(false);
+  const [fadeKey, setFadeKey] = useState(0); // Dùng để kích hoạt hiệu ứng fade
 
   const activeMovie = movies[selectedMovieIndex] || movies[0];
+
+  // Kích hoạt hiệu ứng mỗi khi phim được chọn thay đổi
+  useEffect(() => {
+    setFadeKey(prev => prev + 1);
+  }, [selectedMovieIndex]);
 
   if (loading || !activeMovie) {
     return (
       <section className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
-        <div className="h-80 animate-pulse rounded-3xl bg-[var(--color-fill-tertiary)]" />
+        <div className="h-80 animate-pulse rounded-[var(--radius-xl)] bg-[var(--color-fill-tertiary)]" />
       </section>
     );
   }
@@ -22,76 +36,88 @@ export default function FeaturedSection({ movies = [], loading, onSelectShowtime
   const activeDuration = activeMovie?.duration || activeMovie?.durationMinutes;
 
   return (
-    <section className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold tracking-tight text-[var(--color-text-primary)]">Phim nổi bật</h2>
-      </div>
+    <>
+      <section
+        className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8 lg:pt-10"
+        style={{ fontFamily: FONT_STACK }}
+      >
+        <h2 className="mb-6 text-xl font-bold tracking-tight text-[var(--color-text-primary)] sm:text-2xl lg:mb-8">
+          Phim nổi bật
+        </h2>
 
-      <div className="overflow-hidden rounded-3xl border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-6 lg:p-8 shadow-lg">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div className="grid grid-cols-1 items-center gap-10 pb-10 lg:grid-cols-12 lg:gap-12 lg:pb-14">
           
-          {/* Cột trái: Thông tin Phim */}
-          <div className="lg:col-span-7 flex flex-col justify-between space-y-5">
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[var(--color-text-primary)] leading-tight">
-              {activeTitle}
-            </h1>
+          {/* Cột trái: Thông tin phim có hiệu ứng mờ dần */}
+          <div className="order-2 flex flex-col items-start lg:order-1 lg:col-span-7">
+            {/* Vùng chứa bọc toàn bộ nội dung để áp dụng hiệu ứng chuyển đổi */}
+            <div 
+              key={fadeKey} 
+              className="w-full transition-opacity duration-500 ease-in-out animate-fade-in"
+            >
+              <h1 className="text-[clamp(2.5rem,6vw,4.5rem)] font-extrabold leading-[1.05] tracking-tight text-[var(--color-text-primary)]">
+                {activeTitle}
+              </h1>
 
-            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-[var(--color-text-secondary)]">
-              {activeMovie.genres && activeMovie.genres.length > 0 && (
-                <span>{activeMovie.genres.join(', ')}</span>
+              {activeDescription && (
+                <p className="mt-5 line-clamp-4 max-w-[38rem] text-lg leading-relaxed text-gray-500 sm:text-[18px]">
+                  {activeDescription}
+                </p>
               )}
-              {activeAgeRating && (
-                <span className="rounded-md border border-[var(--color-border-separator)] bg-[var(--color-fill-secondary)] px-2 py-0.5 font-semibold text-[var(--color-text-primary)]">
-                  {activeAgeRating}
-                </span>
-              )}
-              {activeDuration && (
-                <span className="rounded-md border border-[var(--color-border-separator)] bg-[var(--color-fill-secondary)] px-2 py-0.5">
-                  {activeDuration} phút
-                </span>
-              )}
-            </div>
 
-            {activeDescription && (
-              <p className="text-sm text-[var(--color-text-secondary)] line-clamp-3 leading-relaxed max-w-xl">
-                {activeDescription}
-              </p>
-            )}
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                {activeMovie.genres && activeMovie.genres.length > 0 && (
+                  <span className={META_CHIP}>{activeMovie.genres.join(', ')}</span>
+                )}
+                {activeAgeRating && (
+                  <span className={META_CHIP}>{activeAgeRating}</span>
+                )}
+                {activeDuration && (
+                  <span className={META_CHIP}>{activeDuration} phút</span>
+                )}
+              </div>
 
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => onSelectShowtime && onSelectShowtime(activeMovie)}
-                className="inline-flex items-center gap-2 h-10 px-6 rounded-full bg-[var(--color-brand-primary)] text-xs sm:text-sm font-semibold text-[var(--color-brand-on-primary)] shadow-sm transition-transform hover:scale-105 active:scale-95"
-              >
-                <span>Đặt vé ngay</span>
-              </button>
-
-              {activeMovie.trailerUrl && (
+              <div className="mt-8 flex flex-wrap items-center gap-4">
                 <button
                   type="button"
-                  onClick={() => window.open(activeMovie.trailerUrl, '_blank')}
-                  className="inline-flex items-center gap-2 h-10 px-5 rounded-full border border-[var(--color-border-separator)] bg-[var(--color-fill-secondary)] text-xs sm:text-sm font-semibold text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-fill-tertiary)]"
+                  onClick={() => onSelectShowtime && onSelectShowtime(activeMovie)}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#0066FF] px-8 text-sm font-bold text-white shadow-md transition-colors hover:bg-blue-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                 >
-                  <PlayIcon />
-                  <span>Xem trailer</span>
+                  <span>Đặt vé ngay</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
                 </button>
-              )}
+
+                {activeMovie.trailerUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setIsTrailerOpen(true)} // Mở modal thay vì tab mới
+                    className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-8 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-200"
+                  >
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full border border-blue-600 text-blue-600">
+                      <PlayIconSmall />
+                    </span>
+                    <span>Xem trailer</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Cột phải: Poster & Danh sách Thumbnail */}
-          <div className="lg:col-span-5 flex flex-col items-center justify-center">
-            <div className="relative w-full max-w-[280px] sm:max-w-[320px] aspect-[2/3] rounded-2xl overflow-hidden border border-[var(--color-border-separator)] shadow-md bg-[var(--color-fill-secondary)]">
+          {/* Cột phải: Poster và thumbnail */}
+          <div className="order-1 flex flex-col items-center lg:order-2 lg:col-span-5 lg:items-end">
+            <div className="relative aspect-[2/3] w-full max-w-[280px] overflow-hidden rounded-[var(--radius-xl)] bg-[var(--color-fill-secondary)] shadow-[var(--shadow-high)] sm:max-w-[320px]">
               <img
+                key={fadeKey} // Thêm key để ảnh lớn cũng có hiệu ứng khi thay đổi
                 src={activePoster}
                 alt={activeTitle}
-                className="h-full w-full object-contain bg-black/10"
+                className="h-full w-full object-cover transition-opacity duration-500 animate-fade-in"
               />
             </div>
 
             {movies.length > 1 && (
-              <div className="mt-4 flex items-center justify-center gap-2 overflow-x-auto max-w-full pb-1 scrollbar-none">
+              <div className="mt-5 flex max-w-full items-center justify-center gap-2 overflow-x-auto p-1 scrollbar-none sm:max-w-[320px]">
                 {movies.slice(0, 5).map((movie, index) => {
                   const isSelected = index === selectedMovieIndex;
                   return (
@@ -99,10 +125,12 @@ export default function FeaturedSection({ movies = [], loading, onSelectShowtime
                       key={movie.id || index}
                       type="button"
                       onClick={() => setSelectedMovieIndex(index)}
-                      className={`relative flex-shrink-0 h-14 w-10 rounded-md overflow-hidden border-2 transition-all ${
+                      aria-label={movie.title}
+                      aria-pressed={isSelected}
+                      className={`relative h-14 w-10 flex-shrink-0 overflow-hidden rounded-[var(--radius-xs)] transition-all ${
                         isSelected
-                          ? 'border-[var(--color-brand-primary)] scale-105 shadow-sm'
-                          : 'border-transparent opacity-60 hover:opacity-100'
+                          ? 'ring-2 ring-[var(--color-brand-primary)] ring-offset-2 ring-offset-[var(--color-bg-primary)]'
+                          : 'opacity-60 hover:opacity-100'
                       }`}
                     >
                       <img
@@ -116,17 +144,24 @@ export default function FeaturedSection({ movies = [], loading, onSelectShowtime
               </div>
             )}
           </div>
-
         </div>
-      </div>
-    </section>
+      </section>
+
+      {/* Tích hợp TrailerModal vào component */}
+      <TrailerModal
+        isOpen={isTrailerOpen}
+        onClose={() => setIsTrailerOpen(false)}
+        trailerUrl={activeMovie?.trailerUrl}
+        title={activeTitle}
+      />
+    </>
   );
 }
 
-function PlayIcon() {
+function PlayIconSmall() {
   return (
-    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polygon points="5 3 19 12 5 21 5 3"></polygon>
     </svg>
   );
 }

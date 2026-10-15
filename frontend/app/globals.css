@@ -2,7 +2,19 @@
 
 /* Khai báo keyframes & animation class cho Tailwind CSS v4 */
 @theme {
-  /* Animation mở */
+  /* Animation xuất hiện nội dung (Fade In + trượt nhẹ lên) */
+  @keyframes fade-in {
+    0% {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Animation mở modal */
   @keyframes popup-scale-in {
     0% {
       opacity: 0;
@@ -14,7 +26,7 @@
     }
   }
 
-  /* Animation đóng */
+  /* Animation đóng modal */
   @keyframes popup-scale-out {
     0% {
       opacity: 1;
@@ -38,6 +50,9 @@
     100% { opacity: 0; }
   }
 
+  /* Đăng ký class animate-fade-in cho Tailwind v4 */
+  --animate-fade-in: fade-in 0.35s ease-out forwards;
+  
   --animate-backdrop-in: backdrop-fade-in 0.2s ease-out forwards;
   --animate-backdrop-out: backdrop-fade-out 0.2s ease-in forwards;
   --animate-popup-in: popup-scale-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -46,15 +61,52 @@
 
 @layer base {
   :root {
+    /* ĐƯỜNG VIỀN SIÊU MẢNH VÀ NHẸ KIỂU APPLE STUDIO */
+    --color-border-separator: rgba(0, 0, 0, 0.06);
+    --color-border-opaque-separator: rgba(0, 0, 0, 0.08);
+
+    /* MÀU NỀN PHÂN TẦNG (NỬA TRÊN TRẮNG, NỬA DƯỚI XÁM) */
+    --color-bg-primary: #ffffff;           /* Nền nửa trên */
+    --color-bg-secondary: #f5f5f7;         /* Nền nửa dưới (Xám Apple) */
+    --color-bg-tertiary: #ffffff;          /* Nền Card trắng */
+    --color-bg-translucent-header: rgba(255, 255, 255, 0.8);
+    --color-bg-translucent-card: rgba(255, 255, 255, 0.95);
+
+    /* MÀU CHỮ & THƯƠNG HIỆU */
+    --color-text-primary: #1d1d1f;
+    --color-text-secondary: #86868b;
+    --color-text-tertiary: #a1a1a6;
+    --color-brand-primary: #0071e3;        /* Xanh Apple */
+    --color-brand-primary-hover: #0077ed;
+    --color-brand-on-primary: #ffffff;
+
+    /* FILL & HOVER STATES */
+    --color-fill-primary: rgba(0, 0, 0, 0.04);
+    --color-fill-secondary: #f5f5f7;
+    --color-fill-tertiary: #e8e8ed;
+
+    /* BO GÓC CHUẨN APPLE HIG */
+    --radius-xs: 6px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+
+    /* BÓNG ĐỔ MỊN NHẸ */
+    --shadow-low: 0 1px 2px rgba(0, 0, 0, 0.02);
+    --shadow-medium: 0 4px 24px rgba(0, 0, 0, 0.04);
+    --shadow-high: 0 12px 36px rgba(0, 0, 0, 0.08);
+
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
 
+  /* Custom Scrollbar mượt cho giao diện */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
@@ -62,11 +114,11 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: var(--color-fill-primary);
+    background: rgba(0, 0, 0, 0.15);
     border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-fill-secondary);
+    background: rgba(0, 0, 0, 0.25);
   }
 }

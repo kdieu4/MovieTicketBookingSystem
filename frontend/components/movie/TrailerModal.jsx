@@ -1,11 +1,17 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getYouTubeEmbedUrl } from '@/utils/movieHelpers';
 import { IconClose } from '@/components/common/Icons';
 
 export default function TrailerModal({ isOpen, onClose, trailerUrl, title }) {
   const [isClosing, setIsClosing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -19,17 +25,26 @@ export default function TrailerModal({ isOpen, onClose, trailerUrl, title }) {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') handleClose();
     };
+
     if (isOpen) {
       window.addEventListener('keydown', handleKeyDown);
+      // Khóa cuộn trang khi mở modal
+      document.body.style.overflow = 'hidden';
     }
-    return () => window.removeEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      // Mở lại cuộn trang khi đóng modal
+      document.body.style.overflow = '';
+    };
   }, [isOpen]);
 
-  if (!isOpen || !trailerUrl) return null;
+  if (!isOpen || !trailerUrl || !mounted) return null;
 
-  return (
+  // Sử dụng createPortal để gắn Modal trực tiếp vào document.body
+  return createPortal(
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md ${
+      className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md ${
         isClosing ? 'animate-backdrop-out' : 'animate-backdrop-in'
       }`}
       onClick={handleClose}
@@ -54,16 +69,17 @@ export default function TrailerModal({ isOpen, onClose, trailerUrl, title }) {
           </button>
         </div>
 
-        <div className="relative aspect-video w-full bg-black">
+        <div className="relative aspect-video w-full bg-black leading-none">
           <iframe
             src={getYouTubeEmbedUrl(trailerUrl)}
             title={`Trailer ${title}`}
-            className="absolute inset-0 h-full w-full border-0"
+            className="absolute inset-0 h-full w-full border-0 block"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
