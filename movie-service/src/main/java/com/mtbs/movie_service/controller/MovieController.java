@@ -36,7 +36,6 @@ public class MovieController {
         return ResponseEntity.ok(movieService.searchMovies(status, genreIds, title));
     }
 
-    // Gợi ý cho ô tìm kiếm trên Header: khớp tên phim hoặc tên đạo diễn
     @GetMapping("/searchMovies")
     public ResponseEntity<List<MovieResponse>> searchMovies(
             @RequestParam String keyword,
