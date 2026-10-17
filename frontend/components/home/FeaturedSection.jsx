@@ -1,26 +1,50 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import TrailerModal from '../movie/TrailerModal';
+import BookingFlow from '@/components/booking/BookingFlow';
 
 const FONT_STACK =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif';
 
+// Dùng biến màu của theme thay cho màu cố định để tự đổi theo chế độ sáng/tối
 const META_CHIP =
-  'inline-flex items-center rounded-md bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-700 border border-gray-200';
+  'inline-flex items-center rounded-md border border-[var(--color-border-separator)] bg-[var(--color-fill-tertiary)] px-3 py-1 text-xs font-semibold text-[var(--color-text-secondary)]';
 
-export default function FeaturedSection({ movies = [], loading, onSelectShowtime }) {
+export default function FeaturedSection({
+  movies = [],
+  loading,
+  onContinue, // nhận { showtime, seats, total, holdUntil, city, cinema } khi người dùng bấm Tiếp tục
+}) {
   const [selectedMovieIndex, setSelectedMovieIndex] = useState(0);
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
   const [fadeKey, setFadeKey] = useState(0); // Dùng để kích hoạt hiệu ứng fade
 
+  // Bộ lọc và mã tìm kiếm truyền cho BookingFlow
+  const [filters, setFilters] = useState(null);
+  const [searchId, setSearchId] = useState(0);
+  const [searching, setSearching] = useState(false);
+
   const activeMovie = movies[selectedMovieIndex] || movies[0];
+  const activeTitle = activeMovie?.title || activeMovie?.name || '';
 
   // Kích hoạt hiệu ứng mỗi khi phim được chọn thay đổi
   useEffect(() => {
-    setFadeKey(prev => prev + 1);
+    setFadeKey((prev) => prev + 1);
   }, [selectedMovieIndex]);
 
+  // Bấm "Đặt vé ngay": mở menu đặt vé với phim đang hiển thị.
+  // Tăng searchId để bấm lại cùng một phim vẫn mở lại bảng và tải lại dữ liệu.
+  const handleBook = useCallback(() => {
+    if (!activeTitle) return;
+    setSearching(true);
+    setFilters({ movieTitle: activeTitle });
+    setSearchId((id) => id + 1);
+  }, [activeTitle]);
+
+  const handleSearchSettled = useCallback(() => setSearching(false), []);
+
+  // Mọi hook đã được gọi ở trên, từ đây mới được phép return sớm
   if (loading || !activeMovie) {
     return (
       <section className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
@@ -29,7 +53,6 @@ export default function FeaturedSection({ movies = [], loading, onSelectShowtime
     );
   }
 
-  const activeTitle = activeMovie?.title || activeMovie?.name || '';
   const activeDescription = activeMovie?.description || activeMovie?.overview || activeMovie?.synopsis || '';
   const activePoster = activeMovie?.posterUrl || activeMovie?.poster_url || activeMovie?.bannerUrl || activeMovie?.backdropUrl || '/images/placeholder-movie.jpg';
   const activeAgeRating = activeMovie?.ageRating || activeMovie?.ageRestriction;
@@ -46,12 +69,11 @@ export default function FeaturedSection({ movies = [], loading, onSelectShowtime
         </h2>
 
         <div className="grid grid-cols-1 items-center gap-10 pb-10 lg:grid-cols-12 lg:gap-12 lg:pb-14">
-          
+
           {/* Cột trái: Thông tin phim có hiệu ứng mờ dần */}
           <div className="order-2 flex flex-col items-start lg:order-1 lg:col-span-7">
-            {/* Vùng chứa bọc toàn bộ nội dung để áp dụng hiệu ứng chuyển đổi */}
-            <div 
-              key={fadeKey} 
+            <div
+              key={fadeKey}
               className="w-full transition-opacity duration-500 ease-in-out animate-fade-in"
             >
               <h1 className="text-[clamp(2.5rem,6vw,4.5rem)] font-extrabold leading-[1.05] tracking-tight text-[var(--color-text-primary)]">
@@ -59,7 +81,7 @@ export default function FeaturedSection({ movies = [], loading, onSelectShowtime
               </h1>
 
               {activeDescription && (
-                <p className="mt-5 line-clamp-4 max-w-[38rem] text-lg leading-relaxed text-gray-500 sm:text-[18px]">
+                <p className="mt-5 line-clamp-4 max-w-[38rem] text-lg leading-relaxed text-[var(--color-text-secondary)] sm:text-[18px]">
                   {activeDescription}
                 </p>
               )}
@@ -79,23 +101,26 @@ export default function FeaturedSection({ movies = [], loading, onSelectShowtime
               <div className="mt-8 flex flex-wrap items-center gap-4">
                 <button
                   type="button"
-                  onClick={() => onSelectShowtime && onSelectShowtime(activeMovie)}
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#0066FF] px-8 text-sm font-bold text-white shadow-md transition-colors hover:bg-blue-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                  onClick={handleBook}
+                  disabled={searching}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--color-brand-primary)] px-8 text-sm font-bold text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)] transition-colors hover:bg-[var(--color-brand-primary-hover)] active:scale-[0.98] disabled:cursor-wait disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                 >
-                  <span>Đặt vé ngay</span>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                    <polyline points="12 5 19 12 12 19"></polyline>
-                  </svg>
+                  <span>{searching ? 'Đang tải suất chiếu...' : 'Đặt vé ngay'}</span>
+                  {!searching && (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                  )}
                 </button>
 
                 {activeMovie.trailerUrl && (
                   <button
                     type="button"
-                    onClick={() => setIsTrailerOpen(true)} // Mở modal thay vì tab mới
-                    className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-8 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-200"
+                    onClick={() => setIsTrailerOpen(true)}
+                    className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[var(--color-border-separator)] bg-[var(--color-bg-primary)] px-8 text-sm font-bold text-[var(--color-text-primary)] shadow-[var(--shadow-low)] transition-colors hover:bg-[var(--color-fill-tertiary)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-border-separator)]"
                   >
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full border border-blue-600 text-blue-600">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--color-brand-primary)] text-[var(--color-brand-primary)]">
                       <PlayIconSmall />
                     </span>
                     <span>Xem trailer</span>
@@ -109,7 +134,7 @@ export default function FeaturedSection({ movies = [], loading, onSelectShowtime
           <div className="order-1 flex flex-col items-center lg:order-2 lg:col-span-5 lg:items-end">
             <div className="relative aspect-[2/3] w-full max-w-[280px] overflow-hidden rounded-[var(--radius-xl)] bg-[var(--color-fill-secondary)] shadow-[var(--shadow-high)] sm:max-w-[320px]">
               <img
-                key={fadeKey} // Thêm key để ảnh lớn cũng có hiệu ứng khi thay đổi
+                key={fadeKey}
                 src={activePoster}
                 alt={activeTitle}
                 className="h-full w-full object-cover transition-opacity duration-500 animate-fade-in"
@@ -147,7 +172,14 @@ export default function FeaturedSection({ movies = [], loading, onSelectShowtime
         </div>
       </section>
 
-      {/* Tích hợp TrailerModal vào component */}
+      {/* Menu đặt vé: chọn thành phố, rạp, suất chiếu rồi chọn ghế, tự mở khi có filters */}
+      <BookingFlow
+        filters={filters}
+        searchId={searchId}
+        onSearchSettled={handleSearchSettled}
+        onContinue={onContinue}
+      />
+
       <TrailerModal
         isOpen={isTrailerOpen}
         onClose={() => setIsTrailerOpen(false)}

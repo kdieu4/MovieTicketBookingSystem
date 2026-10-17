@@ -1,9 +1,6 @@
 "use client";
 
-import { IconWheelchair } from '@/components/common/Icons';
-
-// Keyframes cho sơ đồ ghế
-const SEAT_ANIMATIONS = `
+export const SEAT_ANIMATIONS = `
 @keyframes sp-seat-in {
   from { opacity: 0; transform: translateY(8px) scale(0.85); }
   to { opacity: 1; transform: translateY(0) scale(1); }
@@ -81,13 +78,8 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
         </span>
       </div>
 
-      {/*
-        Khi có overflow-x thì trình duyệt cũng cắt luôn phần tràn theo chiều dọc.
-        Padding ở đây chừa chỗ cho ghế phóng to (hover, hiệu ứng nảy), còn margin
-        âm bù lại để bố cục không bị đẩy đi.
-      */}
-      <div className="-mx-3 -mt-3 overflow-x-auto px-3 pb-4 pt-3">
-        <div className="mx-auto flex flex-col items-center gap-3 min-w-[500px]">
+      <div className="overflow-x-auto pb-4 pt-3">
+        <div className="mx-auto flex w-max flex-col items-center gap-3">
           {seatsByRow.map(([rowLabel, rowSeats], rowIndex) => (
             <div key={rowLabel} className="flex items-center gap-3">
               <span
@@ -102,7 +94,6 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
                   const isSold = seat.isSold;
                   const isVip = seat.type === 'VIP';
                   const isDouble = seat.type === 'DOUBLE' || seat.type === 'SWEETBOX' || seat.type === 'COUPLE';
-                  const isAccessible = seat.type === 'ACCESSIBLE';
 
                   let seatClass =
                     'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border-[var(--color-border-separator)] hover:border-[var(--color-brand-primary)] hover:bg-[var(--color-fill-tertiary)]';
@@ -119,15 +110,11 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
                   } else if (isDouble) {
                     seatClass =
                       'bg-[var(--color-bg-primary)] border-[var(--color-brand-primary)] text-[var(--color-brand-primary)] font-semibold hover:bg-[var(--color-fill-tertiary)]';
-                  } else if (isAccessible) {
-                    seatClass =
-                      'bg-[var(--color-bg-primary)] border-[var(--color-system-info)] text-[var(--color-system-info)] hover:bg-[var(--color-fill-tertiary)]';
                   }
 
                   const seatLabel = `${seat.row ?? rowLabel}${String(seat.number).padStart(2, '0')}`;
 
                   return (
-                    // Hiệu ứng xuất hiện nằm ở thẻ bao ngoài để không xung đột với hiệu ứng hover của nút
                     <span
                       key={seat.id}
                       className="sp-seat-in inline-flex"
@@ -143,22 +130,12 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
                           isSold ? '' : 'hover:scale-110 active:scale-90'
                         } ${seatClass}`}
                       >
-                        {isAccessible && !isSelected ? (
-                          <IconWheelchair />
-                        ) : (
-                          String(seat.number).padStart(2, '0')
-                        )}
+                        {String(seat.number).padStart(2, '0')}
                       </button>
                     </span>
                   );
                 })}
               </div>
-              <span
-                className="sp-fade w-5 text-center text-[12px] font-bold text-[var(--color-text-secondary)]"
-                style={{ animationDelay: `${rowIndex * 45}ms` }}
-              >
-                {rowLabel}
-              </span>
             </div>
           ))}
         </div>
@@ -179,12 +156,6 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
         <div className="flex items-center gap-2">
           <span className="h-4 w-4 rounded-[var(--radius-xs)] border border-[var(--color-brand-primary)] bg-[var(--color-bg-primary)]" />
           <span>Ghế đôi</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="flex h-4 w-4 items-center justify-center rounded-[var(--radius-xs)] border border-[var(--color-system-info)] bg-[var(--color-bg-primary)] text-[var(--color-system-info)]">
-            <IconWheelchair />
-          </span>
-          <span>Ghế hỗ trợ tiếp cận</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="h-4 w-4 rounded-[var(--radius-xs)] bg-[var(--color-brand-primary)]" />

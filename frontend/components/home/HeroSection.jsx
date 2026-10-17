@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8083/api';
-const WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
 // Lớp dùng chung, toàn bộ màu đi qua CSS variables nên tự đổi theo Light/Dark
 const FIELD_LABEL =
@@ -12,21 +11,83 @@ const FIELD_LABEL =
 const FIELD_BUTTON =
   'flex h-11 w-full items-center justify-between rounded-[var(--radius-sm)] border border-[var(--color-border-separator)] bg-[var(--color-fill-tertiary)] px-3.5 text-[13px] font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-fill-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]';
 
+// Ô nhập tìm phim: cùng kích thước và màu với FIELD_BUTTON, thêm hiệu ứng viền khi focus
+const FIELD_INPUT_WRAP =
+  'group flex h-11 w-full items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border-separator)] bg-[var(--color-fill-tertiary)] px-3.5 text-[var(--color-text-secondary)] transition-all duration-200 hover:bg-[var(--color-fill-secondary)] focus-within:border-[var(--color-brand-primary)] focus-within:bg-[var(--color-bg-primary)] focus-within:ring-2 focus-within:ring-[var(--color-brand-primary)]/30';
+
+// bm-menu: hiệu ứng mở dropdown (định nghĩa trong booking-motion.css)
 const MENU_PANEL =
-  'absolute left-0 top-full z-50 mt-1.5 w-full overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border-opaque-separator)] bg-[var(--color-bg-tertiary)] p-1.5 shadow-[var(--shadow-high)]';
+  'bm-menu absolute left-0 top-full z-50 mt-1.5 w-full overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border-opaque-separator)] bg-[var(--color-bg-tertiary)] p-1.5 shadow-[var(--shadow-high)]';
 
 // Bo góc lồng nhau: Radius_con = Radius_cha - Padding (14px - 6px = 8px)
 const MENU_ITEM_BASE =
-  'flex w-full items-center rounded-[calc(var(--radius-md)-6px)] px-3 py-2 text-left text-[13px] font-medium transition-colors';
+  'bm-item flex w-full items-center rounded-[calc(var(--radius-md)-6px)] px-3 py-2 text-left text-[13px] font-medium transition-colors';
 const MENU_ITEM_IDLE =
   'text-[var(--color-text-primary)] hover:bg-[var(--color-fill-tertiary)]';
 const MENU_ITEM_ACTIVE =
   'bg-[var(--color-brand-primary)] font-semibold text-[var(--color-brand-on-primary)]';
+// Mục đang được trỏ bằng bàn phím (mũi tên lên, xuống)
+const MENU_ITEM_FOCUS =
+  'bg-[var(--color-fill-secondary)] text-[var(--color-text-primary)]';
+
+// Chỉ còn hai trường bắt buộc. Ngày xem được chọn ở bước sau, trong bảng suất chiếu.
+const REQUIRED_FIELDS = [
+  { key: 'city', label: 'Khu vực' },
+  { key: 'movie', label: 'Tên phim' },
+  { key: 'cinema', label: 'Rạp chiếu' },
+];
+
+const itemDelay = (index) => ({ animationDelay: `${Math.min(index * 25, 250)}ms` });
+
+// Bỏ dấu tiếng Việt từng ký tự một để vị trí chuỗi sau khi bỏ dấu khớp 1-1 với chuỗi gốc
+// (cần cho việc tô sáng phần trùng khớp). Gõ "bo gia" vẫn tìm ra "Bố Già".
+function foldChar(ch) {
+  const folded = ch
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase();
+  return folded.slice(0, 1) || ch;
+}
+function foldText(text) {
+  let out = '';
+  for (let i = 0; i < text.length; i += 1) out += foldChar(text[i]);
+  return out;
+}
+
+// Mọi từ trong ô nhập đều phải xuất hiện trong tên phim (không cần đúng thứ tự)
+function matchesQuery(title, query) {
+  const tokens = foldText(query).split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return true;
+  const haystack = foldText(title);
+  return tokens.every((t) => haystack.includes(t));
+}
+
+// Tô sáng đoạn trùng với nội dung đang gõ
+function HighlightedTitle({ title, query, selected = false }) {
+  const q = foldText(query.trim());
+  const start = q ? foldText(title).indexOf(q) : -1;
+  // Dòng đang được chọn có nền màu thương hiệu: không tô sáng nữa để chữ không trùng màu với nền
+  if (start < 0 || selected) return <span className="truncate">{title}</span>;
+  const end = start + q.length;
+  return (
+    <span className="truncate">
+      {title.slice(0, start)}
+      <span className="rounded-[2px] bg-[var(--color-brand-primary)]/20 text-[var(--color-brand-primary)]">
+        {title.slice(start, end)}
+      </span>
+      {title.slice(end)}
+    </span>
+  );
+}
 
 export default function HeroSection({
   movies = [],
   movieTitles = [],
+  onSearch,
   onSelectShowtime,
+  searching = false,
 }) {
   const [cities, setCities] = useState([]);
   // 'loading' | 'ready' | 'empty' | 'error'
@@ -35,23 +96,41 @@ export default function HeroSection({
   const [cinemas, setCinemas] = useState([]);
   const [selectedCinema, setSelectedCinema] = useState('');
 
-  const [showDate, setShowDate] = useState('');
-  const [movieFilter, setMovieFilter] = useState('');
+  // Nội dung người dùng gõ vào ô phim, được phép nhập tự do
+  const [movieQuery, setMovieQuery] = useState('');
+  // Mục gợi ý đang được trỏ bằng bàn phím, -1 là chưa trỏ mục nào
+  const [activeIndex, setActiveIndex] = useState(-1);
 
-  const today = new Date();
-  const todayReset = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const [calendarViewDate, setCalendarViewDate] = useState(new Date());
-
-  // Chỉ một menu được mở tại một thời điểm: 'city' | 'cinema' | 'date' | 'movie' | null
+  // Chỉ một menu được mở tại một thời điểm: 'city' | 'cinema' | 'movie' | null
   const [openMenu, setOpenMenu] = useState(null);
   const formRef = useRef(null);
+  const inputRef = useRef(null);
+  const listId = useId();
 
-  const displayMovieTitles =
-    movieTitles.length > 0
-      ? movieTitles
-      : movies.map((m) => m.title || m.name).filter(Boolean);
+  // Nhắc nhở khi thiếu thông tin: danh sách trường bị thiếu và bộ đếm để chạy lại hiệu ứng rung
+  const [missing, setMissing] = useState([]);
+  const [shakeId, setShakeId] = useState(0);
+
+  const displayMovieTitles = useMemo(() => {
+    const raw =
+      movieTitles.length > 0 ? movieTitles : movies.map((m) => m.title || m.name).filter(Boolean);
+    return Array.from(new Set(raw));
+  }, [movies, movieTitles]);
+
+  const suggestions = useMemo(
+    () => displayMovieTitles.filter((title) => matchesQuery(title, movieQuery)),
+    [displayMovieTitles, movieQuery]
+  );
 
   const toggleMenu = (name) => setOpenMenu((current) => (current === name ? null : name));
+
+  const effectiveCinema = selectedCinema || 'Tất cả rạp';
+  const fieldValues = { city: selectedCity, movie: movieQuery.trim(), cinema: effectiveCinema };
+  // Trường nào đã được điền lại thì tự động hết cảnh báo
+  const activeMissing = missing.filter((key) => !fieldValues[key]);
+  const isMissing = (key) => activeMissing.includes(key);
+  const fieldButtonClass = (key) =>
+    `${FIELD_BUTTON} ${isMissing(key) ? 'bm-shake !border-[var(--color-system-error)]' : ''}`;
 
   const loadCities = useCallback(async () => {
     setCitiesStatus('loading');
@@ -80,31 +159,35 @@ export default function HeroSection({
 
   useEffect(() => {
     if (!selectedCity) return;
+    const movie = movieQuery.trim();
+    if (!movie) {
+      setCinemas([]);
+      setSelectedCinema('Tất cả rạp');
+      return;
+    }
     let cancelled = false;
-    async function fetchCinemasByCity() {
+    const timer = setTimeout(async () => {
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/getCinemasByCity?city=${encodeURIComponent(selectedCity)}`
-        );
+        const params = new URLSearchParams({ city: selectedCity, movieTitle: movie });
+        const res = await fetch(`${API_BASE_URL}/getCinemasByCity?${params}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (cancelled) return;
-        const list = Array.isArray(data) ? data : [];
-        setCinemas(list);
-        setSelectedCinema(list.length > 0 ? list[0].name : 'Tất cả rạp');
+        setCinemas(Array.isArray(data) ? data : []);
+        setSelectedCinema('Tất cả rạp');
       } catch (err) {
-        console.error('Lỗi khi tải danh sách rạp:', err);
+        console.error('Lỗi khi tải rạp theo phim:', err);
         if (!cancelled) {
           setCinemas([]);
           setSelectedCinema('Tất cả rạp');
         }
       }
-    }
-    fetchCinemasByCity();
+    }, 300);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, [selectedCity]);
+  }, [selectedCity, movieQuery]);
 
   // Đóng menu khi bấm ra ngoài form hoặc nhấn Escape
   useEffect(() => {
@@ -122,67 +205,78 @@ export default function HeroSection({
     };
   }, []);
 
-  function handleFindShowtimes(event) {
-    event.preventDefault();
-    if (onSelectShowtime) {
-      onSelectShowtime({
-        city: selectedCity,
-        cinema: selectedCinema,
-        date: showDate,
-        movieTitle: movieFilter,
+  function handleMovieChange(event) {
+    setMovieQuery(event.target.value);
+    setActiveIndex(-1);
+    setOpenMenu('movie');
+  }
+
+  function pickSuggestion(title) {
+    setMovieQuery(title);
+    setActiveIndex(-1);
+    setOpenMenu(null);
+  }
+
+  function clearMovie() {
+    setMovieQuery('');
+    setActiveIndex(-1);
+    inputRef.current?.focus();
+    setOpenMenu('movie');
+  }
+
+  function handleMovieKeyDown(event) {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      if (suggestions.length === 0) return;
+      event.preventDefault();
+      setOpenMenu('movie');
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+      setActiveIndex((current) => {
+        const next = current + step;
+        if (next < 0) return suggestions.length - 1;
+        if (next >= suggestions.length) return 0;
+        return next;
       });
+    } else if (event.key === 'Enter' && openMenu === 'movie' && activeIndex >= 0) {
+      // Đang trỏ vào một gợi ý thì Enter chỉ chọn gợi ý, chưa gửi form
+      event.preventDefault();
+      pickSuggestion(suggestions[activeIndex]);
     }
   }
 
-  const currentYear = calendarViewDate.getFullYear();
-  const currentMonth = calendarViewDate.getMonth();
+  function handleFindShowtimes(event) {
+    event.preventDefault();
+    if (searching) return;
 
-  function handlePrevMonth() {
-    setCalendarViewDate(new Date(currentYear, currentMonth - 1, 1));
-  }
-  function handleNextMonth() {
-    setCalendarViewDate(new Date(currentYear, currentMonth + 1, 1));
-  }
-  function handleSelectDay(year, month, day) {
-    const formattedMonth = String(month + 1).padStart(2, '0');
-    const formattedDay = String(day).padStart(2, '0');
-    setShowDate(`${year}-${formattedMonth}-${formattedDay}`);
+    const emptyKeys = REQUIRED_FIELDS.map((f) => f.key).filter((key) => !fieldValues[key]);
+    if (emptyKeys.length > 0) {
+      setMissing(emptyKeys);
+      setShakeId((n) => n + 1);
+      setOpenMenu(emptyKeys[0]);
+      return;
+    }
+    setMissing([]);
     setOpenMenu(null);
-  }
-  function handleSelectToday() {
-    const tYear = today.getFullYear();
-    const tMonth = String(today.getMonth() + 1).padStart(2, '0');
-    const tDay = String(today.getDate()).padStart(2, '0');
-    setShowDate(`${tYear}-${tMonth}-${tDay}`);
-    setCalendarViewDate(new Date());
-    setOpenMenu(null);
-  }
-  function getFormattedDisplayDate() {
-    if (!showDate) return 'Chọn ngày xem';
-    const [y, m, d] = showDate.split('-');
-    return `${d}/${m}/${y}`;
+
+    // Không còn trường date: ngày được chọn trong bảng suất chiếu
+    const searchData = {
+      city: selectedCity,
+      cinema: effectiveCinema,
+      movieTitle: movieQuery.trim(),
+    };
+
+    if (typeof onSearch === 'function') {
+      onSearch(searchData);
+    }
+
+    if (onSelectShowtime) {
+      onSelectShowtime(searchData);
+    }
   }
 
-  const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const prevMonthDays = new Date(currentYear, currentMonth, 0).getDate();
-
-  const calendarCells = [];
-  for (let i = firstDayIndex - 1; i >= 0; i--) {
-    const day = prevMonthDays - i;
-    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-    const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-    calendarCells.push({ day, month: prevMonth, year: prevYear, isCurrentMonth: false });
-  }
-  for (let d = 1; d <= daysInMonth; d++) {
-    calendarCells.push({ day: d, month: currentMonth, year: currentYear, isCurrentMonth: true });
-  }
-  const remaining = 42 - calendarCells.length;
-  for (let i = 1; i <= remaining; i++) {
-    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
-    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
-    calendarCells.push({ day: i, month: nextMonth, year: nextYear, isCurrentMonth: false });
-  }
+  // Ô rạp chiếu chỉ hiện sau khi đã chọn thành phố và nhập tên phim
+  const hasQuery = movieQuery.trim().length > 0;
+  const showCinema = Boolean(selectedCity) && hasQuery;
+  const showMovieMenu = openMenu === 'movie' && (suggestions.length > 0 || movieQuery.trim());
 
   return (
     // z-30 để dropdown luôn nổi lên trên section phía dưới (nguyên nhân phổ biến gây che khuất)
@@ -190,7 +284,9 @@ export default function HeroSection({
       <form
         ref={formRef}
         onSubmit={handleFindShowtimes}
-        className="relative grid items-end gap-3 overflow-visible rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-4 shadow-[var(--shadow-low)] sm:grid-cols-2 sm:p-5 lg:grid-cols-[1fr_1fr_1fr_1fr_auto]"
+        className={`relative grid items-end gap-3 overflow-visible rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-4 shadow-[var(--shadow-low)] sm:grid-cols-2 sm:p-5 ${
+          showCinema ? 'lg:grid-cols-[1fr_1.4fr_1fr_auto]' : 'lg:grid-cols-[1fr_1.4fr_auto]'
+        }`}
       >
         {/* 1. Khu vực */}
         <div className={`relative ${openMenu === 'city' ? 'z-50' : 'z-10'}`}>
@@ -198,13 +294,14 @@ export default function HeroSection({
           <button
             type="button"
             aria-haspopup="listbox"
+            key={`city-btn-${shakeId}`}
             aria-expanded={openMenu === 'city'}
             onClick={() => toggleMenu('city')}
-            className={FIELD_BUTTON}
+            className={fieldButtonClass('city')}
           >
             <span className="truncate">{selectedCity || 'Chọn thành phố'}</span>
             <ChevronDownIcon
-              className={`h-4 w-4 shrink-0 text-[var(--color-text-secondary)] transition-transform ${
+              className={`h-4 w-4 shrink-0 text-[var(--color-text-secondary)] transition-transform duration-200 ${
                 openMenu === 'city' ? 'rotate-180' : ''
               }`}
             />
@@ -240,7 +337,7 @@ export default function HeroSection({
               )}
 
               {citiesStatus === 'ready' &&
-                cities.map((c) => (
+                cities.map((c, index) => (
                   <button
                     key={c}
                     type="button"
@@ -250,6 +347,7 @@ export default function HeroSection({
                       setSelectedCity(c);
                       setOpenMenu(null);
                     }}
+                    style={itemDelay(index)}
                     className={`${MENU_ITEM_BASE} justify-between ${
                       selectedCity === c ? MENU_ITEM_ACTIVE : MENU_ITEM_IDLE
                     }`}
@@ -261,19 +359,96 @@ export default function HeroSection({
           )}
         </div>
 
-        {/* 2. Rạp chiếu */}
-        <div className={`relative ${openMenu === 'cinema' ? 'z-50' : 'z-10'}`}>
+        {/* 2. Phim (giữa): ô nhập tự do, có gợi ý lọc theo từng ký tự */}
+        <div className={`relative ${openMenu === 'movie' ? 'z-50' : 'z-10'}`}>
+          <label htmlFor={`${listId}-movie`} className={FIELD_LABEL}>
+            Tên phim
+          </label>
+          <div className={FIELD_INPUT_WRAP}>
+            <SearchIcon />
+            <input
+              id={`${listId}-movie`}
+              ref={inputRef}
+              type="text"
+              role="combobox"
+              aria-expanded={Boolean(showMovieMenu)}
+              aria-controls={listId}
+              aria-autocomplete="list"
+              aria-activedescendant={activeIndex >= 0 ? `${listId}-opt-${activeIndex}` : undefined}
+              autoComplete="off"
+              value={movieQuery}
+              onChange={handleMovieChange}
+              onFocus={() => setOpenMenu('movie')}
+              onKeyDown={handleMovieKeyDown}
+              placeholder="Nhập tên phim để tìm"
+              className="min-w-0 flex-1 bg-transparent text-[13px] font-medium text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-tertiary)]"
+            />
+            {/* Nút xóa: mờ dần vào, mờ dần ra thay vì xuất hiện đột ngột */}
+            <button
+              type="button"
+              aria-label="Xóa nội dung tìm phim"
+              tabIndex={hasQuery ? 0 : -1}
+              onClick={clearMovie}
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--color-text-secondary)] transition-all duration-200 hover:bg-[var(--color-fill-secondary)] hover:text-[var(--color-text-primary)] active:scale-90 ${
+                hasQuery ? 'scale-100 opacity-100' : 'pointer-events-none scale-75 opacity-0'
+              }`}
+            >
+              <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                <path d="M5 5l10 10M15 5L5 15" />
+              </svg>
+            </button>
+          </div>
+
+          {showMovieMenu && (
+            <div id={listId} role="listbox" className={`${MENU_PANEL} max-h-60`}>
+              {suggestions.length > 0 ? (
+                <>
+                  {suggestions.map((title, index) => (
+                    <button
+                      key={title}
+                      id={`${listId}-opt-${index}`}
+                      type="button"
+                      role="option"
+                      aria-selected={movieQuery === title}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      onClick={() => pickSuggestion(title)}
+                      style={itemDelay(index)}
+                      className={`${MENU_ITEM_BASE} ${
+                        movieQuery === title
+                          ? MENU_ITEM_ACTIVE
+                          : index === activeIndex
+                            ? MENU_ITEM_FOCUS
+                            : MENU_ITEM_IDLE
+                      }`}
+                    >
+                      <HighlightedTitle title={title} query={movieQuery} selected={movieQuery === title} />
+                    </button>
+                  ))}
+                </>
+              ) : (
+                <p className="bm-rise px-3 py-2 text-center text-xs text-[var(--color-text-secondary)]">
+                  Không có phim trùng với "{movieQuery.trim()}". Bấm Tìm suất chiếu để thử tìm theo từ khóa này.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 3. Rạp chiếu (bên phải, chỉ hiện khi đã có thành phố và tên phim) */}
+        {showCinema && (
+        <div className={`bm-rise relative ${openMenu === 'cinema' ? 'z-50' : 'z-10'}`}>
           <label className={FIELD_LABEL}>Rạp chiếu</label>
           <button
             type="button"
             aria-haspopup="listbox"
+            key={`cinema-btn-${shakeId}`}
             aria-expanded={openMenu === 'cinema'}
             onClick={() => toggleMenu('cinema')}
-            className={FIELD_BUTTON}
+            className={fieldButtonClass('cinema')}
           >
-            <span className="truncate">{selectedCinema || 'Chọn rạp chiếu'}</span>
+            <span className="truncate">{effectiveCinema}</span>
             <ChevronDownIcon
-              className={`h-4 w-4 shrink-0 text-[var(--color-text-secondary)] transition-transform ${
+              className={`h-4 w-4 shrink-0 text-[var(--color-text-secondary)] transition-transform duration-200 ${
                 openMenu === 'cinema' ? 'rotate-180' : ''
               }`}
             />
@@ -282,7 +457,22 @@ export default function HeroSection({
           {openMenu === 'cinema' && (
             <div role="listbox" className={`${MENU_PANEL} max-h-60`}>
               {cinemas.length > 0 ? (
-                cinemas.map((c) => (
+                <>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={effectiveCinema === 'Tất cả rạp'}
+                    onClick={() => {
+                      setSelectedCinema('Tất cả rạp');
+                      setOpenMenu(null);
+                    }}
+                    className={`${MENU_ITEM_BASE} ${
+                      effectiveCinema === 'Tất cả rạp' ? MENU_ITEM_ACTIVE : MENU_ITEM_IDLE
+                    }`}
+                  >
+                    <span className="truncate">Tất cả rạp</span>
+                  </button>
+                {cinemas.map((c, index) => (
                   <button
                     key={c.cinemaId || c.name}
                     type="button"
@@ -292,219 +482,62 @@ export default function HeroSection({
                       setSelectedCinema(c.name);
                       setOpenMenu(null);
                     }}
+                    style={itemDelay(index)}
                     className={`${MENU_ITEM_BASE} ${
                       selectedCinema === c.name ? MENU_ITEM_ACTIVE : MENU_ITEM_IDLE
                     }`}
                   >
                     <span className="truncate">{c.name}</span>
                   </button>
-                ))
+                ))}
+                </>
               ) : (
                 <p className="px-3 py-2 text-center text-xs text-[var(--color-text-secondary)]">
-                  {selectedCity ? `Không có rạp nào ở ${selectedCity}` : 'Hãy chọn thành phố trước'}
+                  {`Không có rạp nào ở ${selectedCity} đang chiếu "${movieQuery.trim()}"`}
                 </p>
               )}
             </div>
           )}
         </div>
+        )}
 
-        {/* 3. Ngày xem */}
-        <div className={`relative ${openMenu === 'date' ? 'z-50' : 'z-10'}`}>
-          <label className={FIELD_LABEL}>Ngày xem</label>
-          <button
-            type="button"
-            aria-haspopup="dialog"
-            aria-expanded={openMenu === 'date'}
-            onClick={() => toggleMenu('date')}
-            className={FIELD_BUTTON}
-          >
-            <span className="truncate">{getFormattedDisplayDate()}</span>
-            <IconCalendar className="h-4 w-4 shrink-0 text-[var(--color-text-secondary)]" />
-          </button>
-
-          {openMenu === 'date' && (
-            <div
-              className={`${MENU_PANEL} !w-72 !rounded-[var(--radius-lg)] p-3`}
-            >
-              <div className="mb-2 flex items-center justify-between border-b border-[var(--color-border-separator)] pb-2">
-                <span className="text-xs font-semibold text-[var(--color-text-primary)]">
-                  Tháng {currentMonth + 1}, {currentYear}
-                </span>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    aria-label="Tháng trước"
-                    onClick={handlePrevMonth}
-                    className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-xs)] text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-fill-tertiary)]"
-                  >
-                    <ChevronDownIcon className="h-4 w-4 rotate-90" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Tháng sau"
-                    onClick={handleNextMonth}
-                    className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-xs)] text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-fill-tertiary)]"
-                  >
-                    <ChevronDownIcon className="h-4 w-4 -rotate-90" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="mb-1 grid grid-cols-7 gap-1 text-center">
-                {WEEKDAYS.map((dayName) => (
-                  <span
-                    key={dayName}
-                    className="text-[11px] font-semibold text-[var(--color-text-secondary)]"
-                  >
-                    {dayName}
-                  </span>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 text-center">
-                {calendarCells.map((cell, idx) => {
-                  const cellDate = new Date(cell.year, cell.month, cell.day);
-                  const isPast = cellDate < todayReset;
-                  const isToday =
-                    cell.year === today.getFullYear() &&
-                    cell.month === today.getMonth() &&
-                    cell.day === today.getDate();
-                  const cellFormatted = `${cell.year}-${String(cell.month + 1).padStart(2, '0')}-${String(cell.day).padStart(2, '0')}`;
-                  const isSelected = showDate === cellFormatted;
-
-                  let stateClass;
-                  if (isPast) {
-                    stateClass = 'cursor-not-allowed text-[var(--color-text-quaternary)]';
-                  } else if (isSelected) {
-                    stateClass =
-                      'bg-[var(--color-brand-primary)] font-bold text-[var(--color-brand-on-primary)]';
-                  } else if (isToday) {
-                    stateClass =
-                      'border border-[var(--color-brand-primary)] font-bold text-[var(--color-brand-primary)]';
-                  } else if (cell.isCurrentMonth) {
-                    stateClass =
-                      'text-[var(--color-text-primary)] hover:bg-[var(--color-fill-tertiary)]';
-                  } else {
-                    stateClass =
-                      'text-[var(--color-text-tertiary)] hover:bg-[var(--color-fill-tertiary)]';
-                  }
-
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      disabled={isPast}
-                      onClick={() => handleSelectDay(cell.year, cell.month, cell.day)}
-                      className={`mx-auto flex h-8 w-8 items-center justify-center rounded-[var(--radius-xs)] text-xs font-medium transition-colors ${stateClass}`}
-                    >
-                      {cell.day}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="mt-2 flex items-center justify-between border-t border-[var(--color-border-separator)] pt-2 text-xs font-semibold">
-                <button
-                  type="button"
-                  onClick={handleSelectToday}
-                  className="text-[var(--color-brand-primary)] hover:text-[var(--color-brand-primary-hover)]"
-                >
-                  Hôm nay
-                </button>
-                {showDate && (
-                  <button
-                    type="button"
-                    onClick={() => setShowDate('')}
-                    className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-                  >
-                    Xóa
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 4. Phim */}
-        <div className={`relative ${openMenu === 'movie' ? 'z-50' : 'z-10'}`}>
-          <label className={FIELD_LABEL}>Phim (tuỳ chọn)</label>
-          <button
-            type="button"
-            aria-haspopup="listbox"
-            aria-expanded={openMenu === 'movie'}
-            onClick={() => toggleMenu('movie')}
-            className={FIELD_BUTTON}
-          >
-            <span className="truncate">{movieFilter || 'Tất cả phim'}</span>
-            <ChevronDownIcon
-              className={`h-4 w-4 shrink-0 text-[var(--color-text-secondary)] transition-transform ${
-                openMenu === 'movie' ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-
-          {openMenu === 'movie' && (
-            <div role="listbox" className={`${MENU_PANEL} max-h-60`}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={!movieFilter}
-                onClick={() => {
-                  setMovieFilter('');
-                  setOpenMenu(null);
-                }}
-                className={`${MENU_ITEM_BASE} ${!movieFilter ? MENU_ITEM_ACTIVE : MENU_ITEM_IDLE}`}
-              >
-                Tất cả phim
-              </button>
-              {displayMovieTitles.map((title) => (
-                <button
-                  key={title}
-                  type="button"
-                  role="option"
-                  aria-selected={movieFilter === title}
-                  onClick={() => {
-                    setMovieFilter(title);
-                    setOpenMenu(null);
-                  }}
-                  className={`${MENU_ITEM_BASE} ${
-                    movieFilter === title ? MENU_ITEM_ACTIVE : MENU_ITEM_IDLE
-                  }`}
-                >
-                  <span className="truncate">{title}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 5. Tìm suất chiếu */}
+        {/* 4. Tìm suất chiếu */}
         <button
           type="submit"
-          className="flex h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-brand-primary)] px-5 text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 sm:col-span-2 sm:self-end lg:col-span-1"
+          disabled={searching}
+          aria-busy={searching}
+          className={`flex h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-brand-primary)] px-5 text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-primary-hover)] active:scale-95 disabled:cursor-wait disabled:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 sm:self-end ${showCinema ? '' : 'sm:col-span-2'} lg:col-span-1`}
         >
-          <SearchIcon />
-          <span>Tìm suất chiếu</span>
+          {searching ? <span className="bm-spinner" aria-hidden="true" /> : <SearchIcon />}
+          <span>{searching ? 'Đang tìm...' : 'Tìm suất chiếu'}</span>
         </button>
       </form>
+
+      {activeMissing.length > 0 && (
+        <div
+          key={`alert-${shakeId}`}
+          role="alert"
+          className="bm-rise mt-3 flex items-start gap-2.5 rounded-[var(--radius-md)] border border-[var(--color-system-error)]/40 bg-[var(--color-system-error)]/10 px-4 py-3 text-[13px] font-medium text-[var(--color-system-error)]"
+        >
+          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[var(--color-system-error)]" />
+          <p>
+            Vui lòng chọn{' '}
+            {REQUIRED_FIELDS.filter((f) => activeMissing.includes(f.key))
+              .map((f) => f.label)
+              .join(', ')}{' '}
+            trước khi tìm suất chiếu.
+          </p>
+        </div>
+      )}
     </section>
   );
 }
 
 function SearchIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="shrink-0" aria-hidden="true">
       <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.5" />
       <path d="M11 11L14.5 14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconCalendar({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-      <rect x="3" y="4" width="14" height="13" rx="2" />
-      <path d="M3 8h14M7 2v4M13 2v4" strokeLinecap="round" />
     </svg>
   );
 }

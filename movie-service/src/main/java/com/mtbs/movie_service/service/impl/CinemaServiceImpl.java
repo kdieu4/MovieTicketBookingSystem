@@ -7,6 +7,7 @@ package com.mtbs.movie_service.service.impl;
 import com.mtbs.movie_service.domain.dto.request.CinemaRequest;
 import com.mtbs.movie_service.domain.dto.response.CinemaResponse;
 import com.mtbs.movie_service.domain.entity.Cinema;
+import com.mtbs.movie_service.domain.entity.enums.ShowtimeStatus;
 import com.mtbs.movie_service.exception.CinemaNotFoundException;
 import com.mtbs.movie_service.repository.CinemaRepository;
 import com.mtbs.movie_service.service.CinemaService;
@@ -15,6 +16,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 /**
  *
@@ -23,6 +27,9 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class CinemaServiceImpl implements CinemaService {
+
+    private static final ZoneId CINEMA_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+    private static final int SEARCH_WINDOW_DAYS = 30;
 
     private final CinemaRepository cinemaRepository;
 
@@ -46,8 +53,20 @@ public class CinemaServiceImpl implements CinemaService {
     }
 
     @Override
-    public List<CinemaResponse> getCinemasByCity(String city) {
-        return cinemaRepository.findByCityIgnoreCase(city)
+    @Transactional(readOnly = true)
+    public List<CinemaResponse> getCinemasByCity(String city, String movieTitle) {
+        if (movieTitle == null || movieTitle.isBlank()) {
+            return cinemaRepository.findByCityIgnoreCase(city)
+                    .stream()
+                    .map(this::toResponse)
+                    .toList();
+        }
+        LocalDate today = LocalDate.now(CINEMA_ZONE);
+        OffsetDateTime from = today.atStartOfDay(CINEMA_ZONE).toOffsetDateTime();
+        OffsetDateTime to = today.plusDays(SEARCH_WINDOW_DAYS).atStartOfDay(CINEMA_ZONE).toOffsetDateTime();
+
+        return cinemaRepository.findCinemasShowingMovie(
+                        city.trim(), movieTitle.trim(), from, to, ShowtimeStatus.CANCELLED)
                 .stream()
                 .map(this::toResponse)
                 .toList();

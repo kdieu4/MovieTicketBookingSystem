@@ -44,6 +44,12 @@ public class ShowtimeSeat {
     @Column(nullable = false)
     private SeatStatus status;
 
+    @Column(name = "hold_until")
+    private OffsetDateTime holdUntil;
+
+    @Column(name = "hold_by")
+    private String holdBy;
+
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;

@@ -30,7 +30,6 @@ public class MovieSpecifications {
             if (genreIds == null || genreIds.isEmpty()) {
                 return null;
             }
-            // Chỉ apply distinct khi query trả về Entity (tránh lỗi khi Spring JPA chạy count query cho Pageable)
             if (Long.class != query.getResultType()) {
                 query.distinct(true);
             }

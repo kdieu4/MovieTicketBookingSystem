@@ -20,7 +20,7 @@ public interface CinemaService {
 
     List<String> getAllCities();
 
-    List<CinemaResponse> getCinemasByCity(String city);
+    List<CinemaResponse> getCinemasByCity(String city, String movieTitle);
 
     CinemaResponse createCinema(CinemaRequest request);
 

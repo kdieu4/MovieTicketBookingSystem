@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Header from '@/components/layout/Header';
 import FeaturedSection from '@/components/home/FeaturedSection';
 import HeroSection from '@/components/home/HeroSection';
 import NowShowingSection from '@/components/home/NowShowingSection';
 import ComingSoonSection from '@/components/home/ComingSoonSection';
+import BookingFlow from '@/components/booking/BookingFlow';
 import Footer from '@/components/layout/Footer';
 import { fetchNowShowingMovies, fetchComingSoonMovies, fetchGenres } from '@/services/movieApi';
+import '@/styles/booking-motion.css';
 
 export default function HomePage() {
   const [nowShowing, setNowShowing] = useState([]);
@@ -17,6 +19,11 @@ export default function HomePage() {
   const [loadingNowShowing, setLoadingNowShowing] = useState(true);
   const [loadingComingSoon, setLoadingComingSoon] = useState(true);
   const [error, setError] = useState(null);
+
+  // Luồng đặt vé dùng chung cho FeaturedSection, HeroSection và nút "Chọn suất" trên thẻ phim
+  const [filters, setFilters] = useState(null);
+  const [searchId, setSearchId] = useState(0);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,7 +59,30 @@ export default function HomePage() {
     };
   }, []);
 
-  function handleSelectShowtime(movie) {}
+  // Mở luồng đặt vé cho một phim. Tăng searchId để bấm lại cùng phim vẫn tải lại dữ liệu.
+  const openBooking = useCallback((title) => {
+    if (!title) return;
+    setSearching(true);
+    setFilters({ movieTitle: title });
+    setSearchId((n) => n + 1);
+  }, []);
+
+  const handleSearchSettled = useCallback(() => setSearching(false), []);
+
+  // Nút "Chọn suất" trên thẻ phim
+  const handleSelectShowtime = useCallback((movie) => {
+    openBooking(movie?.title || movie?.name);
+  }, [openBooking]);
+
+  // Nhận bộ lọc từ HeroSection (chỉ cần tên phim, thành phố được chọn trong luồng)
+  const handleSearchShowtimes = useCallback((nextFilters) => {
+    openBooking(nextFilters?.movieTitle);
+  }, [openBooking]);
+
+  // Khi người dùng bấm Tiếp tục ở bước ghế, phần thanh toán sẽ nối vào đây
+  const handleContinue = useCallback((payload) => {
+    console.log('Chuyển sang thanh toán:', payload);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-primary)] selection:text-[var(--color-brand-on-primary)] transition-colors duration-200 overflow-visible">
@@ -72,14 +102,16 @@ export default function HomePage() {
         <FeaturedSection
           movies={nowShowing}
           loading={loadingNowShowing}
-          onSelectShowtime={handleSelectShowtime}
+          onContinue={handleContinue}
         />
 
         {/* 2. THANH TÌM SUẤT CHIẾU NHANH (HERO SECTION) */}
         <HeroSection
           movies={nowShowing}
           movieTitles={nowShowing.map((m) => m.title)}
+          onSearch={handleSearchShowtimes}
           onSelectShowtime={handleSelectShowtime}
+          searching={searching}
         />
 
         {/* 3. KHỐI PHIM ĐANG CHIẾU & BỘ LỌC */}
@@ -93,6 +125,14 @@ export default function HomePage() {
         {/* 4. KHỐI PHIM SẮP CHIẾU */}
         <ComingSoonSection movies={comingSoon} loading={loadingComingSoon} />
       </main>
+
+      {/* BookingFlow là cửa sổ toàn màn hình (portal), đặt ở đây cho gọn */}
+      <BookingFlow
+        filters={filters}
+        searchId={searchId}
+        onSearchSettled={handleSearchSettled}
+        onContinue={handleContinue}
+      />
 
       <Footer />
     </div>

@@ -5,8 +5,10 @@ import Header from '@/components/layout/Header';
 import HeroSection from '@/components/home/HeroSection';
 import NowShowingSection from '@/components/home/NowShowingSection';
 import ComingSoonSection from '@/components/home/ComingSoonSection';
+import ShowtimeFlow from '@/components/booking/ShowtimeFlow';
 import Footer from '@/components/layout/Footer';
 import { fetchNowShowingMovies, fetchComingSoonMovies, fetchGenres } from '@/services/movieApi';
+import '@/styles/booking-motion.css';
 
 export default function HomePage() {
   const [nowShowing, setNowShowing] = useState([]);
@@ -16,6 +18,11 @@ export default function HomePage() {
   const [loadingNowShowing, setLoadingNowShowing] = useState(true);
   const [loadingComingSoon, setLoadingComingSoon] = useState(true);
   const [error, setError] = useState(null);
+
+  // Luồng tìm suất chiếu từ thanh HeroSection
+  const [filters, setFilters] = useState(null);
+  const [searchId, setSearchId] = useState(0);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,7 +60,17 @@ export default function HomePage() {
     };
   }, []);
 
+  // Handler cũ cho NowShowingSection và nút chọn phim thông thường
   function handleSelectShowtime(movie) {
+    // Logic của bạn
+  }
+
+  // Handler cho thanh tìm kiếm của HeroSection
+  function handleSearchShowtimes(nextFilters) {
+    console.log('HomePage nhận filters:', nextFilters);
+    setFilters(nextFilters);
+    setSearchId((n) => n + 1);
+    setSearching(true);
   }
 
   const featuredMovie = nowShowing[0]
@@ -91,7 +108,16 @@ export default function HomePage() {
           movies={nowShowing}
           featuredMovie={featuredMovie}
           movieTitles={nowShowing.map((m) => m.title)}
+          onSearch={handleSearchShowtimes}
           onSelectShowtime={handleSelectShowtime}
+          searching={searching}
+        />
+
+        {/* 2b. Suất chiếu và sơ đồ ghế mở ra ngay dưới thanh tìm kiếm */}
+        <ShowtimeFlow
+          filters={filters}
+          searchId={searchId}
+          onSearchSettled={() => setSearching(false)}
         />
 
         {/* 3. Phần Phim sắp chiếu */}

@@ -6,7 +6,11 @@ package com.mtbs.movie_service.repository;
 
 import com.mtbs.movie_service.domain.entity.Showtime;
 
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -18,7 +22,11 @@ import java.util.List;
  * @author quanghieu
  */
 @Repository
-public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
+public interface ShowtimeRepository extends JpaRepository<Showtime, Long>, JpaSpecificationExecutor<Showtime> {
+
+    @Override
+    @EntityGraph(attributePaths = {"room", "room.cinema", "movie"})
+    List<Showtime> findAll(Specification<Showtime> spec, Sort sort);
 
     List<Showtime> findByMovie_MovieId(Long movieId);
 

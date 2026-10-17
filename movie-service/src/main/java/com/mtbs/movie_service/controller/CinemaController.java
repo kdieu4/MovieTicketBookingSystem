@@ -43,8 +43,10 @@ public class CinemaController {
     }
 
     @GetMapping("/getCinemasByCity")
-    public ResponseEntity<List<CinemaResponse>> getCinemasByCity(@RequestParam String city) {
-        return ResponseEntity.ok(cinemaService.getCinemasByCity(city));
+    public ResponseEntity<List<CinemaResponse>> getCinemasByCity(
+            @RequestParam String city,
+            @RequestParam(required = false) String movieTitle) {
+        return ResponseEntity.ok(cinemaService.getCinemasByCity(city, movieTitle));
     }
 
     @PostMapping("/createCinema")

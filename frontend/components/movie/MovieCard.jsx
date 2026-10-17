@@ -5,6 +5,13 @@ import Link from 'next/link';
 export default function MovieCard({ movie, onSelectShowtime }) {
   const genreLine = movie.genres?.slice(0, 2).join(' · ');
 
+  // Nút "Chọn suất" nằm trong vùng bao quanh bởi Link, nên phải chặn sự kiện để không chuyển trang
+  function handleSelect(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    onSelectShowtime?.(movie);
+  }
+
   return (
     <article className="group flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] shadow-[var(--shadow-low)] transition-all duration-200 hover:-translate-y-1 hover:border-[var(--color-border-opaque-separator)] hover:shadow-[var(--shadow-medium)]">
       <Link href={`/phim/${movie.id}`} className="flex flex-1 flex-col">
@@ -37,8 +44,8 @@ export default function MovieCard({ movie, onSelectShowtime }) {
         )}
         <button
           type="button"
-          onClick={() => onSelectShowtime?.(movie)}
-          className="h-7 items-center justify-center rounded-full bg-[var(--color-brand-primary)] px-3 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-all hover:bg-[var(--color-brand-primary-hover)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
+          onClick={handleSelect}
+          className="inline-flex h-7 items-center justify-center rounded-full bg-[var(--color-brand-primary)] px-3 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-all hover:bg-[var(--color-brand-primary-hover)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
         >
           Chọn suất
         </button>
