@@ -11,6 +11,8 @@ const FONT_STACK =
 const META_CHIP =
   'inline-flex items-center rounded-md border border-[var(--color-border-separator)] bg-[var(--color-fill-tertiary)] px-3 py-1 text-xs font-semibold text-[var(--color-text-secondary)]';
 
+const stagger = (ms) => ({ animationDelay: `${ms}ms`, animationFillMode: 'both' });
+
 export default function FeaturedSection({
   movies = [],
   loading,
@@ -74,19 +76,19 @@ export default function FeaturedSection({
           <div className="order-2 flex flex-col items-start lg:order-1 lg:col-span-7">
             <div
               key={fadeKey}
-              className="w-full transition-opacity duration-500 ease-in-out animate-fade-in"
+              className="w-full"
             >
-              <h1 className="text-[clamp(2.5rem,6vw,4.5rem)] font-extrabold leading-[1.05] tracking-tight text-[var(--color-text-primary)]">
+              <h1 style={stagger(0)} className="animate-fade-in text-[clamp(2.5rem,6vw,4.5rem)] font-extrabold leading-[1.05] tracking-tight text-[var(--color-text-primary)]">
                 {activeTitle}
               </h1>
 
               {activeDescription && (
-                <p className="mt-5 line-clamp-4 max-w-[38rem] text-lg leading-relaxed text-[var(--color-text-secondary)] sm:text-[18px]">
+                <p style={stagger(80)} className="animate-fade-in mt-5 line-clamp-4 max-w-[38rem] text-lg leading-relaxed text-[var(--color-text-secondary)] sm:text-[18px]">
                   {activeDescription}
                 </p>
               )}
 
-              <div className="mt-6 flex flex-wrap items-center gap-3">
+              <div style={stagger(160)} className="animate-fade-in mt-6 flex flex-wrap items-center gap-3">
                 {activeMovie.genres && activeMovie.genres.length > 0 && (
                   <span className={META_CHIP}>{activeMovie.genres.join(', ')}</span>
                 )}
@@ -98,7 +100,7 @@ export default function FeaturedSection({
                 )}
               </div>
 
-              <div className="mt-8 flex flex-wrap items-center gap-4">
+              <div style={stagger(240)} className="animate-fade-in mt-8 flex flex-wrap items-center gap-4">
                 <button
                   type="button"
                   onClick={handleBook}
@@ -155,7 +157,7 @@ export default function FeaturedSection({
                       className={`relative h-14 w-10 flex-shrink-0 overflow-hidden rounded-[var(--radius-xs)] transition-all ${
                         isSelected
                           ? 'ring-2 ring-[var(--color-brand-primary)] ring-offset-2 ring-offset-[var(--color-bg-primary)]'
-                          : 'opacity-60 hover:opacity-100'
+                          : 'opacity-60 hover:-translate-y-0.5 hover:opacity-100'
                       }`}
                     >
                       <img

@@ -38,7 +38,8 @@ export default function ComingSoonSection({ movies = [], loading }) {
         {movies.map((movie, index) => (
           <li
             key={movie.id ?? `coming-soon-${index}`}
-            className="group flex items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-3.5 shadow-[var(--shadow-low)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--color-border-opaque-separator)] hover:shadow-[var(--shadow-medium)]"
+            style={{ animationDelay: `${Math.min(index * 60, 420)}ms`, animationFillMode: 'both' }}
+            className="animate-fade-in group flex items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-3.5 shadow-[var(--shadow-low)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--color-border-opaque-separator)] hover:shadow-[var(--shadow-medium)]"
           >
             <div className="h-16 w-12 shrink-0 overflow-hidden rounded-[var(--radius-sm)] bg-[var(--color-fill-tertiary)]">
               {movie.posterUrl && (

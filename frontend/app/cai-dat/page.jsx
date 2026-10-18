@@ -8,9 +8,9 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] transition-colors duration-200">
+    <div className="flex min-h-screen flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] transition-colors duration-200">
       <Header />
-      <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+      <main className="animate-fade-in w-full flex-1 mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold tracking-tight">Cài đặt hệ thống</h1>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Quản lý giao diện và tùy chọn thông báo.</p>
 

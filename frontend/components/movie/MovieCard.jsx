@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 
-export default function MovieCard({ movie, onSelectShowtime }) {
+export default function MovieCard({ movie, onSelectShowtime, index = 0 }) {
   const genreLine = movie.genres?.slice(0, 2).join(' · ');
 
   // Nút "Chọn suất" nằm trong vùng bao quanh bởi Link, nên phải chặn sự kiện để không chuyển trang
@@ -13,7 +13,9 @@ export default function MovieCard({ movie, onSelectShowtime }) {
   }
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] shadow-[var(--shadow-low)] transition-all duration-200 hover:-translate-y-1 hover:border-[var(--color-border-opaque-separator)] hover:shadow-[var(--shadow-medium)]">
+    <article
+      style={{ animationDelay: `${(index % 10) * 40}ms`, animationFillMode: 'both' }}
+      className="animate-fade-in group flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] shadow-[var(--shadow-low)] transition-all duration-200 hover:-translate-y-1 hover:border-[var(--color-border-opaque-separator)] hover:shadow-[var(--shadow-medium)]">
       <Link href={`/phim/${movie.id}`} className="flex flex-1 flex-col">
         <div className="relative aspect-[3/4] w-full overflow-hidden bg-[var(--color-fill-tertiary)]">
           {movie.posterUrl && (

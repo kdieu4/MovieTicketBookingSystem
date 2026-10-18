@@ -20,7 +20,7 @@ export default function Footer() {
 
         <nav className="flex flex-wrap gap-x-6 gap-y-2">
           {FOOTER_LINKS.map((link) => (
-            <Link key={link.href} href={link.href} className="transition-colors hover:text-[var(--color-text-primary)]">
+            <Link key={link.href} href={link.href} className="relative transition-colors hover:text-[var(--color-text-primary)] after:absolute after:-bottom-0.5 after:left-0 after:h-px after:w-0 after:bg-current after:content-[''] after:transition-all after:duration-300 hover:after:w-full">
               {link.label}
             </Link>
           ))}

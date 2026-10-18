@@ -253,8 +253,23 @@ function uniqueByName(items) {
  * searchId: tăng dần mỗi lần bấm Đặt vé để bấm lại cùng một phim vẫn mở lại bảng và tải lại dữ liệu
  * onSearchSettled: gọi khi danh sách thành phố đã tải xong (thành công hay lỗi) để nút bên ngoài hết trạng thái chờ
  * onContinue: gọi khi bấm Tiếp tục, nhận { showtime, seats, total, holdUntil, city, cinema }. Phần thanh toán sẽ nối vào đây sau.
+ * variant: 'modal' (mặc định, cửa sổ toàn màn hình) | 'inline' (hiện thẳng trong trang, không có nền mờ và nút đóng).
+ * Với 'inline', filters phải được giữ ổn định giữa các lần render (dùng useMemo), nếu không luồng sẽ bị đặt lại liên tục.
  */
-export default function BookingFlow({ filters, searchId, onSearchSettled, onContinue }) {
+
+// Cache thành phố theo tên phim, sống suốt phiên trang. Chỉ lưu kết quả thành công.
+const citiesCache = new Map();
+
+// Gọi khi người dùng đưa chuột vào nút đặt vé, để khi bấm thì danh sách thành phố đã sẵn
+export function prefetchCities(movieTitle) {
+  if (!movieTitle || citiesCache.has(movieTitle)) return;
+  fetchList('getCities', { movieTitle })
+    .then((list) => citiesCache.set(movieTitle, uniqueByName(list.map(toCity))))
+    .catch(() => {});
+}
+
+export default function BookingFlow({ filters, searchId, onSearchSettled, onContinue, variant = 'modal' }) {
+  const inline = variant === 'inline';
   const [open, setOpen] = useState(false);
 
   // Lựa chọn của người dùng theo từng bước
@@ -292,6 +307,10 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   const scrollRef = useRef(null);
   const innerRef = useRef(null);
   const dayStripCleanupRef = useRef(null);
+  const panelRef = useRef(null); // khung ngoài, dùng để cuộn trang khi đổi bước ở chế độ nội tuyến
+  const firstStepRef = useRef(true);
+  // Đã chuyển sang bước thanh toán: giữ nguyên ghế khi component bị gỡ thay vì trả lại
+  const handedOffRef = useRef(false);
 
   const movieQuery = filters?.movieTitle ?? '';
 
@@ -377,6 +396,14 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     }
   }, []);
 
+  // Rời trang (component bị gỡ) thì trả ghế đang giữ, để ghế không bị khóa đến khi hết hạn
+  useEffect(
+    () => () => {
+      if (!handedOffRef.current) releaseHeldSeats();
+    },
+    [releaseHeldSeats]
+  );
+
   const refreshSeats = useCallback(async (showtimeId, signal) => {
     const params = new URLSearchParams({
       showtimeId: String(showtimeId),
@@ -400,6 +427,7 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     lastSeatsRef.current = [];
     lastHoldRef.current = null;
     dirRef.current = 'forward';
+    handedOffRef.current = false;
     setOpen(true);
     setCity(null);
     setCinema(null);
@@ -487,15 +515,38 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
 
   // Ở bước chọn ghế: làm mới sơ đồ mỗi 15 giây để thấy ghế người khác vừa đặt.
   // Bỏ qua khi tab đang ẩn hoặc đang có yêu cầu giữ/trả ghế chạy dở.
+    // Bước 1: tải danh sách thành phố, ưu tiên lấy từ cache
   useEffect(() => {
-    if (!open || !selectedShowtime) return;
-    const showtimeId = selectedShowtime.id;
-    const id = setInterval(() => {
-      if (document.hidden || pendingRef.current > 0) return;
-      refreshSeats(showtimeId).catch(() => {});
-    }, 15000);
-    return () => clearInterval(id);
-  }, [open, selectedShowtime, refreshSeats]);
+    if (!filters) return;
+    const key = filters.movieTitle;
+    const cached = citiesCache.get(key);
+    if (cached) {
+      setCities({ status: cached.length > 0 ? 'ready' : 'empty', items: cached });
+      if (onSearchSettled) onSearchSettled();
+      return;
+    }
+
+    const controller = new AbortController();
+    setCities({ status: 'loading', items: [] });
+
+    fetchList('getCities', { movieTitle: key }, controller.signal)
+      .then((list) => {
+        const items = uniqueByName(list.map(toCity));
+        citiesCache.set(key, items);
+        setCities({ status: items.length > 0 ? 'ready' : 'empty', items });
+      })
+      .catch((err) => {
+        if (err.name === 'AbortError') return;
+        console.error('Lỗi khi tải thành phố:', err);
+        setCities({ status: 'error', items: [] });
+      })
+      .finally(() => {
+        if (!controller.signal.aborted && onSearchSettled) onSearchSettled();
+      });
+
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, searchId, reload.cities]);
 
   // Tải sơ đồ ghế khi chọn suất chiếu
   useEffect(() => {
@@ -520,10 +571,22 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
 
   const step = !city ? 1 : !cinema ? 2 : !selectedShowtime ? 3 : 4;
 
-  // Đổi bước thì cuộn về đầu vùng nội dung
+  // Đổi bước thì cuộn về đầu vùng nội dung.
+  // Chế độ nội tuyến: khung không tự cuộn, nên chỉ cuộn trang khi đầu luồng đã trôi lên khỏi màn hình.
   useEffect(() => {
+    if (inline) {
+      if (firstStepRef.current) {
+        firstStepRef.current = false;
+        return;
+      }
+      const panel = panelRef.current;
+      if (panel && panel.getBoundingClientRect().top < 0) {
+        panel.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+      }
+      return;
+    }
     scrollRef.current?.scrollTo({ top: 0 });
-  }, [step, selectedShowtime]);
+  }, [step, selectedShowtime, inline]);
 
   // Đo chiều cao nội dung để khung tự giãn, co lại mượt (không vượt quá 92% chiều cao màn hình)
   const hasFilters = Boolean(filters);
@@ -534,7 +597,8 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     if (!inner || !header) return;
 
     const measure = () => {
-      const max = Math.floor(window.innerHeight * 0.92) - header.offsetHeight - 2;
+      // Nội tuyến: khung cao đúng bằng nội dung, trang tự cuộn. Modal: không vượt quá 92% chiều cao màn hình.
+      const max = inline ? Infinity : Math.floor(window.innerHeight * 0.92) - header.offsetHeight - 2;
       setBodyHeight(Math.max(0, Math.min(inner.offsetHeight, max)));
     };
     measure();
@@ -546,11 +610,11 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
       observer.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [hasFilters]);
+  }, [hasFilters, inline]);
 
   // Khi bảng mở: khóa cuộn nền, Escape để đóng, đưa focus vào nút đóng
   useEffect(() => {
-    if (!open) return;
+    if (!open || inline) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     function onKeyDown(event) {
@@ -692,6 +756,7 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   function handleContinue() {
     if (!selectedShowtime || selectedSeats.length === 0) return;
     if (typeof onContinue === 'function') {
+      handedOffRef.current = true;
       onContinue({ showtime: selectedShowtime, seats: selectedSeats, total, holdUntil, city, cinema });
     }
   }
@@ -754,25 +819,34 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
 
   const modal = (
     <div
-      className="bm-modal fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
-      style={{
-        opacity: open ? 1 : 0,
-        visibility: open ? 'visible' : 'hidden',
-        pointerEvents: open ? 'auto' : 'none',
-      }}
+      className={inline ? 'relative' : 'bm-modal fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6'}
+      style={
+        inline
+          ? undefined
+          : {
+              opacity: open ? 1 : 0,
+              visibility: open ? 'visible' : 'hidden',
+              pointerEvents: open ? 'auto' : 'none',
+            }
+      }
       data-open={open ? 'true' : 'false'}
-      aria-hidden={!open}
+      aria-hidden={inline ? undefined : !open}
     >
       <style>{SEAT_ANIMATIONS}{FLOW_STYLES}</style>
 
-      {/* Nền mờ: bấm vào để đóng */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeModal} />
+      {/* Nền mờ: bấm vào để đóng (chỉ có ở chế độ modal) */}
+      {!inline && <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeModal} />}
 
       <div
-        role="dialog"
-        aria-modal="true"
+        ref={panelRef}
+        role={inline ? undefined : 'dialog'}
+        aria-modal={inline ? undefined : 'true'}
         aria-label="Đặt vé xem phim"
-        className="bm-modal-panel relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-opaque-separator)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-[var(--shadow-high)]"
+        className={
+          inline
+            ? 'relative flex w-full scroll-mt-24 flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-[var(--shadow-low)]'
+            : 'bm-modal-panel relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-opaque-separator)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-[var(--shadow-high)]'
+        }
       >
         {/* Thanh các bước và nút đóng */}
         <div
@@ -806,6 +880,7 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
               );
             })}
           </ol>
+          {!inline && (
           <button
             ref={closeButtonRef}
             type="button"
@@ -817,12 +892,13 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
               <path d="M5 5l10 10M15 5L5 15" />
             </svg>
           </button>
+          )}
         </div>
 
         {/* Khung nội dung: chiều cao chạy mượt theo nội dung bên trong */}
         <div
           ref={scrollRef}
-          className="sf-body min-h-0 overflow-y-auto overflow-x-hidden"
+          className={`sf-body min-h-0 ${inline ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden'}`}
           style={bodyHeight != null ? { height: bodyHeight } : undefined}
           aria-live="polite"
         >
@@ -1211,8 +1287,9 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     </div>
   );
 
-  // Render qua portal để lớp nền mờ luôn phủ kín toàn màn hình, không bị ảnh hưởng bởi thẻ cha
-  return createPortal(modal, document.body);
+  // Nội tuyến: render ngay tại vị trí đặt component.
+  // Modal: render qua portal để lớp nền mờ luôn phủ kín toàn màn hình, không bị ảnh hưởng bởi thẻ cha.
+  return inline ? modal : createPortal(modal, document.body);
 }
 
 // Tiêu đề của mỗi bước, kèm nút quay lại bước trước (nếu có)
