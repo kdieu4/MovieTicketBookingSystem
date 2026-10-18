@@ -439,12 +439,12 @@ export default function Header() {
             )}
           </div>
 
-          <button
-            type="button"
+          <Link
+            href="/dang-nhap"
             className="hidden h-9 items-center justify-center rounded-full bg-[var(--color-brand-primary)] px-4 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-primary-hover)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] sm:inline-flex"
           >
             Đăng nhập
-          </button>
+          </Link>
 
           <div className="hidden sm:block">
             <AccountMenu />
@@ -463,7 +463,7 @@ export default function Header() {
       </div>
 
       {menuOpen && (
-        <div className="border-t border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] px-4 pb-4 pt-3 md:hidden">
+        <div className="animate-fade-in border-t border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] px-4 pb-4 pt-3 md:hidden">
           <nav className="flex flex-col gap-1">
             {NAV_LINKS.map((link) => (
               <Link

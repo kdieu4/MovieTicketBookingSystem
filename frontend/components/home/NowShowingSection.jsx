@@ -88,16 +88,16 @@ export default function NowShowingSection({ movies = [], genres = [], loading, o
       </div>
 
       {/* DANH SÁCH LƯỚI PHIM */}
-      <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 sm:gap-6">
+      <div key={selectedGenres.join('|')} className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 sm:gap-6">
         {loading
           ? Array.from({ length: 5 }).map((_, i) => <CardSkeleton key={i} />)
-          : visibleMovies.map((movie) => (
-              <MovieCard key={movie.id} movie={movie} onSelectShowtime={onSelectShowtime} />
+          : visibleMovies.map((movie, index) => (
+              <MovieCard key={movie.id} movie={movie} index={index} onSelectShowtime={onSelectShowtime} />
             ))}
       </div>
 
       {!loading && filteredMovies.length === 0 && (
-        <div className="mt-8 text-center py-10 rounded-2xl border border-dashed border-[var(--color-border-separator)]">
+        <div className="animate-fade-in mt-8 text-center py-10 rounded-2xl border border-dashed border-[var(--color-border-separator)]">
           <p className="text-xs text-[var(--color-text-tertiary)]">Không tìm thấy phim nào thuộc các thể loại đã chọn.</p>
           <button
             type="button"

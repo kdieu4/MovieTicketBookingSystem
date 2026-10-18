@@ -39,10 +39,15 @@ export default function AccountMenu() {
         <UserIcon />
       </button>
 
-      {open && (
+      {(
         <div
           role="menu"
-          className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-translucent-card)] p-1.5 shadow-[var(--shadow-high)] backdrop-blur-xl transition-all"
+          aria-hidden={!open}
+          className={`absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-translucent-card)] p-1.5 shadow-[var(--shadow-high)] backdrop-blur-xl origin-top-right transition-all duration-200 ease-out ${
+            open
+              ? 'visible translate-y-0 scale-100 opacity-100'
+              : 'invisible pointer-events-none -translate-y-1 scale-95 opacity-0'
+          }`}
         >
           <Link
             href="/thong-tin-ca-nhan"

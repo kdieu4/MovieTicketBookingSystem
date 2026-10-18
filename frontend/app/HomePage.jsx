@@ -82,10 +82,10 @@ export default function HomePage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-primary)] selection:text-[var(--color-brand-on-primary)] transition-colors duration-200">
+    <div className="flex min-h-screen flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-primary)] selection:text-[var(--color-brand-on-primary)] transition-colors duration-200">
       <Header />
 
-      <main className="pb-8 space-y-6">
+      <main className="animate-fade-in flex-1 pb-8 space-y-6">
         {error && (
           <div className="mx-auto pt-4 max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-system-error)]/40 bg-[var(--color-system-error)]/10 px-4 py-3 text-sm font-medium text-[var(--color-system-error)] backdrop-blur-md">

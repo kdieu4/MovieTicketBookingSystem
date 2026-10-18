@@ -280,7 +280,7 @@ export default function HeroSection({
 
   return (
     // z-30 để dropdown luôn nổi lên trên section phía dưới (nguyên nhân phổ biến gây che khuất)
-    <section className="relative z-30 mx-auto max-w-[1200px] overflow-visible px-6">
+    <section className="animate-fade-in relative z-30 mx-auto max-w-[1200px] overflow-visible px-6">
       <form
         ref={formRef}
         onSubmit={handleFindShowtimes}

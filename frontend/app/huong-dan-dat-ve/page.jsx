@@ -30,9 +30,9 @@ const STEPS = [
 
 export default function BookingGuidePage() {
   return (
-    <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] transition-colors duration-200">
+    <div className="flex min-h-screen flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] transition-colors duration-200">
       <Header />
-      <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <main className="animate-fade-in w-full flex-1 mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="max-w-3xl">
           <span className="inline-block rounded-full bg-[var(--color-fill-secondary)] px-3 py-1 text-xs font-semibold text-[var(--color-brand-primary)]">
             Trợ giúp
