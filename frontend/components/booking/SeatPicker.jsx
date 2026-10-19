@@ -80,64 +80,69 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
 
       <div className="overflow-x-auto pb-4 pt-3">
         <div className="mx-auto flex w-max flex-col items-center gap-3">
-          {seatsByRow.map(([rowLabel, rowSeats], rowIndex) => (
-            <div key={rowLabel} className="flex items-center gap-3">
-              <span
-                className="sp-fade w-5 text-center text-[12px] font-bold text-[var(--color-text-secondary)]"
-                style={{ animationDelay: `${rowIndex * 45}ms` }}
-              >
-                {rowLabel}
-              </span>
-              <div className="flex items-center gap-2">
-                {rowSeats.map((seat, seatIndex) => {
-                  const isSelected = selectedSeats.some((s) => s.id === seat.id);
-                  const isSold = seat.isSold;
-                  const isVip = seat.type === 'VIP';
-                  const isDouble = seat.type === 'DOUBLE' || seat.type === 'SWEETBOX' || seat.type === 'COUPLE';
+          {seatsByRow.map(([rowLabel, rowSeats], rowIndex) => {
+            // FIX LỖI NHÂN ĐÔI GHẾ: Lọc loại bỏ các object ghế bị trùng số (number) trong cùng một hàng
+            const uniqueSeats = Array.from(new Map(rowSeats.map(seat => [seat.number, seat])).values());
 
-                  let seatClass =
-                    'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border-[var(--color-border-separator)] hover:border-[var(--color-brand-primary)] hover:bg-[var(--color-fill-tertiary)]';
+            return (
+              <div key={rowLabel} className="flex items-center gap-3">
+                <span
+                  className="sp-fade w-5 text-center text-[12px] font-bold text-[var(--color-text-secondary)]"
+                  style={{ animationDelay: `${rowIndex * 45}ms` }}
+                >
+                  {rowLabel}
+                </span>
+                <div className="flex items-center gap-2">
+                  {uniqueSeats.map((seat, seatIndex) => {
+                    const isSelected = selectedSeats.some((s) => s.id === seat.id);
+                    const isSold = seat.isSold;
+                    const isVip = seat.type === 'VIP';
+                    const isDouble = seat.type === 'DOUBLE' || seat.type === 'SWEETBOX' || seat.type === 'COUPLE';
 
-                  if (isSold) {
-                    seatClass =
-                      'bg-[var(--color-fill-tertiary)] text-[var(--color-text-quaternary)] border-transparent cursor-not-allowed';
-                  } else if (isSelected) {
-                    seatClass =
-                      'sp-pop bg-[var(--color-brand-primary)] text-[var(--color-brand-on-primary)] border-[var(--color-brand-primary)] font-bold shadow-[var(--shadow-low)]';
-                  } else if (isVip) {
-                    seatClass =
-                      'bg-[var(--color-bg-primary)] border-[var(--color-system-warning)] text-[var(--color-system-warning)] font-semibold hover:bg-[var(--color-fill-tertiary)]';
-                  } else if (isDouble) {
-                    seatClass =
-                      'bg-[var(--color-bg-primary)] border-[var(--color-brand-primary)] text-[var(--color-brand-primary)] font-semibold hover:bg-[var(--color-fill-tertiary)]';
-                  }
+                    let seatClass =
+                      'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border-[var(--color-border-separator)] hover:border-[var(--color-brand-primary)] hover:bg-[var(--color-fill-tertiary)]';
 
-                  const seatLabel = `${seat.row ?? rowLabel}${String(seat.number).padStart(2, '0')}`;
+                    if (isSold) {
+                      seatClass =
+                        'bg-[var(--color-fill-tertiary)] text-[var(--color-text-quaternary)] border-transparent cursor-not-allowed';
+                    } else if (isSelected) {
+                      seatClass =
+                        'sp-pop bg-[var(--color-brand-primary)] text-[var(--color-brand-on-primary)] border-[var(--color-brand-primary)] font-bold shadow-[var(--shadow-low)]';
+                    } else if (isVip) {
+                      seatClass =
+                        'bg-[var(--color-bg-primary)] border-[var(--color-system-warning)] text-[var(--color-system-warning)] font-semibold hover:bg-[var(--color-fill-tertiary)]';
+                    } else if (isDouble) {
+                      seatClass =
+                        'bg-[var(--color-bg-primary)] border-[var(--color-brand-primary)] text-[var(--color-brand-primary)] font-semibold hover:bg-[var(--color-fill-tertiary)]';
+                    }
 
-                  return (
-                    <span
-                      key={seat.id}
-                      className="sp-seat-in inline-flex"
-                      style={{ animationDelay: `${Math.min(rowIndex * 45 + seatIndex * 14, 700)}ms` }}
-                    >
-                      <button
-                        type="button"
-                        disabled={isSold}
-                        aria-pressed={isSelected}
-                        aria-label={isSold ? `Ghế ${seatLabel} đã bán` : `Ghế ${seatLabel}`}
-                        onClick={() => onToggleSeat(seat)}
-                        className={`flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] border text-[11px] transition-all duration-200 ease-out ${
-                          isSold ? '' : 'hover:scale-110 active:scale-90'
-                        } ${seatClass}`}
+                    const seatLabel = `${seat.row ?? rowLabel}${String(seat.number).padStart(2, '0')}`;
+
+                    return (
+                      <span
+                        key={seat.id}
+                        className="sp-seat-in inline-flex"
+                        style={{ animationDelay: `${Math.min(rowIndex * 45 + seatIndex * 14, 700)}ms` }}
                       >
-                        {String(seat.number).padStart(2, '0')}
-                      </button>
-                    </span>
-                  );
-                })}
+                        <button
+                          type="button"
+                          disabled={isSold}
+                          aria-pressed={isSelected}
+                          aria-label={isSold ? `Ghế ${seatLabel} đã bán` : `Ghế ${seatLabel}`}
+                          onClick={() => onToggleSeat(seat)}
+                          className={`flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] border text-[11px] transition-all duration-200 ease-out ${
+                            isSold ? '' : 'hover:scale-110 active:scale-90'
+                          } ${seatClass}`}
+                        >
+                          {String(seat.number).padStart(2, '0')}
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

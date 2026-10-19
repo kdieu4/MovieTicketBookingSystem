@@ -4,6 +4,9 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8083/api';
 
+// Giá trị rạp mặc định, khớp với ALL_CINEMAS trong BookingFlow
+const ALL_CINEMAS = 'Tất cả rạp';
+
 // Lớp dùng chung, toàn bộ màu đi qua CSS variables nên tự đổi theo Light/Dark
 const FIELD_LABEL =
   'mb-1 block text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]';
@@ -30,7 +33,7 @@ const MENU_ITEM_ACTIVE =
 const MENU_ITEM_FOCUS =
   'bg-[var(--color-fill-secondary)] text-[var(--color-text-primary)]';
 
-// Chỉ còn hai trường bắt buộc. Ngày xem được chọn ở bước sau, trong bảng suất chiếu.
+// Ba trường bắt buộc. Ngày xem được chọn ở bước sau, trong bảng suất chiếu của BookingFlow.
 const REQUIRED_FIELDS = [
   { key: 'city', label: 'Khu vực' },
   { key: 'movie', label: 'Tên phim' },
@@ -82,11 +85,15 @@ function HighlightedTitle({ title, query, selected = false }) {
   );
 }
 
+/**
+ * Hero Section: chọn thành phố, tên phim, rạp rồi bấm Tìm suất chiếu.
+ * Khi tìm, chỉ gọi onSearch({ city, cinema, movieTitle }). Component cha (SearchBooking)
+ * truyền dữ liệu này cho BookingFlow, luồng sẽ bắt đầu thẳng từ bước chọn suất chiếu.
+ */
 export default function HeroSection({
   movies = [],
   movieTitles = [],
   onSearch,
-  onSelectShowtime,
   searching = false,
 }) {
   const [cities, setCities] = useState([]);
@@ -124,7 +131,7 @@ export default function HeroSection({
 
   const toggleMenu = (name) => setOpenMenu((current) => (current === name ? null : name));
 
-  const effectiveCinema = selectedCinema || 'Tất cả rạp';
+  const effectiveCinema = selectedCinema || ALL_CINEMAS;
   const fieldValues = { city: selectedCity, movie: movieQuery.trim(), cinema: effectiveCinema };
   // Trường nào đã được điền lại thì tự động hết cảnh báo
   const activeMissing = missing.filter((key) => !fieldValues[key]);
@@ -157,12 +164,13 @@ export default function HeroSection({
     loadCities();
   }, [loadCities]);
 
+  // Có thành phố và tên phim thì tải các rạp đang chiếu phim đó (đợi 300ms sau lần gõ cuối)
   useEffect(() => {
     if (!selectedCity) return;
     const movie = movieQuery.trim();
     if (!movie) {
       setCinemas([]);
-      setSelectedCinema('Tất cả rạp');
+      setSelectedCinema(ALL_CINEMAS);
       return;
     }
     let cancelled = false;
@@ -174,12 +182,12 @@ export default function HeroSection({
         const data = await res.json();
         if (cancelled) return;
         setCinemas(Array.isArray(data) ? data : []);
-        setSelectedCinema('Tất cả rạp');
+        setSelectedCinema(ALL_CINEMAS);
       } catch (err) {
         console.error('Lỗi khi tải rạp theo phim:', err);
         if (!cancelled) {
           setCinemas([]);
-          setSelectedCinema('Tất cả rạp');
+          setSelectedCinema(ALL_CINEMAS);
         }
       }
     }, 300);
@@ -257,19 +265,14 @@ export default function HeroSection({
     setMissing([]);
     setOpenMenu(null);
 
-    // Không còn trường date: ngày được chọn trong bảng suất chiếu
-    const searchData = {
-      city: selectedCity,
-      cinema: effectiveCinema,
-      movieTitle: movieQuery.trim(),
-    };
-
+    // Chỉ gọi onSearch một lần. Không còn onSelectShowtime vì gọi cả hai với cùng dữ liệu
+    // sẽ làm luồng đặt vé bị mở và tải lại hai lần.
     if (typeof onSearch === 'function') {
-      onSearch(searchData);
-    }
-
-    if (onSelectShowtime) {
-      onSelectShowtime(searchData);
+      onSearch({
+        city: selectedCity,
+        cinema: effectiveCinema,
+        movieTitle: movieQuery.trim(),
+      });
     }
   }
 
@@ -359,12 +362,12 @@ export default function HeroSection({
           )}
         </div>
 
-        {/* 2. Phim (giữa): ô nhập tự do, có gợi ý lọc theo từng ký tự */}
+        {/* 2. Phim: ô nhập tự do, có gợi ý lọc theo từng ký tự */}
         <div className={`relative ${openMenu === 'movie' ? 'z-50' : 'z-10'}`}>
           <label htmlFor={`${listId}-movie`} className={FIELD_LABEL}>
             Tên phim
           </label>
-          <div className={FIELD_INPUT_WRAP}>
+          <div className={`${FIELD_INPUT_WRAP} ${isMissing('movie') ? 'bm-shake !border-[var(--color-system-error)]' : ''}`}>
             <SearchIcon />
             <input
               id={`${listId}-movie`}
@@ -434,71 +437,74 @@ export default function HeroSection({
           )}
         </div>
 
-        {/* 3. Rạp chiếu (bên phải, chỉ hiện khi đã có thành phố và tên phim) */}
+        {/* 3. Rạp chiếu (chỉ hiện khi đã có thành phố và tên phim) */}
         {showCinema && (
-        <div className={`bm-rise relative ${openMenu === 'cinema' ? 'z-50' : 'z-10'}`}>
-          <label className={FIELD_LABEL}>Rạp chiếu</label>
-          <button
-            type="button"
-            aria-haspopup="listbox"
-            key={`cinema-btn-${shakeId}`}
-            aria-expanded={openMenu === 'cinema'}
-            onClick={() => toggleMenu('cinema')}
-            className={fieldButtonClass('cinema')}
-          >
-            <span className="truncate">{effectiveCinema}</span>
-            <ChevronDownIcon
-              className={`h-4 w-4 shrink-0 text-[var(--color-text-secondary)] transition-transform duration-200 ${
-                openMenu === 'cinema' ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
+          <div className={`bm-rise relative ${openMenu === 'cinema' ? 'z-50' : 'z-10'}`}>
+            <label className={FIELD_LABEL}>Rạp chiếu</label>
+            <button
+              type="button"
+              aria-haspopup="listbox"
+              key={`cinema-btn-${shakeId}`}
+              aria-expanded={openMenu === 'cinema'}
+              onClick={() => toggleMenu('cinema')}
+              className={fieldButtonClass('cinema')}
+            >
+              <span className="truncate">{effectiveCinema}</span>
+              <ChevronDownIcon
+                className={`h-4 w-4 shrink-0 text-[var(--color-text-secondary)] transition-transform duration-200 ${
+                  openMenu === 'cinema' ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
 
-          {openMenu === 'cinema' && (
-            <div role="listbox" className={`${MENU_PANEL} max-h-60`}>
-              {cinemas.length > 0 ? (
-                <>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={effectiveCinema === 'Tất cả rạp'}
-                    onClick={() => {
-                      setSelectedCinema('Tất cả rạp');
-                      setOpenMenu(null);
-                    }}
-                    className={`${MENU_ITEM_BASE} ${
-                      effectiveCinema === 'Tất cả rạp' ? MENU_ITEM_ACTIVE : MENU_ITEM_IDLE
-                    }`}
-                  >
-                    <span className="truncate">Tất cả rạp</span>
-                  </button>
-                {cinemas.map((c, index) => (
-                  <button
-                    key={c.cinemaId || c.name}
-                    type="button"
-                    role="option"
-                    aria-selected={selectedCinema === c.name}
-                    onClick={() => {
-                      setSelectedCinema(c.name);
-                      setOpenMenu(null);
-                    }}
-                    style={itemDelay(index)}
-                    className={`${MENU_ITEM_BASE} ${
-                      selectedCinema === c.name ? MENU_ITEM_ACTIVE : MENU_ITEM_IDLE
-                    }`}
-                  >
-                    <span className="truncate">{c.name}</span>
-                  </button>
-                ))}
-                </>
-              ) : (
-                <p className="px-3 py-2 text-center text-xs text-[var(--color-text-secondary)]">
-                  {`Không có rạp nào ở ${selectedCity} đang chiếu "${movieQuery.trim()}"`}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
+            {openMenu === 'cinema' && (
+              <div role="listbox" className={`${MENU_PANEL} max-h-60`}>
+                {cinemas.length > 0 ? (
+                  <>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={effectiveCinema === ALL_CINEMAS}
+                      onClick={() => {
+                        setSelectedCinema(ALL_CINEMAS);
+                        setOpenMenu(null);
+                      }}
+                      className={`${MENU_ITEM_BASE} ${
+                        effectiveCinema === ALL_CINEMAS ? MENU_ITEM_ACTIVE : MENU_ITEM_IDLE
+                      }`}
+                    >
+                      <span className="truncate">{ALL_CINEMAS}</span>
+                    </button>
+                    {cinemas.map((c, index) => {
+                      const name = typeof c === 'string' ? c : c.name;
+                      return (
+                        <button
+                          key={c.cinemaId || name}
+                          type="button"
+                          role="option"
+                          aria-selected={selectedCinema === name}
+                          onClick={() => {
+                            setSelectedCinema(name);
+                            setOpenMenu(null);
+                          }}
+                          style={itemDelay(index)}
+                          className={`${MENU_ITEM_BASE} ${
+                            selectedCinema === name ? MENU_ITEM_ACTIVE : MENU_ITEM_IDLE
+                          }`}
+                        >
+                          <span className="truncate">{name}</span>
+                        </button>
+                      );
+                    })}
+                  </>
+                ) : (
+                  <p className="px-3 py-2 text-center text-xs text-[var(--color-text-secondary)]">
+                    {`Không có rạp nào ở ${selectedCity} đang chiếu "${movieQuery.trim()}"`}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         {/* 4. Tìm suất chiếu */}

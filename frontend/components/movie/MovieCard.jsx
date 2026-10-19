@@ -49,7 +49,7 @@ export default function MovieCard({ movie, onSelectShowtime, index = 0 }) {
           onClick={handleSelect}
           className="inline-flex h-7 items-center justify-center rounded-full bg-[var(--color-brand-primary)] px-3 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-all hover:bg-[var(--color-brand-primary-hover)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
         >
-          Chọn suất
+          Đặt vé
         </button>
       </div>
     </article>
