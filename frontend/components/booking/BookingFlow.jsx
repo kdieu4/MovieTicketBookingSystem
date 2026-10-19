@@ -9,6 +9,9 @@ const SESSION_KEY = 'mtbs-booking-session-id';
 const TIME_ZONE = 'Asia/Ho_Chi_Minh';
 const STEP_OUT_MS = 170;
 
+// Giá trị rạp mà Hero Section gửi khi người dùng không chọn rạp cụ thể
+const ALL_CINEMAS = 'Tất cả rạp';
+
 // Các bước hiển thị trên thanh tiến trình. Bước 5 (Xác nhận) sẽ nối với phần thanh toán sau.
 const STEP_LABELS = ['Thành phố', 'Rạp chiếu', 'Suất chiếu', 'Chọn ghế', 'Xác nhận'];
 
@@ -248,15 +251,6 @@ function uniqueByName(items) {
   });
 }
 
-/**
- * filters: { movieTitle } | null. Thành phố và rạp do người dùng chọn ngay trong luồng này.
- * searchId: tăng dần mỗi lần bấm Đặt vé để bấm lại cùng một phim vẫn mở lại bảng và tải lại dữ liệu
- * onSearchSettled: gọi khi danh sách thành phố đã tải xong (thành công hay lỗi) để nút bên ngoài hết trạng thái chờ
- * onContinue: gọi khi bấm Tiếp tục, nhận { showtime, seats, total, holdUntil, city, cinema }. Phần thanh toán sẽ nối vào đây sau.
- * variant: 'modal' (mặc định, cửa sổ toàn màn hình) | 'inline' (hiện thẳng trong trang, không có nền mờ và nút đóng).
- * Với 'inline', filters phải được giữ ổn định giữa các lần render (dùng useMemo), nếu không luồng sẽ bị đặt lại liên tục.
- */
-
 // Cache thành phố theo tên phim, sống suốt phiên trang. Chỉ lưu kết quả thành công.
 const citiesCache = new Map();
 
@@ -268,6 +262,19 @@ export function prefetchCities(movieTitle) {
     .catch(() => {});
 }
 
+/**
+ * filters: { movieTitle, city?, cinema? } | null
+ *   - Chỉ có movieTitle (FeaturedSection, MovieCard, trang chi tiết phim): luồng bắt đầu từ bước chọn thành phố.
+ *   - Có thêm city (Hero Section): bỏ qua bước thành phố, bắt đầu từ bước chọn rạp.
+ *   - Có thêm cả cinema (Hero Section đã chọn rạp): bỏ qua cả bước rạp, bắt đầu từ bước chọn suất chiếu.
+ *     cinema = 'Tất cả rạp' nghĩa là xem suất chiếu của mọi rạp trong thành phố.
+ *   Các bước đã bỏ qua vẫn hiện trên thanh tiến trình và bấm vào được để quay lại đổi.
+ * searchId: tăng dần mỗi lần bấm Đặt vé / Tìm để bấm lại cùng bộ lọc vẫn mở lại bảng và tải lại dữ liệu
+ * onSearchSettled: gọi khi dữ liệu của bước đầu tiên đã tải xong (thành công hay lỗi) để nút bên ngoài hết trạng thái chờ
+ * onContinue: gọi khi bấm Tiếp tục, nhận { showtime, seats, total, holdUntil, city, cinema }. Phần thanh toán sẽ nối vào đây sau.
+ * variant: 'modal' (mặc định, cửa sổ toàn màn hình) | 'inline' (hiện thẳng trong trang, không có nền mờ và nút đóng).
+ * Với 'inline', filters phải được giữ ổn định giữa các lần render (dùng useMemo), nếu không luồng sẽ bị đặt lại liên tục.
+ */
 export default function BookingFlow({ filters, searchId, onSearchSettled, onContinue, variant = 'modal' }) {
   const inline = variant === 'inline';
   const [open, setOpen] = useState(false);
@@ -313,6 +320,19 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   const handedOffRef = useRef(false);
 
   const movieQuery = filters?.movieTitle ?? '';
+
+  // Đặt điểm bắt đầu theo filters ngay trong lúc render, không chờ effect. Nếu để effect làm việc này
+  // thì ở lần render đầu city vẫn là null và effect tải thành phố sẽ kịp gọi getCities trước khi city được đặt.
+  // Có sẵn city thì bỏ qua bước thành phố, có sẵn cả cinema thì bỏ qua luôn bước rạp.
+  const [syncedFilters, setSyncedFilters] = useState(null);
+  const [syncedSearchId, setSyncedSearchId] = useState(null);
+  if (filters && (filters !== syncedFilters || searchId !== syncedSearchId)) {
+    setSyncedFilters(filters);
+    setSyncedSearchId(searchId);
+    const presetCity = filters.city || null;
+    setCity(presetCity);
+    setCinema(presetCity && filters.cinema ? filters.cinema : null);
+  }
 
   // Thanh chọn ngày: cuộn con lăn chuột thì chuyển thành cuộn ngang, có quán tính nhẹ cho mượt.
   // Dùng ref dạng hàm vì thanh này mount và unmount theo từng bước, và phải gắn sự kiện wheel
@@ -420,7 +440,8 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     setSelectedSeats((current) => (sameIds(current, mine) ? current : mine));
   }, []);
 
-  // Mỗi lần bấm Đặt vé: trả ghế cũ, xóa mọi lựa chọn và mở bảng ở bước chọn thành phố
+  // Mỗi lần bấm Đặt vé / Tìm: trả ghế cũ, xóa các lựa chọn phía sau và mở bảng.
+  // city và cinema đã được đặt theo filters ở phần đồng bộ trong lúc render phía trên.
   useEffect(() => {
     if (!filters) return;
     releaseHeldSeats();
@@ -428,9 +449,8 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     lastHoldRef.current = null;
     dirRef.current = 'forward';
     handedOffRef.current = false;
+
     setOpen(true);
-    setCity(null);
-    setCinema(null);
     setSelectedShowtime(null);
     setSelectedSeats([]);
     setHoldUntil(null);
@@ -443,81 +463,10 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, searchId]);
 
-  // Bước 1: tải danh sách thành phố
+  // Bước 1: tải danh sách thành phố khi chưa có thành phố, ưu tiên lấy từ cache
+  const needCities = !city;
   useEffect(() => {
-    if (!filters) return;
-    const controller = new AbortController();
-    setCities({ status: 'loading', items: [] });
-
-    fetchList('getCities', { movieTitle: filters.movieTitle }, controller.signal)
-      .then((list) => {
-        const items = uniqueByName(list.map(toCity));
-        setCities({ status: items.length > 0 ? 'ready' : 'empty', items });
-      })
-      .catch((err) => {
-        if (err.name === 'AbortError') return;
-        console.error('Lỗi khi tải thành phố:', err);
-        setCities({ status: 'error', items: [] });
-      })
-      .finally(() => {
-        if (!controller.signal.aborted && onSearchSettled) onSearchSettled();
-      });
-
-    return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, searchId, reload.cities]);
-
-  // Bước 2: chọn xong thành phố thì tải các rạp ở thành phố đó
-  useEffect(() => {
-    if (!city) return;
-    const controller = new AbortController();
-    setCinemas({ status: 'loading', items: [] });
-
-    fetchList('getCinemasByCity', { city, movieTitle: movieQuery }, controller.signal)
-      .then((list) => {
-        const items = uniqueByName(list.map(toCinema));
-        setCinemas({ status: items.length > 0 ? 'ready' : 'empty', items });
-      })
-      .catch((err) => {
-        if (err.name === 'AbortError') return;
-        console.error('Lỗi khi tải rạp chiếu:', err);
-        setCinemas({ status: 'error', items: [] });
-      });
-
-    return () => controller.abort();
-  }, [city, movieQuery, reload.cinemas]);
-
-  // Bước 3: chọn xong rạp thì tải suất chiếu của phim tại rạp đó.
-  // Ngày được lọc ở frontend để đổi ngày không phải tải lại.
-  useEffect(() => {
-    if (!city || !cinema) return;
-    const controller = new AbortController();
-    setShowtimes({ status: 'loading', items: [] });
-
-    fetchList('searchShowtimes', { city, cinema, movieTitle: movieQuery }, controller.signal)
-      .then((list) => setShowtimes({ status: list.length > 0 ? 'ready' : 'empty', items: list }))
-      .catch((err) => {
-        if (err.name === 'AbortError') return;
-        console.error('Lỗi khi tải suất chiếu:', err);
-        setShowtimes({ status: 'error', items: [] });
-      });
-
-    return () => controller.abort();
-  }, [city, cinema, movieQuery, reload.showtimes]);
-
-  // Khi bảng mở: cập nhật giờ hiện tại mỗi 30 giây để suất vừa qua giờ tự bị khóa
-  useEffect(() => {
-    if (!open) return;
-    setNow(Date.now());
-    const id = setInterval(() => setNow(Date.now()), 30000);
-    return () => clearInterval(id);
-  }, [open]);
-
-  // Ở bước chọn ghế: làm mới sơ đồ mỗi 15 giây để thấy ghế người khác vừa đặt.
-  // Bỏ qua khi tab đang ẩn hoặc đang có yêu cầu giữ/trả ghế chạy dở.
-    // Bước 1: tải danh sách thành phố, ưu tiên lấy từ cache
-  useEffect(() => {
-    if (!filters) return;
+    if (!filters || !needCities) return;
     const key = filters.movieTitle;
     const cached = citiesCache.get(key);
     if (cached) {
@@ -546,7 +495,78 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
 
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, searchId, reload.cities]);
+  }, [filters, searchId, needCities, reload.cities]);
+
+  // Bước 2: có thành phố mà chưa có rạp thì tải các rạp ở thành phố đó đang chiếu phim
+  const needCinemas = Boolean(city) && !cinema;
+  useEffect(() => {
+    if (!filters || !needCinemas) return;
+    const controller = new AbortController();
+    setCinemas({ status: 'loading', items: [] });
+
+    fetchList('getCinemasByCity', { city, movieTitle: movieQuery }, controller.signal)
+      .then((list) => {
+        const items = uniqueByName(list.map(toCinema));
+        setCinemas({ status: items.length > 0 ? 'ready' : 'empty', items });
+      })
+      .catch((err) => {
+        if (err.name === 'AbortError') return;
+        console.error('Lỗi khi tải rạp chiếu:', err);
+        setCinemas({ status: 'error', items: [] });
+      })
+      .finally(() => {
+        if (!controller.signal.aborted && onSearchSettled) onSearchSettled();
+      });
+
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, searchId, city, needCinemas, movieQuery, reload.cinemas]);
+
+  // Bước 3: có thành phố và rạp thì tải suất chiếu của phim.
+  // 'Tất cả rạp' nghĩa là không gửi tham số rạp. Ngày được lọc ở frontend để đổi ngày không phải tải lại.
+  useEffect(() => {
+    if (!filters || !city || !cinema) return;
+    const controller = new AbortController();
+    setShowtimes({ status: 'loading', items: [] });
+
+    fetchList(
+      'searchShowtimes',
+      { city, cinema: cinema === ALL_CINEMAS ? '' : cinema, movieTitle: movieQuery },
+      controller.signal
+    )
+      .then((list) => setShowtimes({ status: list.length > 0 ? 'ready' : 'empty', items: list }))
+      .catch((err) => {
+        if (err.name === 'AbortError') return;
+        console.error('Lỗi khi tải suất chiếu:', err);
+        setShowtimes({ status: 'error', items: [] });
+      })
+      .finally(() => {
+        if (!controller.signal.aborted && onSearchSettled) onSearchSettled();
+      });
+
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, searchId, city, cinema, movieQuery, reload.showtimes]);
+
+  // Khi bảng mở: cập nhật giờ hiện tại mỗi 30 giây để suất vừa qua giờ tự bị khóa
+  useEffect(() => {
+    if (!open) return;
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, [open]);
+
+  // Ở bước chọn ghế: làm mới sơ đồ mỗi 15 giây để thấy ghế người khác vừa đặt.
+  // Bỏ qua khi tab đang ẩn hoặc đang có yêu cầu giữ/trả ghế chạy dở.
+  useEffect(() => {
+    if (!open || !selectedShowtime) return;
+    const showtimeId = selectedShowtime.id;
+    const id = setInterval(() => {
+      if (document.hidden || pendingRef.current > 0) return;
+      refreshSeats(showtimeId).catch(() => {});
+    }, 15000);
+    return () => clearInterval(id);
+  }, [open, selectedShowtime, refreshSeats]);
 
   // Tải sơ đồ ghế khi chọn suất chiếu
   useEffect(() => {
@@ -753,11 +773,22 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     }
   }
 
+  // Tên rạp thật của suất đã chọn. Khi xem 'Tất cả rạp' thì lấy từ chính suất chiếu.
+  const allCinemas = cinema === ALL_CINEMAS;
+  const cinemaName = selectedShowtime?.cinemaName || (allCinemas ? '' : cinema || '');
+
   function handleContinue() {
     if (!selectedShowtime || selectedSeats.length === 0) return;
     if (typeof onContinue === 'function') {
       handedOffRef.current = true;
-      onContinue({ showtime: selectedShowtime, seats: selectedSeats, total, holdUntil, city, cinema });
+      onContinue({
+        showtime: selectedShowtime,
+        seats: selectedSeats,
+        total,
+        holdUntil,
+        city,
+        cinema: cinemaName,
+      });
     }
   }
 
@@ -768,22 +799,28 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     [cinemas.items, cinemaQuery]
   );
 
+  // Tên phim có thể do người dùng gõ tự do (Hero Section) nên lọc lại theo từ khóa trước khi gom nhóm
+  const matchedShowtimes = useMemo(
+    () => showtimes.items.filter((s) => matchesText(s.movieTitle, movieQuery)),
+    [showtimes.items, movieQuery]
+  );
+
   // Chỉ lấy các ngày từ hôm nay (theo máy người dùng) trở đi
   const todayKey = localDateKey(now);
   const dayOptions = useMemo(() => {
     const keys = new Set();
-    for (const s of showtimes.items) {
+    for (const s of matchedShowtimes) {
       const key = dateKeyOf(s.startTime);
       if (key >= todayKey) keys.add(key);
     }
     return Array.from(keys).sort();
-  }, [showtimes.items, todayKey]);
+  }, [matchedShowtimes, todayKey]);
 
   const activeDate = selectedDate && dayOptions.includes(selectedDate) ? selectedDate : null;
 
   const dayShowtimes = useMemo(
-    () => (activeDate ? showtimes.items.filter((s) => dateKeyOf(s.startTime) === activeDate) : []),
-    [showtimes.items, activeDate]
+    () => (activeDate ? matchedShowtimes.filter((s) => dateKeyOf(s.startTime) === activeDate) : []),
+    [matchedShowtimes, activeDate]
   );
   const allPast = dayShowtimes.length > 0 && dayShowtimes.every((s) => new Date(s.startTime).getTime() <= now);
 
@@ -881,17 +918,17 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
             })}
           </ol>
           {!inline && (
-          <button
-            ref={closeButtonRef}
-            type="button"
-            aria-label="Đóng"
-            onClick={closeModal}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-xs)] text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-fill-tertiary)] hover:text-[var(--color-text-primary)] active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
-          >
-            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-              <path d="M5 5l10 10M15 5L5 15" />
-            </svg>
-          </button>
+            <button
+              ref={closeButtonRef}
+              type="button"
+              aria-label="Đóng"
+              onClick={closeModal}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-xs)] text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-fill-tertiary)] hover:text-[var(--color-text-primary)] active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
+            >
+              <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                <path d="M5 5l10 10M15 5L5 15" />
+              </svg>
+            </button>
           )}
         </div>
 
@@ -1036,7 +1073,7 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
               {step === 3 && (
                 <div>
                   <StepHeading
-                    title={`Suất chiếu tại ${cinema}`}
+                    title={allCinemas ? `Suất chiếu tại ${city}` : `Suất chiếu tại ${cinema}`}
                     subtitle={showtimeSummary}
                     backLabel="Đổi rạp"
                     onBack={() => handleBackTo(2)}
@@ -1053,13 +1090,15 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
 
                     {showtimeStatus === 'empty' && (
                       <ListMessage>
-                        Rạp này chưa có suất chiếu phù hợp. Hãy thử chọn rạp khác.
+                        {allCinemas
+                          ? 'Chưa có suất chiếu phù hợp. Hãy thử chọn thành phố hoặc tên phim khác.'
+                          : 'Rạp này chưa có suất chiếu phù hợp. Hãy thử chọn rạp khác.'}
                       </ListMessage>
                     )}
 
                     {showtimeStatus === 'ready' && (
                       <div>
-                        {/* Chọn ngày: chỉ hiện các ngày từ hôm nay có suất chiếu của phim tại rạp đã chọn */}
+                        {/* Chọn ngày: chỉ hiện các ngày từ hôm nay có suất chiếu của phim đã tìm */}
                         <p className="mb-2 text-[13px] font-semibold">Chọn ngày xem</p>
                         <div
                           ref={dayStripRef}
@@ -1120,6 +1159,10 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
                                 <div className="flex flex-wrap gap-2">
                                   {items.map((s) => {
                                     const isPast = new Date(s.startTime).getTime() <= now;
+                                    // Một rạp cụ thể thì chỉ cần phòng chiếu, xem tất cả rạp thì phải hiện thêm tên rạp
+                                    const subLabel = allCinemas
+                                      ? [s.cinemaName, s.room].filter(Boolean).join(', ')
+                                      : s.room || s.cinemaName;
                                     return (
                                       <button
                                         key={s.id}
@@ -1132,10 +1175,9 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
                                         <span className={`font-semibold ${isPast ? 'line-through' : ''}`}>
                                           {formatTime(s.startTime)}
                                         </span>
-                                        {/* Rạp đã được chọn ở bước trước nên chỉ hiện phòng chiếu */}
-                                        {(s.room || s.cinemaName) && (
+                                        {subLabel && (
                                           <span className="text-[11px] text-[var(--color-text-secondary)]">
-                                            {s.room || s.cinemaName}
+                                            {subLabel}
                                           </span>
                                         )}
                                       </button>
@@ -1166,9 +1208,7 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
                   <div className="mt-5 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] px-5 py-4">
                     <div className="min-w-0">
                       <p className="text-[15px] font-semibold">{selectedShowtime.movieTitle}</p>
-                      <p className="mt-0.5 text-[13px] text-[var(--color-text-secondary)]">
-                        {selectedShowtime.cinemaName || cinema}
-                      </p>
+                      <p className="mt-0.5 text-[13px] text-[var(--color-text-secondary)]">{cinemaName}</p>
                     </div>
                     <p className="text-[13px] text-[var(--color-text-secondary)]">
                       {formatLongDate(selectedShowtime.startTime)} · {formatTime(selectedShowtime.startTime)}
@@ -1193,9 +1233,7 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
 
                       <div className="mt-4 border-t border-[var(--color-border-separator)] pt-4">
                         <p className="text-[14px] font-semibold">{selectedShowtime.movieTitle}</p>
-                        <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">
-                          {selectedShowtime.cinemaName || cinema}
-                        </p>
+                        <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">{cinemaName}</p>
                         <p className="mt-1 text-[12px] text-[var(--color-text-tertiary)]">
                           {formatDate(dateKeyOf(selectedShowtime.startTime))} · {formatTime(selectedShowtime.startTime)}
                           {roomLabel ? ` · ${roomLabel}` : ''}
