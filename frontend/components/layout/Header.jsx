@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { BRAND_NAME } from '@/styles/tokens';
@@ -67,6 +68,7 @@ function Highlight({ text, query }) {
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileQuery, setMobileQuery] = useState('');
   const [searchValue, setSearchValue] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeResult, setActiveResult] = useState(-1);
@@ -86,17 +88,29 @@ export default function Header() {
     link.href === '/' ? pathname === '/' : pathname?.startsWith(link.href)
   );
 
-  const targetIndex = hoverIndex !== null ? hoverIndex : (activeIndex >= 0 ? activeIndex : 0);
+  const targetIndex = hoverIndex !== null ? hoverIndex : (activeIndex >= 0 ? activeIndex : null);
 
   useLayoutEffect(() => {
-    const currentItem = itemRefs.current[targetIndex];
-    if (currentItem) {
-      setIndicatorStyle({
-        left: currentItem.offsetLeft,
-        width: currentItem.offsetWidth,
-        opacity: 1,
-      });
+    function measure() {
+      if (targetIndex === null) {
+        setIndicatorStyle((prev) => ({ ...prev, opacity: 0 }));
+        return;
+      }
+      const currentItem = itemRefs.current[targetIndex];
+      if (currentItem) {
+        setIndicatorStyle({
+          left: currentItem.offsetLeft,
+          width: currentItem.offsetWidth,
+          opacity: 1,
+        });
+      }
     }
+
+    measure();
+
+    const observer = new ResizeObserver(measure);
+    if (navRef.current) observer.observe(navRef.current);
+    return () => observer.disconnect();
   }, [targetIndex, pathname]);
 
   // ---- Tìm kiếm qua API ----
@@ -203,6 +217,15 @@ export default function Header() {
       router.push(`/phim?q=${encodeURIComponent(keyword)}`);
       closeSearch();
     }
+  }
+
+  function handleMobileSearch(event) {
+    event.preventDefault();
+    const query = mobileQuery.trim();
+    if (!query) return;
+    setMenuOpen(false);
+    setMobileQuery('');
+    router.push(`/phim?q=${encodeURIComponent(query)}`);
   }
 
   function handleSearchKeyDown(event) {
@@ -439,12 +462,14 @@ export default function Header() {
             )}
           </div>
 
-          <Link
-            href="/dang-nhap"
-            className="hidden h-9 items-center justify-center rounded-full bg-[var(--color-brand-primary)] px-4 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-primary-hover)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] sm:inline-flex"
-          >
-            Đăng nhập
-          </Link>
+          {pathname !== '/dang-nhap' && (
+            <Link
+              href="/dang-nhap"
+              className="hidden h-9 items-center justify-center rounded-full bg-[var(--color-brand-primary)] px-4 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-primary-hover)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] sm:inline-flex"
+            >
+              Đăng nhập
+            </Link>
+          )}
 
           <div className="hidden sm:block">
             <AccountMenu />
@@ -464,6 +489,28 @@ export default function Header() {
 
       {menuOpen && (
         <div className="animate-fade-in border-t border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] px-4 pb-4 pt-3 md:hidden">
+          <form
+            onSubmit={handleMobileSearch}
+            role="search"
+            className="mb-3 flex h-10 items-center gap-2 rounded-full border border-[var(--color-border-separator)] bg-[var(--color-fill-tertiary)] pl-3.5 pr-1"
+          >
+            <SearchIcon />
+            <input
+              type="search"
+              value={mobileQuery}
+              onChange={(e) => setMobileQuery(e.target.value)}
+              placeholder="Tìm phim, đạo diễn..."
+              aria-label="Tìm phim"
+              className="min-w-0 flex-1 bg-transparent text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none"
+            />
+            <button
+              type="submit"
+              className="h-8 shrink-0 rounded-full bg-[var(--color-brand-primary)] px-3.5 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-primary-hover)] active:scale-95"
+            >
+              Tìm
+            </button>
+          </form>
+
           <nav className="flex flex-col gap-1">
             {NAV_LINKS.map((link) => (
               <Link
@@ -476,7 +523,18 @@ export default function Header() {
               </Link>
             ))}
           </nav>
-          <div className="mt-3 pt-3 border-t border-[var(--color-border-separator)] flex items-center justify-between">
+
+          {pathname !== '/dang-nhap' && (
+            <Link
+              href="/dang-nhap"
+              onClick={() => setMenuOpen(false)}
+              className="mt-3 flex h-10 items-center justify-center rounded-full bg-[var(--color-brand-primary)] text-sm font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-primary-hover)] active:scale-[0.98]"
+            >
+              Đăng nhập
+            </Link>
+          )}
+
+          <div className="mt-3 flex items-center justify-between border-t border-[var(--color-border-separator)] pt-3">
             <span className="text-sm font-medium text-[var(--color-text-secondary)]">Giao diện & Tài khoản</span>
             <AccountMenu />
           </div>
@@ -491,9 +549,12 @@ function MoviePoster({ movie }) {
 
   if (movie.posterUrl && !failed) {
     return (
-      <img
+      <Image
         src={movie.posterUrl}
         alt=""
+        width={40}
+        height={56}
+        sizes="40px"
         onError={() => setFailed(true)}
         className="h-14 w-10 shrink-0 rounded-md bg-[var(--color-fill-secondary)] object-cover"
       />

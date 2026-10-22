@@ -120,19 +120,7 @@ export default function FAQPage() {
   }
 
   return (
-    <div
-      className="faq-light flex min-h-screen flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]"
-      style={{
-        '--color-bg-primary': '#f5f6fa',
-        '--color-bg-tertiary': '#ffffff',
-        '--color-text-primary': '#1b1d2a',
-        '--color-text-secondary': '#555a6e',
-        '--color-text-tertiary': '#8a8fa3',
-        '--color-border-separator': '#e3e6ef',
-        '--shadow-low': '0 1px 2px rgba(27, 29, 42, 0.06), 0 4px 12px rgba(27, 29, 42, 0.04)',
-        '--radius-lg': '16px',
-      }}
-    >
+    <div className="flex min-h-screen flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] transition-colors duration-200">
       <Header />
       <main className="animate-fade-in mx-auto w-full flex-1 max-w-3xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="text-center">
@@ -159,8 +147,8 @@ export default function FAQPage() {
                       key={id}
                       className={`transition-colors duration-300 motion-reduce:transition-none ${
                         isOpen
-                          ? 'bg-[color-mix(in_srgb,var(--color-brand-primary)_8%,white)]'
-                          : 'bg-transparent hover:bg-[#f9fafc]'
+                          ? 'bg-[color-mix(in_srgb,var(--color-brand-primary)_8%,var(--color-bg-tertiary))]'
+                          : 'bg-transparent hover:bg-[var(--color-fill-quaternary)]'
                       }`}
                     >
                       <button

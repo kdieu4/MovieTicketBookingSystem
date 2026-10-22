@@ -23,7 +23,7 @@ async function handleResponse(res) {
   return res.json();
 }
 
-function mapMovie(movie) {
+export function mapMovie(movie) {
   return {
     id: movie.movieId ?? movie.id,
     title: movie.title,
@@ -40,7 +40,7 @@ function mapMovie(movie) {
   };
 }
 
-function mapGenre(genre) {
+export function mapGenre(genre) {
   return {
     id: genre.genreId ?? genre.id ?? genre.name,
     name: genre.name,
@@ -94,6 +94,22 @@ export async function fetchGenres() {
   const url = `${API_BASE_URL}/getGenres`;
   const data = await fetchWithCache('genres', url);
   return data.map(mapGenre);
+}
+
+export function mapCinema(cinema) {
+  return {
+    id: cinema.cinemaId ?? cinema.id,
+    name: cinema.name,
+    address: cinema.address ?? '',
+    city: cinema.city ?? '',
+    phone: cinema.phoneNumber ?? cinema.phone ?? null,
+  };
+}
+
+export async function fetchCinemas() {
+  const url = `${API_BASE_URL}/getCinemas`;
+  const data = await fetchWithCache('cinemas', url);
+  return data.map(mapCinema);
 }
 
 export async function fetchMovieById(id) {

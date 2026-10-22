@@ -26,6 +26,21 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
     @EntityGraph(attributePaths = "seat")
     List<ShowtimeSeat> findByShowtime_ShowtimeId(Long showtimeId);
 
+    @Modifying
+    @Query(value = """
+            INSERT INTO showtime_seats (showtime_id, seat_id, updated_at)
+            SELECT :showtimeId, s.seat_id, :now
+            FROM seats s
+            WHERE s.room_id = :roomId
+              AND NOT EXISTS (
+                  SELECT 1 FROM showtime_seats ss
+                  WHERE ss.showtime_id = :showtimeId AND ss.seat_id = s.seat_id
+              )
+            """, nativeQuery = true)
+    int insertMissingSeats(@Param("showtimeId") Long showtimeId,
+                           @Param("roomId") Long roomId,
+                           @Param("now") OffsetDateTime now);
+
     List<ShowtimeSeat> findByShowtime_ShowtimeIdAndStatus(Long showtimeId, SeatStatus status);
 
     long countByShowtime_ShowtimeId(Long showtimeId);

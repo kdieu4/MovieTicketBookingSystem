@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import SeatPicker, { SEAT_ANIMATIONS } from './SeatPicker';
+import { getCachedSeats, getSessionId, invalidateSeats, loadSeats } from '@/services/seatApi';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8083/api';
-const SESSION_KEY = 'mtbs-booking-session-id';
 const TIME_ZONE = 'Asia/Ho_Chi_Minh';
 const STEP_OUT_MS = 170;
 
@@ -29,18 +29,6 @@ const FLOW_STYLES = `
   .sf-body { transition: none !important; }
 }
 `;
-
-// Mỗi trình duyệt có một sessionId để giữ ghế (dùng khi chưa có đăng nhập)
-function getSessionId() {
-  let id = window.localStorage.getItem(SESSION_KEY);
-  if (!id) {
-    id = window.crypto?.randomUUID
-      ? window.crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    window.localStorage.setItem(SESSION_KEY, id);
-  }
-  return id;
-}
 
 function prefersReducedMotion() {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -301,6 +289,8 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
   const needsSyncRef = useRef(false);
   // Ghế đang giữ hiện tại, dùng ref để các hàm đóng/đổi suất luôn đọc giá trị mới nhất
   const holdRef = useRef({ showtimeId: null, seatIds: [] });
+  // Chỉ áp dụng kết quả của lần tải ghế mới nhất, tránh sơ đồ cũ ghi đè khi người dùng đổi suất nhanh
+  const seatsTokenRef = useRef(0);
   // Giữ lại danh sách ghế và giờ giữ ghế cuối cùng để vùng thu gọn vẫn có nội dung trong lúc chạy hiệu ứng
   const lastSeatsRef = useRef([]);
   const lastHoldRef = useRef(null);
@@ -319,24 +309,21 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
     const { showtimeId, seatIds } = holdRef.current;
     holdRef.current = { showtimeId: null, seatIds: [] };
     if (showtimeId && seatIds.length > 0) {
+      invalidateSeats(showtimeId);
       seatAction('releaseSeats', showtimeId, { sessionId: getSessionId(), seatIds }).catch(() => {});
     }
   }, []);
 
   const refreshSeats = useCallback(async (showtimeId, signal) => {
-    const params = new URLSearchParams({
-      showtimeId: String(showtimeId),
-      sessionId: getSessionId(),
-    });
-    const res = await fetch(`${API_BASE_URL}/getSeatsByShowtime?${params}`, { signal });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const list = Array.isArray(data) ? data : [];
+    const token = ++seatsTokenRef.current;
+    const list = await loadSeats(showtimeId, signal);
+    if (token !== seatsTokenRef.current) return list;
     setSeats(list);
     // Ghế do chính người này giữ (còn hạn) được đánh dấu lại là đang chọn.
     // Nếu không đổi thì giữ nguyên mảng cũ để không render lại và không làm đứt hiệu ứng đang chạy.
     const mine = list.filter((s) => s.heldByMe);
     setSelectedSeats((current) => (sameIds(current, mine) ? current : mine));
+    return list;
   }, []);
 
   // Mỗi lần bấm tìm: mở bảng và tải suất chiếu
@@ -405,13 +392,22 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
     return () => clearInterval(id);
   }, [open, selectedShowtime, refreshSeats]);
 
-  // Tải sơ đồ ghế khi chọn suất chiếu
+  // Tải sơ đồ ghế khi chọn suất chiếu. Dùng dữ liệu vừa prefetch nếu còn mới để mở ghế ngay.
   useEffect(() => {
     if (!selectedShowtime) return;
     const controller = new AbortController();
-    setLoadingSeats(true);
-    setSeats([]);
-    setSelectedSeats([]);
+    const cached = getCachedSeats(selectedShowtime.id);
+
+    if (cached) {
+      setSeats(cached);
+      const mine = cached.filter((s) => s.heldByMe);
+      setSelectedSeats((current) => (sameIds(current, mine) ? current : mine));
+      setLoadingSeats(false);
+    } else {
+      setLoadingSeats(true);
+      setSeats([]);
+      setSelectedSeats([]);
+    }
 
     refreshSeats(selectedShowtime.id, controller.signal)
       .catch((err) => {
@@ -423,7 +419,10 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
         if (!controller.signal.aborted) setLoadingSeats(false);
       });
 
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      seatsTokenRef.current += 1;
+    };
   }, [selectedShowtime, refreshSeats]);
 
   // Đổi bước thì cuộn về đầu vùng nội dung
@@ -553,6 +552,8 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
       setNotice({ type: 'error', text: err.message });
     } finally {
       pendingRef.current -= 1;
+      // Trạng thái giữ ghế vừa đổi nên cache cũ không còn đúng cho lần mở sau
+      invalidateSeats(showtimeId);
       // Giao diện đã cập nhật ngay khi bấm, nên thành công thì không cần tải lại cả sơ đồ ghế
       if (pendingRef.current === 0 && needsSyncRef.current) {
         needsSyncRef.current = false;
@@ -640,7 +641,7 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
       data-open={open ? 'true' : 'false'}
       aria-hidden={!open}
     >
-      <style>{SEAT_ANIMATIONS}{FLOW_STYLES}</style>
+      <style>{`${SEAT_ANIMATIONS}${FLOW_STYLES}`}</style>
 
       {/* Nền mờ: bấm vào để đóng */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeModal} />
