@@ -17,6 +17,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 /**
  *
  * @author quanghieu
@@ -31,6 +32,10 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long>, JpaSp
     List<Showtime> findByMovie_MovieId(Long movieId);
 
     List<Showtime> findByRoom_RoomId(Long roomId);
+
+    // Khóa suất chiếu khi tạo ghế để hai request đồng thời không tạo trùng.
+    @Query(value = "SELECT room_id FROM showtimes WHERE showtime_id = :showtimeId FOR UPDATE", nativeQuery = true)
+    Optional<Long> findRoomIdForUpdate(@Param("showtimeId") Long showtimeId);
 
     @Query("SELECT COUNT(s) > 0 FROM Showtime s WHERE s.room.roomId = :roomId " +
            "AND (:showtimeId IS NULL OR s.showtimeId <> :showtimeId) " +

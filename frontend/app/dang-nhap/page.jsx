@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import TermsModal from '@/components/legal/TermsModal';
 
 // Đổi cho khớp backend của bạn. Hai endpoint dự kiến: POST /auth/login và POST /auth/register
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8083/api';
@@ -95,6 +96,7 @@ export default function AuthPage() {
   const [loginBanner, setLoginBanner] = useState({ tone: 'error', message: '' });
   const [registerBanner, setRegisterBanner] = useState({ tone: 'error', message: '' });
   const [loading, setLoading] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
 
   const isLogin = tab === 'login';
 
@@ -254,7 +256,8 @@ export default function AuthPage() {
                         Ghi nhớ đăng nhập
                       </label>
                       <Link
-                        href="/quen-mat-khau"
+                        href="/ho-tro"
+                        title="Liên hệ hỗ trợ để khôi phục mật khẩu"
                         className="text-xs font-semibold text-[var(--color-brand-primary)] transition-opacity hover:opacity-80"
                       >
                         Quên mật khẩu?
@@ -370,9 +373,14 @@ export default function AuthPage() {
                         />
                         <span>
                           Tôi đã đọc và đồng ý với{' '}
-                          <Link href="/dieu-khoan" className="font-semibold text-[var(--color-brand-primary)] hover:underline">
+                          <button
+                            type="button"
+                            onClick={() => setTermsOpen(true)}
+                            aria-haspopup="dialog"
+                            className="font-semibold text-[var(--color-brand-primary)] hover:underline"
+                          >
                             Điều khoản & Quy định
-                          </Link>{' '}
+                          </button>{' '}
                           của Seenema.
                         </span>
                       </label>
@@ -400,6 +408,11 @@ export default function AuthPage() {
       </main>
 
       <Footer />
+      <TermsModal
+        open={termsOpen}
+        onClose={() => setTermsOpen(false)}
+        onAgree={() => updateRegister('agree', true)}
+      />
     </div>
   );
 }

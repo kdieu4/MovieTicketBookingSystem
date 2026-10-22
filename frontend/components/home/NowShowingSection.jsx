@@ -55,7 +55,7 @@ export default function NowShowingSection({ movies = [], genres = [], loading, o
         </Link>
       </div>
 
-      <div className="rounded-2xl border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-4 shadow-sm">
+      <div className="rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-4 shadow-[var(--shadow-low)]">
         <div className="flex items-center justify-between pb-2 mb-3 border-b border-[var(--color-border-separator)] text-xs font-semibold text-[var(--color-text-secondary)]">
           <span>Lọc theo thể loại phim:</span>
           {!isAllSelected && (

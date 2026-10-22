@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import TrailerModal from '../movie/TrailerModal';
-import BookingFlow from '@/components/booking/BookingFlow';
+import BookingFlow, { prefetchCities } from '@/components/booking/BookingFlow';
 
 const FONT_STACK =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif';
@@ -56,7 +57,7 @@ export default function FeaturedSection({
   }
 
   const activeDescription = activeMovie?.description || activeMovie?.overview || activeMovie?.synopsis || '';
-  const activePoster = activeMovie?.posterUrl || activeMovie?.poster_url || activeMovie?.bannerUrl || activeMovie?.backdropUrl || '/images/placeholder-movie.jpg';
+  const activePoster = activeMovie?.posterUrl || activeMovie?.poster_url || activeMovie?.bannerUrl || activeMovie?.backdropUrl || '';
   const activeAgeRating = activeMovie?.ageRating || activeMovie?.ageRestriction;
   const activeDuration = activeMovie?.duration || activeMovie?.durationMinutes;
 
@@ -104,6 +105,8 @@ export default function FeaturedSection({
                 <button
                   type="button"
                   onClick={handleBook}
+                  onPointerEnter={() => prefetchCities(activeTitle)}
+                  onFocus={() => prefetchCities(activeTitle)}
                   disabled={searching}
                   className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--color-brand-primary)] px-8 text-sm font-bold text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)] transition-colors hover:bg-[var(--color-brand-primary-hover)] active:scale-[0.98] disabled:cursor-wait disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                 >
@@ -135,12 +138,17 @@ export default function FeaturedSection({
           {/* Cột phải: Poster và thumbnail */}
           <div className="order-1 flex flex-col items-center lg:order-2 lg:col-span-5 lg:items-end">
             <div className="relative aspect-[2/3] w-full max-w-[280px] overflow-hidden rounded-[var(--radius-xl)] bg-[var(--color-fill-secondary)] shadow-[var(--shadow-high)] sm:max-w-[320px]">
-              <img
-                key={fadeKey}
-                src={activePoster}
-                alt={activeTitle}
-                className="h-full w-full object-cover transition-opacity duration-500 animate-fade-in"
-              />
+              {activePoster && (
+                <Image
+                  key={fadeKey}
+                  src={activePoster}
+                  alt={activeTitle}
+                  fill
+                  priority
+                  sizes="(max-width: 640px) 280px, 320px"
+                  className="object-cover transition-opacity duration-500 animate-fade-in"
+                />
+              )}
             </div>
 
             {movies.length > 1 && (
@@ -160,11 +168,15 @@ export default function FeaturedSection({
                           : 'opacity-60 hover:-translate-y-0.5 hover:opacity-100'
                       }`}
                     >
-                      <img
-                        src={movie.posterUrl || movie.poster_url || '/images/placeholder-movie.jpg'}
-                        alt={movie.title}
-                        className="h-full w-full object-cover"
-                      />
+                      {(movie.posterUrl || movie.poster_url) && (
+                        <Image
+                          src={movie.posterUrl || movie.poster_url}
+                          alt={movie.title}
+                          fill
+                          sizes="40px"
+                          className="object-cover"
+                        />
+                      )}
                     </button>
                   );
                 })}

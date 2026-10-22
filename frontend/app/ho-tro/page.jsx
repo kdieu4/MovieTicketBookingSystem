@@ -186,7 +186,7 @@ export default function SupportPage() {
                     className={`rounded-[var(--radius-sm)] px-3.5 py-2.5 text-sm ${
                       status === 'success'
                         ? 'bg-[var(--color-brand-primary-container)] text-[var(--color-brand-primary)]'
-                        : 'bg-red-50 text-red-600'
+                        : 'bg-[var(--color-system-error)]/10 text-[var(--color-system-error)]'
                     }`}
                   >
                     {status === 'success'

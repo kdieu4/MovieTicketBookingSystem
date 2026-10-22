@@ -14,8 +14,8 @@ export default function Footer() {
   return (
     <footer className="border-t border-[var(--color-border-separator)] bg-[var(--color-bg-primary)]">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 text-xs text-[var(--color-text-tertiary)] sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-        <Link href="/" className="font-semibold tracking-tight text-[var(--color-text-primary)] hover:opacity-80">
-          {BRAND_NAME} Cinema
+        <Link href="/" className="font-semibold tracking-tight text-[var(--color-text-primary)] transition-opacity hover:opacity-70">
+          {BRAND_NAME}
         </Link>
 
         <nav className="flex flex-wrap gap-x-6 gap-y-2">

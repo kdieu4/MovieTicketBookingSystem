@@ -24,7 +24,6 @@ import com.mtbs.movie_service.exception.SeatUnavailableException;
 import com.mtbs.movie_service.exception.ShowtimeNotFoundException;
 import com.mtbs.movie_service.repository.MovieRepository;
 import com.mtbs.movie_service.repository.RoomRepository;
-import com.mtbs.movie_service.repository.SeatRepository;
 import com.mtbs.movie_service.repository.ShowtimeRepository;
 import com.mtbs.movie_service.repository.ShowtimeSeatRepository;
 import com.mtbs.movie_service.service.ShowtimeService;
@@ -42,9 +41,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 /**
  *
  * @author quanghieu
@@ -60,7 +57,6 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     private final ShowtimeRepository showtimeRepository;
     private final MovieRepository movieRepository;
     private final RoomRepository roomRepository;
-    private final SeatRepository seatRepository;
     private final ShowtimeSeatRepository showtimeSeatRepository;
 
     @Override
@@ -128,15 +124,14 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     @Override
     @Transactional
     public List<ShowtimeSeatResponse> getSeatsByShowtime(Long showtimeId, String sessionId) {
-        if (!showtimeRepository.existsById(showtimeId)) {
-            throw new ShowtimeNotFoundException(showtimeId);
-        }
+        OffsetDateTime now = OffsetDateTime.now();
         List<ShowtimeSeat> showtimeSeats = showtimeSeatRepository.findByShowtime_ShowtimeId(showtimeId);
         if (showtimeSeats.isEmpty()) {
-            ensureShowtimeSeats(findShowtimeOrThrow(showtimeId));
+            Long roomId = showtimeRepository.findRoomIdForUpdate(showtimeId)
+                    .orElseThrow(() -> new ShowtimeNotFoundException(showtimeId));
+            showtimeSeatRepository.insertMissingSeats(showtimeId, roomId, now);
             showtimeSeats = showtimeSeatRepository.findByShowtime_ShowtimeId(showtimeId);
         }
-        OffsetDateTime now = OffsetDateTime.now();
 
         return showtimeSeats.stream()
                 .sorted(Comparator.comparing((ShowtimeSeat ss) -> ss.getSeat().getSeatRow())
@@ -214,26 +209,10 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     }
 
     private void ensureShowtimeSeats(Showtime showtime) {
-        Long showtimeId = showtime.getShowtimeId();
-        Long roomId = showtime.getRoom().getRoomId();
-
-        Set<Long> existingSeatIds = new HashSet<>(
-                showtimeSeatRepository.findSeatIdsByShowtimeId(showtimeId));
-
-        OffsetDateTime now = OffsetDateTime.now();
-        List<ShowtimeSeat> missing = seatRepository.findByRoom_RoomId(roomId).stream()
-                .filter(seat -> !existingSeatIds.contains(seat.getSeatId()))
-                .map(seat -> ShowtimeSeat.builder()
-                        .showtime(showtime)
-                        .seat(seat)
-                        .status(SeatStatus.AVAILABLE)
-                        .updatedAt(now)
-                        .build())
-                .toList();
-
-        if (!missing.isEmpty()) {
-            showtimeSeatRepository.saveAll(missing);
-        }
+        showtimeSeatRepository.insertMissingSeats(
+                showtime.getShowtimeId(),
+                showtime.getRoom().getRoomId(),
+                OffsetDateTime.now());
     }
 
     private Specification<Showtime> searchSpec(String city, String cinemaName, LocalDate date,

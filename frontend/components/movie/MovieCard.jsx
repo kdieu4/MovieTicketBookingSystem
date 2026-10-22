@@ -1,15 +1,18 @@
 "use client";
 
+import Image from 'next/image';
 import Link from 'next/link';
 
 export default function MovieCard({ movie, onSelectShowtime, index = 0 }) {
   const genreLine = movie.genres?.slice(0, 2).join(' · ');
+  const isUpcoming = movie.status === 'UPCOMING';
 
   // Nút "Chọn suất" nằm trong vùng bao quanh bởi Link, nên phải chặn sự kiện để không chuyển trang
   function handleSelect(event) {
+    if (isUpcoming || !onSelectShowtime) return; // Để Link tự chuyển tới trang chi tiết
     event.preventDefault();
     event.stopPropagation();
-    onSelectShowtime?.(movie);
+    onSelectShowtime(movie);
   }
 
   return (
@@ -19,11 +22,12 @@ export default function MovieCard({ movie, onSelectShowtime, index = 0 }) {
       <Link href={`/phim/${movie.id}`} className="flex flex-1 flex-col">
         <div className="relative aspect-[3/4] w-full overflow-hidden bg-[var(--color-fill-tertiary)]">
           {movie.posterUrl && (
-            <img
+            <Image
               src={movie.posterUrl}
               alt={`Poster phim ${movie.title}`}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           )}
         </div>
@@ -47,9 +51,13 @@ export default function MovieCard({ movie, onSelectShowtime, index = 0 }) {
         <button
           type="button"
           onClick={handleSelect}
-          className="inline-flex h-7 items-center justify-center rounded-full bg-[var(--color-brand-primary)] px-3 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-all hover:bg-[var(--color-brand-primary-hover)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
+          className={`inline-flex h-7 items-center justify-center rounded-full px-3 text-xs font-semibold transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] ${
+            isUpcoming
+              ? 'border border-[var(--color-border-separator)] text-[var(--color-text-primary)] hover:bg-[var(--color-fill-tertiary)]'
+              : 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on-primary)] hover:bg-[var(--color-brand-primary-hover)]'
+          }`}
         >
-          Đặt vé
+          {isUpcoming ? 'Chi tiết' : 'Đặt vé'}
         </button>
       </div>
     </article>

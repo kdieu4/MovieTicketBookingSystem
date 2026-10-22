@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 export default function ComingSoonSection({ movies = [], loading }) {
   if (loading) {
     return (
@@ -41,13 +43,14 @@ export default function ComingSoonSection({ movies = [], loading }) {
             style={{ animationDelay: `${Math.min(index * 60, 420)}ms`, animationFillMode: 'both' }}
             className="animate-fade-in group flex items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-3.5 shadow-[var(--shadow-low)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--color-border-opaque-separator)] hover:shadow-[var(--shadow-medium)]"
           >
-            <div className="h-16 w-12 shrink-0 overflow-hidden rounded-[var(--radius-sm)] bg-[var(--color-fill-tertiary)]">
+            <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-[var(--radius-sm)] bg-[var(--color-fill-tertiary)]">
               {movie.posterUrl && (
-                <img
+                <Image
                   src={movie.posterUrl}
                   alt={`Poster phim ${movie.title}`}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  loading="lazy"
+                  fill
+                  sizes="48px"
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               )}
             </div>

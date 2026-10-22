@@ -52,7 +52,7 @@
 
   /* Đăng ký class animate-fade-in cho Tailwind v4 */
   --animate-fade-in: fade-in 0.35s ease-out forwards;
-  
+
   --animate-backdrop-in: backdrop-fade-in 0.2s ease-out forwards;
   --animate-backdrop-out: backdrop-fade-out 0.2s ease-in forwards;
   --animate-popup-in: popup-scale-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -60,47 +60,118 @@
 }
 
 @layer base {
+  /* Bảng token sáng. Đây là nguồn màu duy nhất cho toàn bộ giao diện. */
   :root {
-    /* ĐƯỜNG VIỀN SIÊU MẢNH VÀ NHẸ KIỂU APPLE STUDIO */
-    --color-border-separator: rgba(0, 0, 0, 0.06);
-    --color-border-opaque-separator: rgba(0, 0, 0, 0.08);
+    color-scheme: light;
 
-    /* MÀU NỀN PHÂN TẦNG (NỬA TRÊN TRẮNG, NỬA DƯỚI XÁM) */
-    --color-bg-primary: #ffffff;           /* Nền nửa trên */
-    --color-bg-secondary: #f5f5f7;         /* Nền nửa dưới (Xám Apple) */
-    --color-bg-tertiary: #ffffff;          /* Nền Card trắng */
-    --color-bg-translucent-header: rgba(255, 255, 255, 0.8);
-    --color-bg-translucent-card: rgba(255, 255, 255, 0.95);
-
-    /* MÀU CHỮ & THƯƠNG HIỆU */
-    --color-text-primary: #1d1d1f;
-    --color-text-secondary: #86868b;
-    --color-text-tertiary: #a1a1a6;
-    --color-brand-primary: #0071e3;        /* Xanh Apple */
-    --color-brand-primary-hover: #0077ed;
+    --color-brand-primary: #007aff;
+    --color-brand-primary-hover: #0056b3;
     --color-brand-on-primary: #ffffff;
+    --color-brand-primary-container: #e5f1ff;
+    --color-brand-on-primary-container: #004085;
 
-    /* FILL & HOVER STATES */
-    --color-fill-primary: rgba(0, 0, 0, 0.04);
-    --color-fill-secondary: #f5f5f7;
-    --color-fill-tertiary: #e8e8ed;
+    --color-bg-primary: #ffffff;
+    --color-bg-secondary: #f2f2f7;
+    --color-bg-tertiary: #ffffff;
+    --color-bg-translucent-header: rgba(255, 255, 255, 0.8);
+    --color-bg-translucent-card: rgba(255, 255, 255, 0.88);
+    --color-bg-grouped-primary: #f2f2f7;
+    --color-bg-grouped-secondary: #ffffff;
 
-    /* BO GÓC CHUẨN APPLE HIG */
+    --color-text-primary: #000000;
+    --color-text-secondary: rgba(60, 60, 67, 0.6);
+    --color-text-tertiary: rgba(60, 60, 67, 0.3);
+    --color-text-quaternary: rgba(60, 60, 67, 0.18);
+
+    --color-border-separator: rgba(60, 60, 67, 0.29);
+    --color-border-opaque-separator: #c6c6c8;
+
+    --color-fill-primary: rgba(120, 120, 128, 0.2);
+    --color-fill-secondary: rgba(120, 120, 128, 0.16);
+    --color-fill-tertiary: rgba(118, 118, 128, 0.12);
+    --color-fill-quaternary: rgba(116, 116, 128, 0.08);
+
+    --color-system-success: #34c759;
+    --color-system-warning: #ff9500;
+    --color-system-error: #ff3b30;
+    --color-system-info: #007aff;
+
     --radius-xs: 6px;
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
-    --radius-xl: 24px;
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
 
-    /* BÓNG ĐỔ MỊN NHẸ */
-    --shadow-low: 0 1px 2px rgba(0, 0, 0, 0.02);
-    --shadow-medium: 0 4px 24px rgba(0, 0, 0, 0.04);
-    --shadow-high: 0 12px 36px rgba(0, 0, 0, 0.08);
+    --shadow-low: 0px 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-medium: 0px 4px 16px rgba(0, 0, 0, 0.12);
+    --shadow-high: 0px 10px 30px rgba(0, 0, 0, 0.18);
+
+    --color-scrollbar-thumb: rgba(60, 60, 67, 0.22);
+    --color-scrollbar-thumb-hover: rgba(60, 60, 67, 0.36);
 
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+  }
+
+  /* Bảng token tối: ThemeProvider chỉ đổi thuộc tính data-theme, CSS tự lo phần còn lại. */
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --color-brand-primary: #bf5af2;
+    --color-brand-primary-hover: #d380f5;
+    --color-brand-on-primary: #ffffff;
+    --color-brand-primary-container: #3a1d4d;
+    --color-brand-on-primary-container: #e8b8f9;
+
+    --color-bg-primary: #000000;
+    --color-bg-secondary: #1c1c1e;
+    --color-bg-tertiary: #2c2c2e;
+    --color-bg-translucent-header: rgba(28, 28, 30, 0.75);
+    --color-bg-translucent-card: rgba(44, 44, 46, 0.85);
+    --color-bg-grouped-primary: #000000;
+    --color-bg-grouped-secondary: #1c1c1e;
+
+    --color-text-primary: #ffffff;
+    --color-text-secondary: rgba(235, 235, 245, 0.6);
+    --color-text-tertiary: rgba(235, 235, 245, 0.3);
+    --color-text-quaternary: rgba(235, 235, 245, 0.18);
+
+    --color-border-separator: rgba(84, 84, 88, 0.65);
+    --color-border-opaque-separator: #38383a;
+
+    --color-fill-primary: rgba(120, 120, 128, 0.36);
+    --color-fill-secondary: rgba(120, 120, 128, 0.32);
+    --color-fill-tertiary: rgba(118, 118, 128, 0.24);
+    --color-fill-quaternary: rgba(116, 116, 128, 0.18);
+
+    --color-system-success: #30d158;
+    --color-system-warning: #ff9f0a;
+    --color-system-error: #ff453a;
+    --color-system-info: #64d2ff;
+
+    --shadow-low: 0px 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-medium: 0px 4px 16px rgba(0, 0, 0, 0.4);
+    --shadow-high: 0px 10px 30px rgba(0, 0, 0, 0.5);
+
+    --color-scrollbar-thumb: rgba(235, 235, 245, 0.24);
+    --color-scrollbar-thumb-hover: rgba(235, 235, 245, 0.4);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  ::selection {
+    background-color: var(--color-brand-primary);
+    color: var(--color-brand-on-primary);
   }
 
   /* Custom Scrollbar mượt cho giao diện */
@@ -114,11 +185,25 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
+    background: var(--color-scrollbar-thumb);
     border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.25);
+    background: var(--color-scrollbar-thumb-hover);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
