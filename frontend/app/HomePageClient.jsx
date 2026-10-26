@@ -14,12 +14,10 @@ import SearchBooking from '@/components/home/SearchBooking';
 export default function HomePageClient({
   initialNowShowing = [],
   initialComingSoon = [],
-  initialGenres = [],
   initialError = false,
 }) {
   const nowShowing = initialNowShowing;
   const comingSoon = initialComingSoon;
-  const genres = initialGenres;
 
   // Luồng đặt vé dùng chung cho FeaturedSection và nút "Chọn suất" trên thẻ phim
   const [filters, setFilters] = useState(null);
@@ -46,10 +44,10 @@ export default function HomePageClient({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-primary)] selection:text-[var(--color-brand-on-primary)] transition-colors duration-200 overflow-visible">
+    <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-fill)] selection:text-[var(--color-brand-on-primary)] transition-colors duration-200 overflow-visible">
       <Header />
 
-      <main className="pb-8 space-y-6 overflow-visible">
+      <main className="overflow-visible pb-12">
         {initialError && (
           <div className="mx-auto pt-4 max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-system-error)]/40 bg-[var(--color-system-error)]/10 px-4 py-3 text-sm font-medium text-[var(--color-system-error)] backdrop-blur-md">
@@ -62,17 +60,18 @@ export default function HomePageClient({
         {/* 1. KHỐI PHIM NỔI BẬT */}
         <FeaturedSection movies={nowShowing} onContinue={handleContinue} />
 
-        {/* 2. THANH TÌM SUẤT CHIẾU NHANH */}
-        <SearchBooking
-          movies={nowShowing}
-          movieTitles={nowShowing.map((m) => m.title)}
-          onContinue={handleContinue}
-        />
+        {/* 2. THANH TÌM SUẤT CHIẾU NHANH: nổi lên trên mép dưới của hero */}
+        <div className="relative z-20 -mt-10 sm:-mt-14">
+          <SearchBooking
+            movies={nowShowing}
+            movieTitles={nowShowing.map((m) => m.title)}
+            onContinue={handleContinue}
+          />
+        </div>
 
         {/* 3. KHỐI PHIM ĐANG CHIẾU & BỘ LỌC */}
         <NowShowingSection
           movies={nowShowing}
-          genres={genres}
           onSelectShowtime={handleSelectShowtime}
         />
 

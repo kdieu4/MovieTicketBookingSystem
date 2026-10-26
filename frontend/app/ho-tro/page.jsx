@@ -72,14 +72,14 @@ export default function SupportPage() {
             <span className="inline-block rounded-full bg-[var(--color-fill-secondary)] px-3 py-1 text-xs font-semibold text-[var(--color-brand-primary)]">
               Liên hệ 24/7
             </span>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Trung tâm hỗ trợ khách hàng</h1>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Trung tâm hỗ trợ khách hàng</h1>
             <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
               Chúng tôi luôn sẵn sàng lắng nghe và giải đáp mọi thắc mắc của bạn.
             </p>
 
             <div className="mt-8 space-y-4">
               <div className="flex items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-4 shadow-[var(--shadow-low)]">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-primary-container)] text-xs font-bold text-[var(--color-brand-primary)]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-primary-container)] text-xs font-semibold text-[var(--color-brand-primary)]">
                   TEL
                 </div>
                 <div>
@@ -89,7 +89,7 @@ export default function SupportPage() {
               </div>
 
               <div className="flex items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-4 shadow-[var(--shadow-low)]">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-primary-container)] text-xs font-bold text-[var(--color-brand-primary)]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-primary-container)] text-xs font-semibold text-[var(--color-brand-primary)]">
                   MAIL
                 </div>
                 <div>
@@ -101,7 +101,7 @@ export default function SupportPage() {
           </div>
 
           <div className="rounded-[var(--radius-xl)] border border-[var(--color-border-separator)] bg-[var(--color-bg-translucent-card)] p-6 shadow-[var(--shadow-medium)] backdrop-blur-xl sm:p-8">
-            <h2 className="text-lg font-bold tracking-tight">Gửi yêu cầu hỗ trợ</h2>
+            <h2 className="text-lg font-semibold tracking-tight">Gửi yêu cầu hỗ trợ</h2>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
               <div>
@@ -199,7 +199,7 @@ export default function SupportPage() {
               <button
                 type="submit"
                 disabled={isSending}
-                className="h-11 w-full rounded-[var(--radius-sm)] bg-[var(--color-brand-primary)] text-sm font-semibold text-[var(--color-brand-on-primary)] transition-all hover:bg-[var(--color-brand-primary-hover)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-70 disabled:active:scale-100"
+                className="h-11 w-full rounded-full bg-[var(--color-brand-fill)] text-sm font-semibold text-[var(--color-brand-on-primary)] transition-all hover:bg-[var(--color-brand-fill-hover)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-70 disabled:active:scale-100"
               >
                 {isSending ? 'Đang gửi...' : 'Gửi yêu cầu'}
               </button>

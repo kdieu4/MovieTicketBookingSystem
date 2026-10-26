@@ -101,7 +101,7 @@ function PlusIcon({ open }) {
       aria-hidden="true"
       className={`ml-4 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-all duration-300 ease-out motion-reduce:transition-none ${
         open
-          ? 'rotate-45 border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)] text-white'
+          ? 'rotate-45 border-[var(--color-brand-primary)] bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)]'
           : 'rotate-0 border-[var(--color-border-separator)] text-[var(--color-text-tertiary)] group-hover:border-[var(--color-brand-primary)] group-hover:text-[var(--color-brand-primary)]'
       }`}
     >
@@ -124,7 +124,7 @@ export default function FAQPage() {
       <Header />
       <main className="animate-fade-in mx-auto w-full flex-1 max-w-3xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Câu hỏi thường gặp</h1>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Câu hỏi thường gặp</h1>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-[var(--color-text-secondary)]">
             Giải đáp nhanh các thắc mắc về đặt vé, thanh toán, nhận vé tại rạp và tài khoản thành viên.
           </p>
@@ -133,7 +133,7 @@ export default function FAQPage() {
         <div className="mt-12 space-y-10">
           {FAQS.map((group) => (
             <section key={group.category}>
-              <h2 className="text-lg font-bold tracking-tight text-[var(--color-brand-primary)]">
+              <h2 className="text-lg font-semibold tracking-tight text-[var(--color-brand-primary)]">
                 {group.category}
               </h2>
               <div className="mt-4 divide-y divide-[var(--color-border-separator)] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] shadow-[var(--shadow-low)]">

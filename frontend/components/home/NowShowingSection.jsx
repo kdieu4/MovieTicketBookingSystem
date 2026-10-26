@@ -3,14 +3,29 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import MovieCard from '@/components/movie/MovieCard';
+import { CheckIcon, IconFilter } from '@/components/common/Icons';
+import Skeleton from '@/components/common/Skeleton';
 
 const PAGE_SIZE = 10;
 
-export default function NowShowingSection({ movies = [], genres = [], loading, onSelectShowtime }) {
+export default function NowShowingSection({ movies = [], loading, onSelectShowtime }) {
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const isAllSelected = selectedGenres.length === 0;
+
+  // Lấy thể loại từ chính danh sách phim: chip nào cũng có kết quả, kèm số phim.
+  const genreOptions = useMemo(() => {
+    const counts = new Map();
+    for (const movie of movies) {
+      for (const genre of movie.genres ?? []) {
+        if (genre) counts.set(genre, (counts.get(genre) ?? 0) + 1);
+      }
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'vi'))
+      .map(([name, count]) => ({ name, count }));
+  }, [movies]);
 
   function handleSelectAll() {
     setSelectedGenres([]);
@@ -38,84 +53,119 @@ export default function NowShowingSection({ movies = [], genres = [], loading, o
   const hasMore = visibleCount < filteredMovies.length;
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      {/* TIÊU ĐỀ PHIM ĐANG CHIẾU & BỘ LỌC THỂ LOẠI */}
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between mb-4">
+    <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <div className="flex items-end justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-[var(--color-text-primary)]">Phim đang chiếu</h2>
-          <p className="mt-1 text-xs sm:text-sm text-[var(--color-text-secondary)]">
-            Trải nghiệm điện ảnh đỉnh cao với lịch chiếu linh hoạt tại rạp.
-          </p>
+          <h2 className="section-title">Phim đang chiếu</h2>
+          <p className="section-lede">Chọn phim, chọn suất chiếu và giữ ghế trong vài phút.</p>
         </div>
         <Link
           href="/phim"
-          className="text-xs sm:text-sm font-semibold text-[var(--color-brand-primary)] transition-colors hover:underline"
+          className="link-underline hidden shrink-0 text-sm font-medium sm:block"
         >
-          Xem tất cả phim →
+          Xem tất cả phim
         </Link>
       </div>
 
-      <div className="rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-4 shadow-[var(--shadow-low)]">
-        <div className="flex items-center justify-between pb-2 mb-3 border-b border-[var(--color-border-separator)] text-xs font-semibold text-[var(--color-text-secondary)]">
-          <span>Lọc theo thể loại phim:</span>
-          {!isAllSelected && (
-            <span className="text-[var(--color-brand-primary)] font-bold">
-              Đã chọn {selectedGenres.length} thể loại
-            </span>
-          )}
-        </div>
+      {/* Bộ lọc thể loại: nhãn rõ ràng, chip xuống dòng, số phim và nút xóa lọc. */}
+      {genreOptions.length > 0 && (
+        <div className="mt-7 border-t border-[var(--color-border-separator)] pt-4">
+          <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
+              <IconFilter className="h-4 w-4 shrink-0" />
+              <span id="now-showing-genre-label" className="text-xs font-semibold">
+                Lọc theo thể loại
+              </span>
+            </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <TabButton active={isAllSelected} onClick={handleSelectAll}>
-            Tất cả
-          </TabButton>
-          {genres.map((genre) => {
-            const genreName = genre.name ?? genre;
-            const isSelected = selectedGenres.includes(genreName);
-
-            return (
-              <TabButton
-                key={genre.id ?? genreName}
-                active={isSelected}
-                showCheck={isSelected}
-                onClick={() => handleToggleGenre(genreName)}
+            <div className="flex items-center gap-1">
+              <span
+                aria-live="polite"
+                className="px-1 text-xs font-medium tabular-nums text-[var(--color-text-tertiary)]"
               >
-                {genreName}
-              </TabButton>
-            );
-          })}
+                {loading ? 'Đang tải phim…' : `${filteredMovies.length} phim`}
+              </span>
+              {!isAllSelected && (
+                <button
+                  type="button"
+                  onClick={handleSelectAll}
+                  className="inline-flex h-11 items-center rounded-full px-3 text-xs font-semibold text-[var(--color-brand-primary)] transition-colors duration-200 hover:bg-[var(--color-fill-secondary)]"
+                >
+                  Xóa lọc
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div
+            role="group"
+            aria-labelledby="now-showing-genre-label"
+            className="mt-3 flex flex-wrap gap-2"
+          >
+            <button
+              type="button"
+              onClick={handleSelectAll}
+              data-active={isAllSelected}
+              aria-pressed={isAllSelected}
+              className="chip"
+            >
+              Tất cả
+              <span className="chip-count">{movies.length}</span>
+            </button>
+
+            {genreOptions.map(({ name, count }) => {
+              const isSelected = selectedGenres.includes(name);
+
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => handleToggleGenre(name)}
+                  data-active={isSelected}
+                  aria-pressed={isSelected}
+                  className="chip"
+                >
+                  {name}
+                  <span className="chip-count">{count}</span>
+                  {isSelected && <CheckIcon className="h-3 w-3 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* DANH SÁCH LƯỚI PHIM */}
-      <div key={selectedGenres.join('|')} className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 sm:gap-6">
-        {loading
-          ? Array.from({ length: 5 }).map((_, i) => <CardSkeleton key={i} />)
-          : visibleMovies.map((movie, index) => (
-              <MovieCard key={movie.id} movie={movie} index={index} onSelectShowtime={onSelectShowtime} />
-            ))}
+      <div key={selectedGenres.join('|')} className="animate-fade-in mt-8">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-5">
+          {loading
+            ? Array.from({ length: 5 }).map((_, i) => <CardSkeleton key={i} />)
+            : visibleMovies.map((movie, index) => (
+                <MovieCard key={movie.id} movie={movie} index={index} onSelectShowtime={onSelectShowtime} />
+              ))}
+        </div>
       </div>
 
       {!loading && filteredMovies.length === 0 && (
-        <div className="animate-fade-in mt-8 text-center py-10 rounded-2xl border border-dashed border-[var(--color-border-separator)]">
-          <p className="text-xs text-[var(--color-text-tertiary)]">Không tìm thấy phim nào thuộc các thể loại đã chọn.</p>
-          <button
-            type="button"
-            onClick={handleSelectAll}
-            className="mt-2 text-xs font-semibold text-[var(--color-brand-primary)] hover:underline"
-          >
-            Hiển thị lại tất cả phim
-          </button>
+        <div className="animate-fade-in mt-8 rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border-separator)] px-6 py-12 text-center">
+          <p className="text-sm font-medium text-[var(--color-text-primary)]">
+            {isAllSelected ? 'Hiện chưa có phim đang chiếu.' : 'Không có phim thuộc thể loại đã chọn.'}
+          </p>
+          {!isAllSelected && (
+            <button
+              type="button"
+              onClick={handleSelectAll}
+              className="mt-3 inline-flex h-11 items-center px-2 text-xs font-semibold text-[var(--color-brand-primary)] hover:underline"
+            >
+              Hiển thị lại tất cả phim
+            </button>
+          )}
         </div>
       )}
 
       {!loading && hasMore && (
-        <div className="mt-8 flex justify-center">
-          <button
-            type="button"
-            onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-            className="h-9 rounded-full border border-[var(--color-border-separator)] px-6 text-xs font-semibold text-[var(--color-text-primary)] transition-all hover:bg-[var(--color-fill-tertiary)] active:scale-95"
-          >
+        <div className="mt-10 flex justify-center">
+          <button type="button" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)} className="btn btn-secondary">
             Xem thêm phim
           </button>
         </div>
@@ -124,35 +174,11 @@ export default function NowShowingSection({ movies = [], genres = [], loading, o
   );
 }
 
-function TabButton({ active, onClick, children, showCheck = false }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 h-7 rounded-full px-3.5 text-xs font-medium transition-all active:scale-95 ${
-        active
-          ? 'bg-[var(--color-brand-primary)] text-white font-semibold shadow-sm'
-          : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-fill-tertiary)] bg-[var(--color-fill-secondary)]'
-      }`}
-    >
-      <span>{children}</span>
-      {showCheck && (
-        <svg className="h-3 w-3 stroke-current" viewBox="0 0 16 16" fill="none" strokeWidth="2.5" strokeLinecap="round">
-          <path d="M3.5 8.5L6.5 11.5L12.5 4.5" />
-        </svg>
-      )}
-    </button>
-  );
-}
-
 function CardSkeleton() {
   return (
-    <div className="animate-pulse overflow-hidden rounded-2xl border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)]">
-      <div className="aspect-[3/4] bg-[var(--color-fill-tertiary)]" />
-      <div className="space-y-2 p-3">
-        <div className="h-3 w-3/4 rounded bg-[var(--color-fill-tertiary)]" />
-        <div className="h-2.5 w-1/2 rounded bg-[var(--color-fill-tertiary)]" />
-      </div>
+    <div>
+      <Skeleton className="aspect-[2/3] w-full rounded-[18px]" />
+      <Skeleton lines={2} widths={['78%', '46%']} className="mt-3" />
     </div>
   );
 }

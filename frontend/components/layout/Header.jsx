@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { BRAND_NAME } from '@/styles/tokens';
 import AccountMenu from '@/components/account/AccountMenu';
+import { Reveal, Skeleton } from '@/components/common/Ascii';
 
 const NAV_LINKS = [
   { label: 'Trang chủ', href: '/' },
@@ -78,9 +79,6 @@ export default function Header() {
   const router = useRouter();
 
   const [hoverIndex, setHoverIndex] = useState(null);
-  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0, opacity: 0 });
-  const navRef = useRef(null);
-  const itemRefs = useRef([]);
   const searchBoxRef = useRef(null);
   const panelInnerRef = useRef(null);
 
@@ -88,30 +86,9 @@ export default function Header() {
     link.href === '/' ? pathname === '/' : pathname?.startsWith(link.href)
   );
 
-  const targetIndex = hoverIndex !== null ? hoverIndex : (activeIndex >= 0 ? activeIndex : null);
-
-  useLayoutEffect(() => {
-    function measure() {
-      if (targetIndex === null) {
-        setIndicatorStyle((prev) => ({ ...prev, opacity: 0 }));
-        return;
-      }
-      const currentItem = itemRefs.current[targetIndex];
-      if (currentItem) {
-        setIndicatorStyle({
-          left: currentItem.offsetLeft,
-          width: currentItem.offsetWidth,
-          opacity: 1,
-        });
-      }
-    }
-
-    measure();
-
-    const observer = new ResizeObserver(measure);
-    if (navRef.current) observer.observe(navRef.current);
-    return () => observer.disconnect();
-  }, [targetIndex, pathname]);
+  // Bốn mục chia đều nhau nên indicator chỉ cần dịch, không phải đo lại chiều rộng.
+  const targetIndex = hoverIndex !== null ? hoverIndex : activeIndex;
+  const indicatorIndex = Math.max(targetIndex, 0);
 
   // ---- Tìm kiếm qua API ----
   const keyword = searchValue.trim();
@@ -256,25 +233,24 @@ export default function Header() {
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2.5 text-[var(--color-text-primary)] transition-opacity hover:opacity-80">
             <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-brand-primary)]">
-              <span className="h-3 w-3 rounded-full bg-[var(--color-brand-primary)]" />
+              <span className="h-3 w-3 rounded-full bg-[var(--color-brand-fill)]" />
             </span>
-            <span className="text-base font-bold tracking-tight">{BRAND_NAME}</span>
+            <span className="text-base font-semibold tracking-tight">{BRAND_NAME}</span>
           </Link>
         </div>
 
         {/* Floating Navigation Bar Center */}
-        <nav className="hidden md:flex items-center">
+        <nav className="hidden md:flex items-center" aria-label="Điều hướng chính">
           <div
-            ref={navRef}
             onMouseLeave={() => setHoverIndex(null)}
-            className="relative flex items-center overflow-hidden rounded-full border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-1 shadow-[0_1px_3px_rgba(0,0,0,0.06)] backdrop-blur-md"
+            className="relative grid grid-cols-4 items-center rounded-full border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-1 backdrop-blur-md"
           >
             <div
-              className="pointer-events-none absolute bottom-1 left-0 top-1 rounded-full bg-[var(--color-fill-secondary)] transition-all duration-300 ease-out"
+              aria-hidden="true"
+              className="pointer-events-none absolute bottom-1 left-1 top-1 w-[calc((100%-0.5rem)/4)] rounded-full bg-[var(--color-fill-secondary)] transition-[transform,opacity] duration-300 ease-[var(--ease-out)]"
               style={{
-                transform: `translateX(${indicatorStyle.left}px)`,
-                width: `${indicatorStyle.width}px`,
-                opacity: indicatorStyle.opacity,
+                transform: `translateX(${indicatorIndex * 100}%)`,
+                opacity: targetIndex >= 0 ? 1 : 0,
               }}
             />
 
@@ -285,11 +261,11 @@ export default function Header() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  ref={(el) => (itemRefs.current[idx] = el)}
                   onMouseEnter={() => setHoverIndex(idx)}
-                  className={`relative z-10 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors duration-200 ${
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`relative z-10 flex h-8 items-center justify-center rounded-full px-4 text-[13px] font-medium transition-colors duration-200 ${
                     isActive
-                      ? 'text-[var(--color-brand-primary)] font-bold'
+                      ? 'text-[var(--color-brand-primary)]'
                       : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
                   }`}
                 >
@@ -308,7 +284,7 @@ export default function Header() {
               role="search"
               className={`flex items-center gap-2 rounded-full border bg-[var(--color-fill-tertiary)] px-3.5 py-1.5 transition-[border-color,background-color,box-shadow] duration-300 ${
                 searchFocused
-                  ? 'border-[var(--color-brand-primary)] bg-[var(--color-bg-tertiary)] shadow-[0_0_0_3px_rgba(0,122,255,0.12)]'
+                  ? 'border-[var(--color-brand-primary)] bg-[var(--color-bg-tertiary)] shadow-[0_0_0_3px_var(--color-focus-ring)]'
                   : 'border-[var(--color-border-separator)]'
               }`}
             >
@@ -337,7 +313,7 @@ export default function Header() {
                 id="search-results"
                 role="listbox"
                 style={{ height: panelHeight ?? 'auto' }}
-                className={`absolute right-0 top-full z-50 mt-2 w-[max(100%,19rem)] max-w-[calc(100vw-2rem)] origin-top overflow-hidden rounded-2xl border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] shadow-[0_12px_40px_rgba(0,0,0,0.14)] backdrop-blur-xl transition-[height,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                className={`absolute right-0 top-full z-50 mt-2 w-[max(100%,19rem)] max-w-[calc(100vw-2rem)] origin-top overflow-hidden rounded-2xl border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] shadow-[var(--shadow-high)] backdrop-blur-xl transition-[height,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                   panelVisible
                     ? 'translate-y-0 scale-100 opacity-100'
                     : '-translate-y-2 scale-[0.97] opacity-0'
@@ -350,10 +326,11 @@ export default function Header() {
                     isLoading ? 'opacity-100' : 'opacity-0'
                   }`}
                 >
-                  <div className="hdr-bar h-full w-2/5 rounded-full bg-[var(--color-brand-primary)]" />
+                  <div className="hdr-bar h-full w-2/5 rounded-full bg-[var(--color-brand-fill)]" />
                 </div>
 
                 <div ref={panelInnerRef} className="p-2">
+                  <Reveal loading={showSkeleton} shimmer={false} lazy={false}>
                   {results.length > 0 && (
                     <>
                       <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
@@ -426,10 +403,9 @@ export default function Header() {
                     <ul className="hdr-fade" aria-label="Đang tìm kiếm">
                       {[0, 1, 2].map((n) => (
                         <li key={n} className="flex items-center gap-3 rounded-xl px-3 py-2">
-                          <span className="h-14 w-10 shrink-0 animate-pulse rounded-md bg-[var(--color-fill-secondary)]" />
-                          <span className="flex-1 space-y-2">
-                            <span className="block h-3 w-3/4 animate-pulse rounded bg-[var(--color-fill-secondary)]" />
-                            <span className="block h-2.5 w-1/2 animate-pulse rounded bg-[var(--color-fill-tertiary)]" />
+                          <Skeleton rows={4} width={40} height={56} className="shrink-0 rounded-md" />
+                          <span className="flex-1">
+                            <Skeleton lines={2} widths={['76%', '48%']} />
                           </span>
                         </li>
                       ))}
@@ -457,6 +433,7 @@ export default function Header() {
                       </p>
                     </div>
                   )}
+                  </Reveal>
                 </div>
               </div>
             )}
@@ -465,7 +442,7 @@ export default function Header() {
           {pathname !== '/dang-nhap' && (
             <Link
               href="/dang-nhap"
-              className="hidden h-9 items-center justify-center rounded-full bg-[var(--color-brand-primary)] px-4 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-primary-hover)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] sm:inline-flex"
+              className="hidden h-9 items-center justify-center rounded-full bg-[var(--color-brand-fill)] px-4 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-fill-hover)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] sm:inline-flex"
             >
               Đăng nhập
             </Link>
@@ -505,7 +482,7 @@ export default function Header() {
             />
             <button
               type="submit"
-              className="h-8 shrink-0 rounded-full bg-[var(--color-brand-primary)] px-3.5 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-primary-hover)] active:scale-95"
+              className="h-8 shrink-0 rounded-full bg-[var(--color-brand-fill)] px-3.5 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-fill-hover)] active:scale-95"
             >
               Tìm
             </button>
@@ -528,7 +505,7 @@ export default function Header() {
             <Link
               href="/dang-nhap"
               onClick={() => setMenuOpen(false)}
-              className="mt-3 flex h-10 items-center justify-center rounded-full bg-[var(--color-brand-primary)] text-sm font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-primary-hover)] active:scale-[0.98]"
+              className="mt-3 flex h-10 items-center justify-center rounded-full bg-[var(--color-brand-fill)] text-sm font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-fill-hover)] active:scale-[0.98]"
             >
               Đăng nhập
             </Link>
@@ -563,7 +540,7 @@ function MoviePoster({ movie }) {
   return (
     <span
       aria-hidden="true"
-      className="flex h-14 w-10 shrink-0 items-center justify-center rounded-md bg-[var(--color-fill-secondary)] text-sm font-bold text-[var(--color-brand-primary)]"
+      className="flex h-14 w-10 shrink-0 items-center justify-center rounded-md bg-[var(--color-fill-secondary)] text-sm font-semibold text-[var(--color-brand-primary)]"
     >
       {movie.title?.charAt(0)}
     </span>

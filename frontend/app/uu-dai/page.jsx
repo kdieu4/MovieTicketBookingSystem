@@ -34,7 +34,7 @@ export default function OffersPage() {
           <span className="inline-block rounded-full bg-[var(--color-fill-secondary)] px-3 py-1 text-xs font-semibold text-[var(--color-brand-primary)]">
             Thành viên
           </span>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-balance sm:text-4xl">Ưu đãi tại Seenema</h1>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">Ưu đãi tại Seenema</h1>
           <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
             Những quyền lợi dành cho khách hàng đặt vé trực tuyến, từ tích điểm đến thanh toán và đặt vé nhóm.
           </p>
@@ -47,7 +47,7 @@ export default function OffersPage() {
               style={{ animationDelay: `${index * 70}ms` }}
               className="animate-fade-in flex flex-col rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-6 shadow-[var(--shadow-low)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--color-border-opaque-separator)] hover:shadow-[var(--shadow-medium)]"
             >
-              <span className="text-2xl font-bold text-[var(--color-brand-primary)]">{offer.step}</span>
+              <span className="text-2xl font-semibold text-[var(--color-brand-primary)]">{offer.step}</span>
               <h2 className="mt-4 text-base font-semibold tracking-tight">{offer.title}</h2>
               <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">{offer.desc}</p>
             </article>
@@ -56,7 +56,7 @@ export default function OffersPage() {
 
         <section className="mt-10 flex flex-col items-start justify-between gap-5 rounded-[var(--radius-xl)] border border-[var(--color-border-separator)] bg-[var(--color-bg-secondary)] p-6 sm:flex-row sm:items-center sm:p-8">
           <div>
-            <h2 className="text-lg font-bold tracking-tight">Sẵn sàng chọn phim?</h2>
+            <h2 className="text-lg font-semibold tracking-tight">Sẵn sàng chọn phim?</h2>
             <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
               Xem lịch chiếu và đặt vé tại rạp gần bạn.
             </p>
@@ -64,7 +64,7 @@ export default function OffersPage() {
           <div className="flex flex-wrap gap-3">
             <Link
               href="/phim"
-              className="inline-flex h-10 items-center rounded-full bg-[var(--color-brand-primary)] px-5 text-sm font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-primary-hover)] active:scale-95"
+              className="inline-flex h-10 items-center rounded-full bg-[var(--color-brand-fill)] px-5 text-sm font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-fill-hover)] active:scale-95"
             >
               Xem phim
             </Link>

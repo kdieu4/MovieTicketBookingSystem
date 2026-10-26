@@ -1,72 +1,67 @@
 import Image from 'next/image';
+import Skeleton from '@/components/common/Skeleton';
 
 export default function ComingSoonSection({ movies = [], loading }) {
-  if (loading) {
-    return (
-      <section className="mx-auto max-w-7xl border-t border-[var(--color-border-separator)] px-4 py-12 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-1">
-          <div className="h-7 w-48 animate-pulse rounded-[var(--radius-xs)] bg-[var(--color-fill-tertiary)]" />
-          <div className="mt-1 h-4 w-72 animate-pulse rounded-[var(--radius-xs)] bg-[var(--color-fill-tertiary)]" />
-        </div>
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={`coming-soon-skeleton-${i}`}
-              className="flex items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-3.5"
-            >
-              <div className="h-16 w-12 shrink-0 animate-pulse rounded-[var(--radius-sm)] bg-[var(--color-fill-tertiary)]" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-3/4 animate-pulse rounded-[var(--radius-xs)] bg-[var(--color-fill-tertiary)]" />
-                <div className="h-3 w-1/2 animate-pulse rounded-[var(--radius-xs)] bg-[var(--color-fill-tertiary)]" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    );
-  }
-
-  if (movies.length === 0) return null;
+  if (!loading && movies.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-7xl border-t border-[var(--color-border-separator)] px-4 py-12 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-2xl font-bold tracking-tight text-[var(--color-text-primary)]">Phim sắp chiếu</h2>
-        <p className="text-sm text-[var(--color-text-secondary)]">Khám phá những tác phẩm điện ảnh sắp ra mắt tại rạp.</p>
+    <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <div>
+        <h2 className="section-title">Phim sắp chiếu</h2>
+        <p className="section-lede">Đánh dấu ngày khởi chiếu để không bỏ lỡ.</p>
       </div>
 
-      <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-8">
+        {loading ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={`coming-soon-skeleton-${i}`} className="surface flex items-center gap-4 p-4">
+                <Skeleton width={64} height={96} className="shrink-0 rounded-[10px]" />
+                <div className="flex-1">
+                  <Skeleton lines={2} widths={['78%', '46%']} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {movies.map((movie, index) => (
           <li
             key={movie.id ?? `coming-soon-${index}`}
-            style={{ animationDelay: `${Math.min(index * 60, 420)}ms`, animationFillMode: 'both' }}
-            className="animate-fade-in group flex items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-3.5 shadow-[var(--shadow-low)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--color-border-opaque-separator)] hover:shadow-[var(--shadow-medium)]"
+            style={{ animationDelay: `${Math.min(index * 55, 330)}ms`, animationFillMode: 'both' }}
+            className="animate-fade-in group surface flex items-center gap-4 p-4 transition-[transform,border-color] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:border-[var(--color-border-opaque-separator)]"
           >
-            <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-[var(--radius-sm)] bg-[var(--color-fill-tertiary)]">
+            <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-[10px] bg-[var(--color-fill-tertiary)]">
               {movie.posterUrl && (
                 <Image
                   src={movie.posterUrl}
                   alt={`Poster phim ${movie.title}`}
                   fill
-                  sizes="48px"
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  sizes="64px"
+                  className="object-cover transition-transform duration-300 ease-[var(--ease-out)] group-hover:scale-105"
                 />
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold tracking-tight text-[var(--color-text-primary)]">
+              <p className="truncate text-[15px] font-semibold tracking-tight text-[var(--color-text-primary)]">
                 {movie.title}
               </p>
               {movie.releaseDate && (
-                <p className="mt-1 text-xs font-medium text-[var(--color-text-secondary)]">
-                  Khởi chiếu: {formatDate(movie.releaseDate)}
+                <p className="mt-1.5 text-xs text-[var(--color-text-secondary)]">
+                  Khởi chiếu {formatDate(movie.releaseDate)}
                 </p>
               )}
+              <span
+                className="mt-3 inline-flex h-6 items-center rounded-full bg-[var(--color-brand-primary-container)] px-2.5 text-[11px] font-semibold text-[var(--color-brand-on-primary-container)]"
+              >
+                Sắp chiếu
+              </span>
             </div>
           </li>
         ))}
       </ul>
+        )}
+      </div>
     </section>
   );
 }

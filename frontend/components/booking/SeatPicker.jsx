@@ -1,5 +1,7 @@
 "use client";
 
+import { Skeleton } from '@/components/common/Ascii';
+
 export const SEAT_ANIMATIONS = `
 @keyframes sp-seat-in {
   from { opacity: 0; transform: translateY(8px) scale(0.85); }
@@ -31,19 +33,18 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
   if (loadingSeats) {
     return (
       <div role="status" aria-live="polite">
-        <div className="mx-auto mb-10 h-1.5 w-full max-w-xl animate-pulse rounded-full bg-[var(--color-fill-secondary)]" />
+        <Skeleton rows={1} width="100%" height={6} className="mx-auto mb-10 max-w-xl rounded-full" />
         <div className="overflow-x-auto pb-2">
           <div className="mx-auto flex min-w-[500px] flex-col items-center gap-3">
             {Array.from({ length: 6 }).map((_, row) => (
-              <div key={row} className="flex items-center gap-2">
-                {Array.from({ length: 10 }).map((__, col) => (
-                  <span
-                    key={col}
-                    className="h-9 w-9 animate-pulse rounded-[var(--radius-sm)] bg-[var(--color-fill-tertiary)]"
-                    style={{ animationDelay: `${(row + col) * 60}ms` }}
-                  />
-                ))}
-              </div>
+              <Skeleton
+                key={row}
+                rows={2}
+                width={388}
+                height={36}
+                seed={row}
+                className="rounded-[var(--radius-sm)]"
+              />
             ))}
           </div>
         </div>
@@ -71,7 +72,7 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
           />
         </svg>
         <span
-          className="sp-fade mt-1 block text-[11px] font-bold tracking-[0.25em] text-[var(--color-text-tertiary)] uppercase"
+          className="sp-fade mt-1 block text-[11px] font-semibold tracking-[0.25em] text-[var(--color-text-tertiary)] uppercase"
           style={{ animationDelay: '300ms' }}
         >
           MÀN HÌNH
@@ -87,7 +88,7 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
             return (
               <div key={rowLabel} className="flex items-center gap-3">
                 <span
-                  className="sp-fade w-5 text-center text-[12px] font-bold text-[var(--color-text-secondary)]"
+                  className="sp-fade w-5 text-center text-[12px] font-semibold text-[var(--color-text-secondary)]"
                   style={{ animationDelay: `${rowIndex * 45}ms` }}
                 >
                   {rowLabel}
@@ -107,7 +108,7 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
                         'bg-[var(--color-fill-tertiary)] text-[var(--color-text-quaternary)] border-transparent cursor-not-allowed';
                     } else if (isSelected) {
                       seatClass =
-                        'sp-pop bg-[var(--color-brand-primary)] text-[var(--color-brand-on-primary)] border-[var(--color-brand-primary)] font-bold shadow-[var(--shadow-low)]';
+                        'sp-pop bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] border-[var(--color-brand-primary)] font-semibold shadow-[var(--shadow-low)]';
                     } else if (isVip) {
                       seatClass =
                         'bg-[var(--color-bg-primary)] border-[var(--color-system-warning)] text-[var(--color-system-warning)] font-semibold hover:bg-[var(--color-fill-tertiary)]';
@@ -163,7 +164,7 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
           <span>Ghế đôi</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="h-4 w-4 rounded-[var(--radius-xs)] bg-[var(--color-brand-primary)]" />
+          <span className="h-4 w-4 rounded-[var(--radius-xs)] bg-[var(--color-brand-fill)]" />
           <span>Đang chọn</span>
         </div>
         <div className="flex items-center gap-2">

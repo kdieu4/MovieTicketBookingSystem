@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import SeatPicker, { SEAT_ANIMATIONS } from './SeatPicker';
+import { Reveal, Skeleton } from '@/components/common/Ascii';
 import { getCachedSeats, getSessionId, invalidateSeats, loadSeats } from '@/services/seatApi';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8083/api';
@@ -664,7 +665,7 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
               const isDone = n < step;
               // Cùng bảng màu với ghế: đang chọn, ghế đôi (đã qua, bấm được), đã bán (chưa tới)
               const cls = isActive
-                ? 'sp-pop border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
+                ? 'sp-pop border-[var(--color-brand-primary)] bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
                 : isDone
                   ? 'cursor-pointer border-[var(--color-brand-primary)] bg-[var(--color-bg-primary)] text-[var(--color-brand-primary)] hover:scale-105 hover:bg-[var(--color-fill-tertiary)] active:scale-90'
                   : 'cursor-not-allowed border-transparent bg-[var(--color-fill-tertiary)] text-[var(--color-text-quaternary)]';
@@ -718,12 +719,13 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
               {/* BƯỚC 1: chọn suất chiếu */}
               {step === 1 && (
                 <div>
-                  <h2 className="text-[24px] font-bold">Suất chiếu tại {filters.city}</h2>
+                  <h2 className="text-[24px] font-semibold">Suất chiếu tại {filters.city}</h2>
                   {summary && (
                     <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">{summary}</p>
                   )}
 
                   <div className="mt-6">
+                    <Reveal loading={viewStatus === 'loading' || viewStatus === 'idle'} shimmer={false} lazy={false}>
                     {viewStatus === 'loading' && <ShowtimeSkeleton />}
 
                     {viewStatus === 'error' && (
@@ -763,14 +765,14 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
                                 style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}
                                 className={`bm-rise flex min-w-[68px] shrink-0 flex-col items-center rounded-[var(--radius-sm)] border px-3 py-2 transition-all duration-200 ease-out active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] ${
                                   isActive
-                                    ? 'border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
+                                    ? 'border-[var(--color-brand-primary)] bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
                                     : 'border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] hover:-translate-y-0.5 hover:border-[var(--color-brand-primary)]'
                                 }`}
                               >
                                 <span className={`text-[11px] ${isActive ? '' : 'text-[var(--color-text-secondary)]'}`}>
                                   {isToday ? 'Hôm nay' : weekday}
                                 </span>
-                                <span className="text-[20px] font-bold leading-tight">{d}</span>
+                                <span className="text-[20px] font-semibold leading-tight">{d}</span>
                                 <span className={`text-[11px] ${isActive ? '' : 'text-[var(--color-text-secondary)]'}`}>
                                   Th{m}
                                 </span>
@@ -827,6 +829,7 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
                         )}
                       </div>
                     )}
+                    </Reveal>
                   </div>
                 </div>
               )}
@@ -836,7 +839,7 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
                 <div>
                   <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
-                      <h2 className="text-[24px] font-bold">Chọn ghế</h2>
+                      <h2 className="text-[24px] font-semibold">Chọn ghế</h2>
                       <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">
                         Chọn chỗ ngồi của bạn. Tổng tiền được cập nhật ngay khi chọn ghế.
                       </p>
@@ -867,12 +870,14 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
                   <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
                     {/* Cột trái: sơ đồ ghế */}
                     <div className="rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-primary)] p-5 sm:p-8">
-                      <SeatPicker
-                        loadingSeats={loadingSeats}
-                        seatsByRow={seatsByRow}
-                        selectedSeats={selectedSeats}
-                        onToggleSeat={toggleSeat}
-                      />
+                      <Reveal loading={loadingSeats} shimmer={false} lazy={false}>
+                        <SeatPicker
+                          loadingSeats={loadingSeats}
+                          seatsByRow={seatsByRow}
+                          selectedSeats={selectedSeats}
+                          onToggleSeat={toggleSeat}
+                        />
+                      </Reveal>
                     </div>
 
                     {/* Cột phải: Vé của bạn và tổng tiền */}
@@ -908,7 +913,7 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
                               {shownSeats.map((s) => (
                                 <li
                                   key={s.id}
-                                  className="sp-pop rounded-[var(--radius-xs)] border border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)] px-2 py-1 text-[12px] font-bold text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]"
+                                  className="sp-pop rounded-[var(--radius-xs)] border border-[var(--color-brand-primary)] bg-[var(--color-brand-fill)] px-2 py-1 text-[12px] font-semibold text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]"
                                 >
                                   {seatName(s)}
                                 </li>
@@ -933,7 +938,7 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
 
                       <div className="mt-4 border-t border-[var(--color-border-separator)] pt-4">
                         <p className="text-[12px] text-[var(--color-text-secondary)]">Tổng cộng</p>
-                        <p className="mt-1 text-[28px] font-bold text-[var(--color-brand-primary)]">
+                        <p className="mt-1 text-[28px] font-semibold text-[var(--color-brand-primary)]">
                           <AnimatedPrice value={total} />
                         </p>
                         <p className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">
@@ -956,7 +961,7 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
                         type="button"
                         onClick={handleContinue}
                         disabled={!hasSeats}
-                        className="mt-5 flex h-11 w-full items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-brand-primary)] text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-primary-hover)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2"
+                        className="mt-5 flex h-11 w-full items-center justify-center gap-1.5 rounded-full bg-[var(--color-brand-fill)] text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-fill-hover)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2"
                       >
                         Tiếp tục
                         <span aria-hidden="true">→</span>
@@ -987,13 +992,15 @@ function ShowtimeSkeleton() {
           key={i}
           className="rounded-[var(--radius-md)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-4"
         >
-          <div className="mb-4 h-4 w-48 animate-pulse rounded-[var(--radius-xs)] bg-[var(--color-fill-secondary)]" />
+          <Skeleton lines={1} widths={[192]} className="mb-4" />
           <div className="flex gap-2">
             {Array.from({ length: 4 }).map((__, j) => (
-              <span
+              <Skeleton
                 key={j}
-                className="h-[52px] w-[88px] animate-pulse rounded-[var(--radius-sm)] bg-[var(--color-fill-tertiary)]"
-                style={{ animationDelay: `${(i + j) * 80}ms` }}
+                rows={3}
+                width={88}
+                height={52}
+                className="rounded-[var(--radius-sm)]"
               />
             ))}
           </div>

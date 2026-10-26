@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'seenema-theme';
-const DEFAULT_THEME = 'dark';
+const DEFAULT_THEME = 'light';
 const ThemeContext = createContext(null);
 
 // Theme thật đã được script trong layout gắn vào <html data-theme> trước khi React chạy.

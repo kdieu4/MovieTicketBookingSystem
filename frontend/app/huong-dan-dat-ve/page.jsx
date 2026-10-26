@@ -37,7 +37,7 @@ export default function BookingGuidePage() {
           <span className="inline-block rounded-full bg-[var(--color-fill-secondary)] px-3 py-1 text-xs font-semibold text-[var(--color-brand-primary)]">
             Trợ giúp
           </span>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Hướng dẫn đặt vé trực tuyến</h1>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Hướng dẫn đặt vé trực tuyến</h1>
           <p className="mt-2 text-base text-[var(--color-text-secondary)]">
             Chỉ với 4 bước đơn giản để sở hữu tấm vé xem phim yêu thích tại Seenema.
           </p>
@@ -50,7 +50,7 @@ export default function BookingGuidePage() {
               className="flex flex-col justify-between rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-6 shadow-[var(--shadow-low)] transition-all hover:border-[var(--color-border-opaque-separator)] hover:shadow-[var(--shadow-medium)]"
             >
               <div>
-                <span className="text-2xl font-bold text-[var(--color-brand-primary)]">{item.step}</span>
+                <span className="text-2xl font-semibold text-[var(--color-brand-primary)]">{item.step}</span>
                 <h2 className="mt-4 text-lg font-semibold tracking-tight">{item.title}</h2>
                 <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-secondary)]">{item.desc}</p>
               </div>
@@ -59,7 +59,7 @@ export default function BookingGuidePage() {
         </div>
 
         <div className="mt-12 rounded-[var(--radius-xl)] border border-[var(--color-border-separator)] bg-[var(--color-bg-secondary)] p-6 sm:p-8">
-          <h2 className="text-lg font-bold tracking-tight">Lưu ý quan trọng khi nhận vé</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Lưu ý quan trọng khi nhận vé</h2>
           <ul className="mt-4 space-y-2.5 text-xs text-[var(--color-text-secondary)] list-disc pl-5">
             <li>Bạn vui lòng đến rạp trước giờ chiếu từ 15 - 20 phút để soát vé và nhận combo bắp nước.</li>
             <li>Xuất trình trực tiếp mã QR trên ứng dụng hoặc email, không cần in vé giấy.</li>

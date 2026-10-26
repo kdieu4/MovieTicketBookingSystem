@@ -12,7 +12,7 @@ export default function TermsPage() {
       <Header />
       <main className="animate-fade-in w-full flex-1 mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="border-b border-[var(--color-border-separator)] pb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Điều khoản &amp; Quy định</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Điều khoản &amp; Quy định</h1>
           <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">Cập nhật lần cuối: 22/10/2026</p>
         </div>
 

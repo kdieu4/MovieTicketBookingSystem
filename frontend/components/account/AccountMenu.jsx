@@ -70,7 +70,7 @@ export default function AccountMenu() {
             <div className="relative mt-2 grid grid-cols-2 gap-1 rounded-[var(--radius-sm)] bg-[var(--color-fill-secondary)] p-1">
               <div
                 aria-hidden="true"
-                className={`absolute top-1 bottom-1 left-1 w-[calc(50%-6px)] rounded-[var(--radius-xs)] bg-[var(--color-brand-primary)] shadow-[var(--shadow-low)] transition-transform duration-300 ease-out pointer-events-none ${
+                className={`absolute top-1 bottom-1 left-1 w-[calc(50%-6px)] rounded-[var(--radius-xs)] bg-[var(--color-brand-fill)] shadow-[var(--shadow-low)] transition-transform duration-300 ease-out pointer-events-none ${
                   theme === 'dark' ? 'translate-x-[calc(100%+4px)]' : 'translate-x-0'
                 }`}
               />

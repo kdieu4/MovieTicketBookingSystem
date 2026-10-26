@@ -8,15 +8,14 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8083/a
 const ALL_CINEMAS = 'Tất cả rạp';
 
 // Lớp dùng chung, toàn bộ màu đi qua CSS variables nên tự đổi theo Light/Dark
-const FIELD_LABEL =
-  'mb-1 block text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]';
+const FIELD_LABEL = 'field-label';
 
 const FIELD_BUTTON =
-  'flex h-11 w-full items-center justify-between rounded-[var(--radius-sm)] border border-[var(--color-border-separator)] bg-[var(--color-fill-tertiary)] px-3.5 text-[13px] font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-fill-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]';
+  'flex h-12 w-full items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-border-separator)] bg-[var(--color-fill-tertiary)] px-3.5 text-[13px] font-medium text-[var(--color-text-primary)] transition-[background-color,border-color] duration-200 ease-[var(--ease-out)] hover:bg-[var(--color-fill-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]';
 
 // Ô nhập tìm phim: cùng kích thước và màu với FIELD_BUTTON, thêm hiệu ứng viền khi focus
 const FIELD_INPUT_WRAP =
-  'group flex h-11 w-full items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border-separator)] bg-[var(--color-fill-tertiary)] px-3.5 text-[var(--color-text-secondary)] transition-all duration-200 hover:bg-[var(--color-fill-secondary)] focus-within:border-[var(--color-brand-primary)] focus-within:bg-[var(--color-bg-primary)] focus-within:ring-2 focus-within:ring-[var(--color-brand-primary)]/30';
+  'group flex h-12 w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border-separator)] bg-[var(--color-fill-tertiary)] px-3.5 text-[var(--color-text-secondary)] transition-[background-color,border-color,box-shadow] duration-200 ease-[var(--ease-out)] hover:bg-[var(--color-fill-secondary)] focus-within:border-[var(--color-brand-primary)] focus-within:bg-[var(--color-bg-primary)] focus-within:ring-2 focus-within:ring-[var(--color-brand-primary)]/25';
 
 // bm-menu: hiệu ứng mở dropdown (định nghĩa trong booking-motion.css)
 const MENU_PANEL =
@@ -28,7 +27,7 @@ const MENU_ITEM_BASE =
 const MENU_ITEM_IDLE =
   'text-[var(--color-text-primary)] hover:bg-[var(--color-fill-tertiary)]';
 const MENU_ITEM_ACTIVE =
-  'bg-[var(--color-brand-primary)] font-semibold text-[var(--color-brand-on-primary)]';
+  'bg-[var(--color-brand-fill)] font-semibold text-[var(--color-brand-on-primary)]';
 // Mục đang được trỏ bằng bàn phím (mũi tên lên, xuống)
 const MENU_ITEM_FOCUS =
   'bg-[var(--color-fill-secondary)] text-[var(--color-text-primary)]';
@@ -77,7 +76,7 @@ function HighlightedTitle({ title, query, selected = false }) {
   return (
     <span className="truncate">
       {title.slice(0, start)}
-      <span className="rounded-[2px] bg-[var(--color-brand-primary)]/20 text-[var(--color-brand-primary)]">
+      <span className="rounded-[2px] bg-[var(--color-brand-fill)]/20 text-[var(--color-brand-primary)]">
         {title.slice(start, end)}
       </span>
       {title.slice(end)}
@@ -283,11 +282,11 @@ export default function HeroSection({
 
   return (
     // z-30 để dropdown luôn nổi lên trên section phía dưới (nguyên nhân phổ biến gây che khuất)
-    <section className="animate-fade-in relative z-30 mx-auto max-w-[1200px] overflow-visible px-6">
+    <section className="animate-fade-in relative z-30 mx-auto max-w-[1200px] overflow-visible px-4 sm:px-6">
       <form
         ref={formRef}
         onSubmit={handleFindShowtimes}
-        className={`relative grid items-end gap-3 overflow-visible rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-4 shadow-[var(--shadow-low)] sm:grid-cols-2 sm:p-5 ${
+        className={`relative grid items-end gap-3 overflow-visible rounded-[var(--radius-xl)] border border-[var(--color-border-separator)] bg-[var(--color-bg-translucent-card)] p-4 shadow-[var(--shadow-float)] backdrop-blur-xl sm:grid-cols-2 sm:p-5 ${
           showCinema ? 'lg:grid-cols-[1fr_1.4fr_1fr_auto]' : 'lg:grid-cols-[1fr_1.4fr_auto]'
         }`}
       >
@@ -512,7 +511,7 @@ export default function HeroSection({
           type="submit"
           disabled={searching}
           aria-busy={searching}
-          className={`flex h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-brand-primary)] px-5 text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-primary-hover)] active:scale-95 disabled:cursor-wait disabled:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 sm:self-end ${showCinema ? '' : 'sm:col-span-2'} lg:col-span-1`}
+          className={`flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--color-brand-fill)] px-6 text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-[var(--color-brand-fill-hover)] active:scale-95 disabled:cursor-wait disabled:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 sm:self-end ${showCinema ? '' : 'sm:col-span-2'} lg:col-span-1`}
         >
           {searching ? <span className="bm-spinner" aria-hidden="true" /> : <SearchIcon />}
           <span>{searching ? 'Đang tìm...' : 'Tìm suất chiếu'}</span>

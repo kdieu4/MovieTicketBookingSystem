@@ -9,6 +9,7 @@ import Badge from '@/components/common/Badge';
 import BookingFlow from '@/components/booking/BookingFlow';
 import TrailerModal from '@/components/movie/TrailerModal';
 import { IconArrowLeft, IconClock, IconCalendar, IconPlay } from '@/components/common/Icons';
+import { Reveal } from '@/components/common/Ascii';
 import { AGE_LABEL, STATUS_LABEL, formatDuration } from '@/utils/movieHelpers';
 import '@/styles/booking-motion.css';
 
@@ -57,7 +58,7 @@ export default function MovieDetailClient({ movie }) {
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-[var(--radius-sm)] bg-[var(--color-brand-primary)] px-6 py-3 text-[14px] font-medium text-[var(--color-brand-on-primary)]"
+            className="rounded-full bg-[var(--color-brand-fill)] px-6 py-3 text-[14px] font-medium text-[var(--color-brand-on-primary)]"
           >
             Quay lại
           </button>
@@ -73,7 +74,7 @@ export default function MovieDetailClient({ movie }) {
     <div className="flex min-h-screen flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
       <Header />
 
-      <div className="animate-fade-in flex-1">
+      <Reveal lazy={false} className="flex-1">
       <div className="mx-auto max-w-6xl px-5 pt-6 md:px-8">
         <button
           type="button"
@@ -119,7 +120,7 @@ export default function MovieDetailClient({ movie }) {
           <div className="flex-1 pt-1 md:pt-4">
             {movie.status && <Badge tone="brand">{STATUS_LABEL[movie.status] ?? movie.status}</Badge>}
 
-            <h1 className="mt-2 text-[26px] font-bold leading-[1.2] text-[var(--color-text-primary)] md:text-[32px]">
+            <h1 className="mt-2 text-[26px] font-semibold leading-[1.2] text-[var(--color-text-primary)] md:text-[32px]">
               {movie.title}
             </h1>
 
@@ -190,7 +191,7 @@ export default function MovieDetailClient({ movie }) {
           />
         </section>
       </div>
-      </div>
+      </Reveal>
 
       <TrailerModal
         isOpen={isTrailerOpen}

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { Reveal } from '@/components/common/Ascii';
 
 const ALL_CITIES = 'Tất cả';
 
@@ -26,7 +27,7 @@ export default function CinemasPage({ cinemas = [], error = false }) {
           <span className="inline-block rounded-full bg-[var(--color-fill-secondary)] px-3 py-1 text-xs font-semibold text-[var(--color-brand-primary)]">
             Hệ thống rạp
           </span>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-balance sm:text-4xl">Rạp chiếu tại Seenema</h1>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">Rạp chiếu tại Seenema</h1>
           <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
             Chọn thành phố để xem danh sách rạp, địa chỉ và số điện thoại hỗ trợ.
           </p>
@@ -48,7 +49,7 @@ export default function CinemasPage({ cinemas = [], error = false }) {
                 aria-pressed={city === item}
                 className={`h-8 rounded-full px-3.5 text-xs font-medium transition-all active:scale-95 ${
                   city === item
-                    ? 'bg-[var(--color-brand-primary)] font-semibold text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
+                    ? 'bg-[var(--color-brand-fill)] font-semibold text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
                     : 'bg-[var(--color-fill-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-fill-tertiary)] hover:text-[var(--color-text-primary)]'
                 }`}
               >
@@ -64,15 +65,17 @@ export default function CinemasPage({ cinemas = [], error = false }) {
               {visibleCinemas.length} rạp {city === ALL_CITIES ? 'trên toàn quốc' : `tại ${city}`}
             </p>
 
-            <div key={city} className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Reveal key={city} lazy={false} className="mt-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {visibleCinemas.map((cinema, index) => (
                 <article
                   key={cinema.id}
+                  data-ascii="surface"
                   style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
                   className="animate-fade-in flex flex-col rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-5 shadow-[var(--shadow-low)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--color-border-opaque-separator)] hover:shadow-[var(--shadow-medium)]"
                 >
                   <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-primary-container)] text-sm font-bold text-[var(--color-brand-primary)]">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-primary-container)] text-sm font-semibold text-[var(--color-brand-primary)]">
                       {cinema.name?.charAt(0) ?? 'S'}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -104,6 +107,7 @@ export default function CinemasPage({ cinemas = [], error = false }) {
                 </article>
               ))}
             </div>
+            </Reveal>
           </>
         ) : (
           <div className="mt-8 rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border-separator)] px-6 py-14 text-center">

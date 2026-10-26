@@ -7,7 +7,7 @@ export default function TermsContent() {
       </p>
 
       <section>
-        <h2 className="text-base font-bold text-[var(--color-text-primary)]">1. Chấp thuận điều khoản</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-primary)]">1. Chấp thuận điều khoản</h2>
         <p className="mt-2">
           Khi truy cập, tạo tài khoản hoặc sử dụng dịch vụ của Seenema, bạn xác nhận đã đọc, hiểu và
           đồng ý tuân thủ toàn bộ các quy định được nêu tại đây. Nếu không đồng ý với bất kỳ điều khoản
@@ -16,7 +16,7 @@ export default function TermsContent() {
       </section>
 
       <section>
-        <h2 className="text-base font-bold text-[var(--color-text-primary)]">2. Tài khoản và bảo mật</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-primary)]">2. Tài khoản và bảo mật</h2>
         <p className="mt-2">
           Bạn có trách nhiệm cung cấp thông tin chính xác, đầy đủ và cập nhật kịp thời khi có thay đổi.
           Bạn cần bảo mật thông tin đăng nhập, không chia sẻ tài khoản cho người khác và thông báo ngay
@@ -29,7 +29,7 @@ export default function TermsContent() {
       </section>
 
       <section>
-        <h2 className="text-base font-bold text-[var(--color-text-primary)]">3. Đặt vé và thanh toán</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-primary)]">3. Đặt vé và thanh toán</h2>
         <p className="mt-2">
           Người dùng có trách nhiệm kiểm tra kỹ tên phim, rạp, suất chiếu, số lượng vé và vị trí ghế
           trước khi xác nhận thanh toán. Giá vé và các khoản phí (nếu có) được hiển thị rõ trước khi
@@ -43,7 +43,7 @@ export default function TermsContent() {
       </section>
 
       <section>
-        <h2 className="text-base font-bold text-[var(--color-text-primary)]">4. Xác nhận vé và sử dụng vé</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-primary)]">4. Xác nhận vé và sử dụng vé</h2>
         <p className="mt-2">
           Vé điện tử hoặc mã QR là căn cứ để vào rạp. Vui lòng đến rạp trước giờ chiếu để làm thủ tục
           soát vé. Việc vào rạp muộn có thể bị hạn chế tùy theo quy định của từng cụm rạp.
@@ -55,7 +55,7 @@ export default function TermsContent() {
       </section>
 
       <section>
-        <h2 className="text-base font-bold text-[var(--color-text-primary)]">5. Hủy, đổi và hoàn vé</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-primary)]">5. Hủy, đổi và hoàn vé</h2>
         <p className="mt-2">
           Giao dịch đã thanh toán thành công thông thường không được hủy, đổi hoặc hoàn tiền. Ngoại lệ
           áp dụng khi rạp thông báo hủy suất chiếu, thay đổi giờ chiếu, xảy ra lỗi kỹ thuật dẫn đến
@@ -68,7 +68,7 @@ export default function TermsContent() {
       </section>
 
       <section>
-        <h2 className="text-base font-bold text-[var(--color-text-primary)]">6. Quy định về độ tuổi</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-primary)]">6. Quy định về độ tuổi</h2>
         <p className="mt-2">
           Khách hàng phải tuân thủ phân loại độ tuổi xem phim theo quy định của Bộ Văn hóa, Thể thao và
           Du lịch:
@@ -87,7 +87,7 @@ export default function TermsContent() {
       </section>
 
       <section>
-        <h2 className="text-base font-bold text-[var(--color-text-primary)]">7. Hành vi bị nghiêm cấm</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-primary)]">7. Hành vi bị nghiêm cấm</h2>
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>Sử dụng thông tin giả mạo, mạo danh người khác hoặc lập tài khoản với mục đích gian lận.</li>
           <li>Dùng công cụ tự động để thu thập dữ liệu, đặt vé hàng loạt hoặc gây quá tải hệ thống.</li>
@@ -102,7 +102,7 @@ export default function TermsContent() {
       </section>
 
       <section>
-        <h2 className="text-base font-bold text-[var(--color-text-primary)]">8. Quyền sở hữu trí tuệ</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-primary)]">8. Quyền sở hữu trí tuệ</h2>
         <p className="mt-2">
           Logo, giao diện, nội dung, dữ liệu và mã nguồn của Seenema thuộc quyền sở hữu của Seenema hoặc
           các bên cấp phép. Bạn không được sao chép, sửa đổi, phân phối hoặc sử dụng cho mục đích
@@ -115,7 +115,7 @@ export default function TermsContent() {
       </section>
 
       <section>
-        <h2 className="text-base font-bold text-[var(--color-text-primary)]">9. Bảo mật và dữ liệu cá nhân</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-primary)]">9. Bảo mật và dữ liệu cá nhân</h2>
         <p className="mt-2">
           Seenema thu thập các thông tin cần thiết như họ tên, email, số điện thoại và lịch sử giao
           dịch để xử lý việc đặt vé, cung cấp hỗ trợ và cải thiện chất lượng dịch vụ.
@@ -132,7 +132,7 @@ export default function TermsContent() {
       </section>
 
       <section>
-        <h2 className="text-base font-bold text-[var(--color-text-primary)]">10. Giới hạn trách nhiệm</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-primary)]">10. Giới hạn trách nhiệm</h2>
         <p className="mt-2">
           Seenema nỗ lực duy trì dịch vụ ổn định nhưng không bảo đảm hệ thống luôn hoạt động liên tục,
           không có lỗi hoặc không bị gián đoạn bởi bảo trì, đường truyền, nhà cung cấp dịch vụ hoặc các
@@ -146,7 +146,7 @@ export default function TermsContent() {
       </section>
 
       <section>
-        <h2 className="text-base font-bold text-[var(--color-text-primary)]">11. Thay đổi điều khoản</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-primary)]">11. Thay đổi điều khoản</h2>
         <p className="mt-2">
           Seenema có thể cập nhật các điều khoản này để phù hợp với hoạt động kinh doanh hoặc quy định
           pháp luật. Phiên bản mới sẽ được đăng tải trên website kèm ngày cập nhật. Việc tiếp tục sử
@@ -155,7 +155,7 @@ export default function TermsContent() {
       </section>
 
       <section>
-        <h2 className="text-base font-bold text-[var(--color-text-primary)]">12. Liên hệ</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-primary)]">12. Liên hệ</h2>
         <p className="mt-2">
           Nếu có câu hỏi hoặc cần hỗ trợ về các điều khoản này, vui lòng liên hệ Seenema qua email{' '}
           <a
