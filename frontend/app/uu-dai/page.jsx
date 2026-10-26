@@ -63,7 +63,7 @@ export default function OffersPage() {
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
-              href="/phim"
+              href="/#phim"
               className="inline-flex h-10 items-center rounded-full bg-[var(--color-brand-fill)] px-5 text-sm font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-fill-hover)] active:scale-95"
             >
               Xem phim
