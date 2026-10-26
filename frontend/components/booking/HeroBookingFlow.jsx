@@ -774,7 +774,7 @@ export default function HeroBookingFlow({ filters, searchId, onSearchSettled, on
               const isDone = n < step;
               // Cùng bảng màu với ghế: đang chọn, ghế đôi (đã qua, bấm được), đã bán (chưa tới)
               const cls = isActive
-                ? 'sp-pop border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
+                ? 'sp-pop border-[var(--color-brand-primary)] bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
                 : isDone
                   ? 'cursor-pointer border-[var(--color-brand-primary)] bg-[var(--color-bg-primary)] text-[var(--color-brand-primary)] hover:scale-105 hover:bg-[var(--color-fill-tertiary)] active:scale-90'
                   : 'cursor-not-allowed border-transparent bg-[var(--color-fill-tertiary)] text-[var(--color-text-quaternary)]';
@@ -944,14 +944,14 @@ export default function HeroBookingFlow({ filters, searchId, onSearchSettled, on
                                 style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}
                                 className={`bm-rise flex min-w-[68px] shrink-0 flex-col items-center rounded-[var(--radius-sm)] border px-3 py-2 transition-all duration-200 ease-out active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] ${
                                   isActive
-                                    ? 'border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
+                                    ? 'border-[var(--color-brand-primary)] bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
                                     : 'border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] hover:-translate-y-0.5 hover:border-[var(--color-brand-primary)]'
                                 }`}
                               >
                                 <span className={`text-[11px] ${isActive ? '' : 'text-[var(--color-text-secondary)]'}`}>
                                   {isToday ? 'Hôm nay' : weekday}
                                 </span>
-                                <span className="text-[20px] font-bold leading-tight">{d}</span>
+                                <span className="text-[20px] font-semibold leading-tight">{d}</span>
                                 <span className={`text-[11px] ${isActive ? '' : 'text-[var(--color-text-secondary)]'}`}>
                                   Th{m}
                                 </span>
@@ -1082,7 +1082,7 @@ export default function HeroBookingFlow({ filters, searchId, onSearchSettled, on
                               {shownSeats.map((s) => (
                                 <li
                                   key={s.id}
-                                  className="sp-pop rounded-[var(--radius-xs)] border border-[var(--color-brand-primary)] bg-[var(--color-brand-primary)] px-2 py-1 text-[12px] font-bold text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]"
+                                  className="sp-pop rounded-[var(--radius-xs)] border border-[var(--color-brand-primary)] bg-[var(--color-brand-fill)] px-2 py-1 text-[12px] font-semibold text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]"
                                 >
                                   {seatName(s)}
                                 </li>
@@ -1107,7 +1107,7 @@ export default function HeroBookingFlow({ filters, searchId, onSearchSettled, on
 
                       <div className="mt-4 border-t border-[var(--color-border-separator)] pt-4">
                         <p className="text-[12px] text-[var(--color-text-secondary)]">Tổng cộng</p>
-                        <p className="mt-1 text-[28px] font-bold text-[var(--color-brand-primary)]">
+                        <p className="mt-1 text-[28px] font-semibold text-[var(--color-brand-primary)]">
                           <AnimatedPrice value={total} />
                         </p>
                         <p className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">
@@ -1130,7 +1130,7 @@ export default function HeroBookingFlow({ filters, searchId, onSearchSettled, on
                         type="button"
                         onClick={handleContinue}
                         disabled={!hasSeats}
-                        className="mt-5 flex h-11 w-full items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-brand-primary)] text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-primary-hover)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2"
+                        className="mt-5 flex h-11 w-full items-center justify-center gap-1.5 rounded-full bg-[var(--color-brand-fill)] text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-fill-hover)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2"
                       >
                         Tiếp tục
                         <span aria-hidden="true">→</span>
@@ -1158,7 +1158,7 @@ function StepHeading({ title, subtitle, backLabel, onBack }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
-        <h2 className="text-[24px] font-bold">{title}</h2>
+        <h2 className="text-[24px] font-semibold">{title}</h2>
         {subtitle && <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">{subtitle}</p>}
       </div>
       {onBack && (

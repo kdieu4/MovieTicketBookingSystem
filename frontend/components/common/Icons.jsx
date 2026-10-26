@@ -88,3 +88,11 @@ export function CheckIcon({ className = "h-3.5 w-3.5 shrink-0" }) {
     </svg>
   );
 }
+
+export function IconFilter(props) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" {...props}>
+      <path d="M2.5 4h11M4.5 8h7M6.5 12h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}

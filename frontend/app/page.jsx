@@ -5,13 +5,12 @@ import { getMovieLists } from '@/services/movieApi.server';
 export const revalidate = 60;
 
 export default async function Page() {
-  const { nowShowing, comingSoon, genres, error } = await getMovieLists();
+  const { nowShowing, comingSoon, error } = await getMovieLists();
 
   return (
     <HomePageClient
       initialNowShowing={nowShowing}
       initialComingSoon={comingSoon}
-      initialGenres={genres}
       initialError={error}
     />
   );

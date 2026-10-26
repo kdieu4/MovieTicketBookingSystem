@@ -82,7 +82,7 @@ export default function HomePage() {
     : null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-primary)] selection:text-[var(--color-brand-on-primary)] transition-colors duration-200">
+    <div className="flex min-h-screen flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] selection:bg-[var(--color-brand-fill)] selection:text-[var(--color-brand-on-primary)] transition-colors duration-200">
       <Header />
 
       <main className="animate-fade-in flex-1 pb-8 space-y-6">

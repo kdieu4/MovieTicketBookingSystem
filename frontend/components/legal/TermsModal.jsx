@@ -71,7 +71,7 @@ export default function TermsModal({ open, onClose, onAgree }) {
       >
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[var(--color-border-separator)] px-5 py-4 sm:px-7">
           <div>
-            <h2 id={titleId} className="text-lg font-bold tracking-tight">
+            <h2 id={titleId} className="text-lg font-semibold tracking-tight">
               Điều khoản &amp; Quy định
             </h2>
             <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">Cập nhật lần cuối: 22/10/2026</p>
@@ -106,7 +106,7 @@ export default function TermsModal({ open, onClose, onAgree }) {
                 onAgree();
                 onCloseRef.current();
               }}
-              className="h-10 rounded-[var(--radius-sm)] bg-[var(--color-brand-primary)] px-5 text-sm font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-tertiary)]"
+              className="h-10 rounded-full bg-[var(--color-brand-fill)] px-5 text-sm font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-fill-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-tertiary)]"
             >
               Đồng ý
             </button>

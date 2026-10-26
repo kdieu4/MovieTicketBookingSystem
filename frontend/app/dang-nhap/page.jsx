@@ -62,9 +62,9 @@ const STRENGTH_LABEL = ['Quá yếu', 'Yếu', 'Trung bình', 'Khá', 'Mạnh'];
 const STRENGTH_COLOR = [
   'bg-[var(--color-system-error)]',
   'bg-[var(--color-system-error)]',
-  'bg-amber-500',
-  'bg-lime-500',
-  'bg-emerald-500',
+  'bg-[var(--color-system-warning)]',
+  'bg-[var(--color-system-success)]',
+  'bg-[var(--color-system-success)]',
 ];
 
 // ---------- Gọi API ----------
@@ -182,11 +182,11 @@ export default function AuthPage() {
           <div
             role="tablist"
             aria-label="Đăng nhập hoặc đăng ký"
-            className="sticky top-20 z-20 mx-auto -mb-5 grid w-full max-w-xs grid-cols-2 rounded-full border border-[var(--color-border-separator)] bg-[var(--color-bg-translucent-card)] p-1 shadow-[var(--shadow-high)] backdrop-blur-xl"
+            className="sticky top-20 z-20 mx-auto -mb-5 grid w-full max-w-xs grid-cols-2 rounded-full border border-[var(--color-border-separator)] bg-[var(--color-bg-translucent-card)] p-1 backdrop-blur-xl"
           >
             <div
               aria-hidden="true"
-              className={`pointer-events-none absolute bottom-1 left-1 top-1 w-[calc(50%-4px)] rounded-full bg-[var(--color-brand-primary)] shadow-[var(--shadow-low)] transition-transform duration-300 ${EASE} motion-reduce:transition-none ${
+              className={`pointer-events-none absolute bottom-1 left-1 top-1 w-[calc(50%-4px)] rounded-full bg-[var(--color-brand-fill)] shadow-[var(--shadow-low)] transition-transform duration-300 ${EASE} motion-reduce:transition-none ${
                 isLogin ? 'translate-x-0' : 'translate-x-full'
               }`}
             />
@@ -201,7 +201,7 @@ export default function AuthPage() {
           <div className="rounded-[var(--radius-xl)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] px-5 pb-6 pt-12 shadow-[var(--shadow-medium)] sm:px-8 sm:pb-8">
             {/* Tiêu đề: mờ dần mỗi khi đổi tab */}
             <div key={tab} className="animate-fade-in text-center">
-              <h1 className="text-2xl font-bold tracking-tight">
+              <h1 className="text-2xl font-semibold tracking-tight">
                 {isLogin ? 'Chào mừng trở lại' : 'Tạo tài khoản mới'}
               </h1>
               <p className="mt-1.5 text-sm text-[var(--color-text-secondary)]">
@@ -251,7 +251,7 @@ export default function AuthPage() {
                           checked={login.remember}
                           onChange={(e) => updateLogin('remember', e.target.checked)}
                           disabled={loading}
-                          className="h-4 w-4 accent-[var(--color-brand-primary)]"
+                          className="h-4 w-4 accent-[var(--color-brand-fill)]"
                         />
                         Ghi nhớ đăng nhập
                       </label>
@@ -369,7 +369,7 @@ export default function AuthPage() {
                           checked={register.agree}
                           onChange={(e) => updateRegister('agree', e.target.checked)}
                           disabled={loading}
-                          className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-brand-primary)]"
+                          className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-brand-fill)]"
                         />
                         <span>
                           Tôi đã đọc và đồng ý với{' '}
@@ -585,7 +585,7 @@ function SubmitButton({ loading, idleLabel, loadingLabel }) {
       type="submit"
       disabled={loading}
       aria-busy={loading}
-      className="flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-[var(--color-brand-primary)] text-sm font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-primary-hover)] active:scale-[0.98] disabled:cursor-wait disabled:opacity-80 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-tertiary)]"
+      className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[var(--color-brand-fill)] text-sm font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-fill-hover)] active:scale-[0.98] disabled:cursor-wait disabled:opacity-80 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-tertiary)]"
     >
       {loading && (
         <span

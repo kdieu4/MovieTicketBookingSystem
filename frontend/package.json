@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "ascii-reveal": "github:quanhoangindex/ascii-reveal",
     "next": "^15.5.0",
     "nodemailer": "^10.1.2",
     "react": "^19.1.0",

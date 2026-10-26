@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import MovieCard from '@/components/movie/MovieCard';
+import Skeleton from '@/components/common/Skeleton';
 
 const PAGE_SIZE = 15;
 
@@ -85,7 +86,7 @@ function MoviesContent({ nowShowing, comingSoon, genres, initialError }) {
           <span className="inline-block rounded-full bg-[var(--color-fill-secondary)] px-3 py-1 text-xs font-semibold text-[var(--color-brand-primary)]">
             Thư viện phim
           </span>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-balance sm:text-4xl">
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
             {query ? 'Kết quả tìm kiếm' : 'Tất cả phim'}
           </h1>
           <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
@@ -119,7 +120,7 @@ function MoviesContent({ nowShowing, comingSoon, genres, initialError }) {
               aria-pressed={tab === item.id}
               className={`h-9 rounded-full px-4 text-xs font-semibold transition-all active:scale-95 ${
                 tab === item.id
-                  ? 'bg-[var(--color-brand-primary)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
+                  ? 'bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
                   : 'border border-[var(--color-border-separator)] text-[var(--color-text-secondary)] hover:bg-[var(--color-fill-tertiary)] hover:text-[var(--color-text-primary)]'
               }`}
             >
@@ -145,18 +146,27 @@ function MoviesContent({ nowShowing, comingSoon, genres, initialError }) {
                 </button>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
-              <GenreChip active={selectedGenres.length === 0} onClick={() => setSelectedGenres([])}>
+            <div role="group" aria-label="Lọc theo thể loại" className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedGenres([])}
+                data-active={selectedGenres.length === 0}
+                aria-pressed={selectedGenres.length === 0}
+                className="chip"
+              >
                 Tất cả
-              </GenreChip>
+              </button>
               {genres.map((genre) => (
-                <GenreChip
+                <button
                   key={genre.id}
-                  active={selectedGenres.includes(genre.name)}
+                  type="button"
                   onClick={() => toggleGenre(genre.name)}
+                  data-active={selectedGenres.includes(genre.name)}
+                  aria-pressed={selectedGenres.includes(genre.name)}
+                  className="chip"
                 >
                   {genre.name}
-                </GenreChip>
+                </button>
               ))}
             </div>
           </div>
@@ -164,10 +174,15 @@ function MoviesContent({ nowShowing, comingSoon, genres, initialError }) {
 
         {visibleMovies.length > 0 ? (
           <>
-            <div key={`${tab}-${query}-${selectedGenres.join('|')}`} className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-5">
-              {visibleMovies.map((movie, index) => (
-                <MovieCard key={movie.id} movie={movie} index={index} />
-              ))}
+            <div
+              key={`${tab}-${query}-${selectedGenres.join('|')}`}
+              className="animate-fade-in mt-8"
+            >
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-5">
+                {visibleMovies.map((movie, index) => (
+                  <MovieCard key={movie.id} movie={movie} index={index} />
+                ))}
+              </div>
             </div>
 
             {hasMore && (
@@ -195,7 +210,7 @@ function MoviesContent({ nowShowing, comingSoon, genres, initialError }) {
                 <button
                   type="button"
                   onClick={() => setTab(tab === 'showing' ? 'upcoming' : 'showing')}
-                  className="h-9 rounded-full bg-[var(--color-brand-primary)] px-5 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-primary-hover)] active:scale-95"
+                  className="h-9 rounded-full bg-[var(--color-brand-fill)] px-5 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-fill-hover)] active:scale-95"
                 >
                   Xem {otherTabCount} phim {tab === 'showing' ? 'sắp chiếu' : 'đang chiếu'}
                 </button>
@@ -217,34 +232,19 @@ function MoviesContent({ nowShowing, comingSoon, genres, initialError }) {
   );
 }
 
-function GenreChip({ active, onClick, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`inline-flex h-7 items-center gap-1.5 rounded-full px-3.5 text-xs font-medium transition-all active:scale-95 ${
-        active
-          ? 'bg-[var(--color-brand-primary)] font-semibold text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
-          : 'bg-[var(--color-fill-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-fill-tertiary)] hover:text-[var(--color-text-primary)]'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
 function PageSkeleton() {
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
       <Header />
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:px-6 lg:px-8" aria-busy="true">
-        <div className="h-4 w-24 animate-pulse rounded bg-[var(--color-fill-tertiary)]" />
-        <div className="mt-4 h-9 w-56 animate-pulse rounded bg-[var(--color-fill-tertiary)]" />
-        <div className="mt-4 h-4 w-80 max-w-full animate-pulse rounded bg-[var(--color-fill-tertiary)]" />
+        <div className="space-y-3">
+          <Skeleton width={96} height={16} className="rounded" />
+          <Skeleton width={224} height={36} className="rounded" />
+          <Skeleton width={320} height={16} className="rounded" />
+        </div>
         <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-5">
           {Array.from({ length: 10 }).map((_, index) => (
-            <div key={index} className="aspect-[3/4] animate-pulse rounded-[var(--radius-lg)] bg-[var(--color-fill-tertiary)]" />
+            <Skeleton key={index} className="aspect-[2/3] w-full rounded-[var(--radius-lg)]" />
           ))}
         </div>
       </main>
