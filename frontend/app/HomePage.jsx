@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import Header from '@/components/layout/Header';
 import HeroSection from '@/components/home/HeroSection';
-import NowShowingSection from '@/components/home/NowShowingSection';
-import ComingSoonSection from '@/components/home/ComingSoonSection';
+import MoviesSection from '@/components/home/MoviesSection';
 import ShowtimeFlow from '@/components/booking/ShowtimeFlow';
 import Footer from '@/components/layout/Footer';
 import { fetchNowShowingMovies, fetchComingSoonMovies, fetchGenres } from '@/services/movieApi';
@@ -95,11 +94,11 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* 1. Phần Phim đang chiếu / Phim nổi bật */}
-        <NowShowingSection
+        {/* 1. Phần Phim: tab Đang chiếu / Sắp chiếu */}
+        <MoviesSection
           movies={nowShowing}
-          genres={genres}
-          loading={loadingNowShowing}
+          comingSoon={comingSoon}
+          loading={loadingNowShowing || loadingComingSoon}
           onSelectShowtime={handleSelectShowtime}
         />
 
@@ -120,8 +119,6 @@ export default function HomePage() {
           onSearchSettled={() => setSearching(false)}
         />
 
-        {/* 3. Phần Phim sắp chiếu */}
-        <ComingSoonSection movies={comingSoon} loading={loadingComingSoon} />
       </main>
 
       <Footer />

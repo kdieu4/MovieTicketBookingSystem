@@ -98,7 +98,7 @@ export default function CinemasPage({ cinemas = [], error = false }) {
                       <span />
                     )}
                     <Link
-                      href="/phim"
+                      href="/#phim"
                       className="inline-flex h-8 items-center rounded-full bg-[var(--color-fill-secondary)] px-3.5 text-xs font-semibold text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-fill-tertiary)] active:scale-95"
                     >
                       Xem phim

@@ -3,8 +3,7 @@
 import { useCallback, useState } from 'react';
 import Header from '@/components/layout/Header';
 import FeaturedSection from '@/components/home/FeaturedSection';
-import NowShowingSection from '@/components/home/NowShowingSection';
-import ComingSoonSection from '@/components/home/ComingSoonSection';
+import MoviesSection from '@/components/home/MoviesSection';
 import BookingFlow from '@/components/booking/BookingFlow';
 import Footer from '@/components/layout/Footer';
 import '@/styles/booking-motion.css';
@@ -69,17 +68,15 @@ export default function HomePageClient({
           />
         </div>
 
-        {/* 3. KHỐI PHIM ĐANG CHIẾU & BỘ LỌC */}
-        <NowShowingSection
+        {/* 3. KHỐI PHIM: tab Đang chiếu / Sắp chiếu */}
+        <MoviesSection
           movies={nowShowing}
+          comingSoon={comingSoon}
           onSelectShowtime={handleSelectShowtime}
         />
-
-        {/* 4. KHỐI PHIM SẮP CHIẾU */}
-        <ComingSoonSection movies={comingSoon} />
       </main>
 
-      {/* BookingFlow dùng chung cho NowShowingSection và FeaturedSection */}
+      {/* BookingFlow dùng chung cho MoviesSection và FeaturedSection */}
       <BookingFlow filters={filters} searchId={searchId} onContinue={handleContinue} />
 
       <Footer />
