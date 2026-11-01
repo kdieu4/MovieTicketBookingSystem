@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///home/dieuhoang/source/repos/MovieTicketBookingSystem/frontend/src/app/booking/page.tsx"],"sourcesContent":["'use client'\nimport BookingForm from \"@/src/features/booking/components/BookingForm\";\nimport BookingSummary from \"@/src/features/booking/components/BookingSummary\";\n\nconst BookingPage = () => {\n  return (\n    <div>Hello</div>\n  )\n}\n\nexport default BookingPage;"],"names":["BookingPage"],"mappings":";;;;;AAAA;;AAIA,MAAMA,cAAc;IAClB,qBACE,6LAAC;kBAAI;;;;;;AAET;KAJMA;uCAMSA"}}]
+}
