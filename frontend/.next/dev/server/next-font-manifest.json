@@ -1,0 +1,9 @@
+{
+  "app": {
+    "[project]/src/app/booking/page": [],
+    "[project]/src/app/page": []
+  },
+  "appUsingSizeAdjust": false,
+  "pages": {},
+  "pagesUsingSizeAdjust": false
+}

@@ -1,0 +1,27 @@
+import {useProgressBar as $723aca2821613fe7$export$ed5abd763a836edc} from "../progress/useProgressBar.mjs";
+
+/*
+ * Copyright 2020 Adobe. All rights reserved.
+ * This file is licensed to you under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+ * OF ANY KIND, either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ */ 
+function $977b20a72a6b59b7$export$e969dbfa146870ff(props) {
+    let { progressBarProps: progressBarProps, labelProps: labelProps } = (0, $723aca2821613fe7$export$ed5abd763a836edc)(props);
+    return {
+        meterProps: {
+            ...progressBarProps,
+            role: 'meter'
+        },
+        labelProps: labelProps
+    };
+}
+
+
+export {$977b20a72a6b59b7$export$e969dbfa146870ff as useMeter};
+//# sourceMappingURL=useMeter.mjs.map

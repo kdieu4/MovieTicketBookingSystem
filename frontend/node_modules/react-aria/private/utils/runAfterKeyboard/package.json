@@ -1,0 +1,5 @@
+{
+  "main": "../../../dist/exports/private/utils/runAfterKeyboard.cjs",
+  "module": "../../../dist/exports/private/utils/runAfterKeyboard.js",
+  "types": "../../../dist/types/exports/private/utils/runAfterKeyboard.d.ts"
+}
