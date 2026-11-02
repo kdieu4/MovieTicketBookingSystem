@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{ticketBaseUrl}}/ticket"
+method: POST
+body:
+  type: text
+  content: "{{userEmail}}"
+auth:
+  type: bearer
+  credentials:
+    token: "{{userToken}}"
+scripts:
+  - type: beforeRequest
+    code: pm.collectionVariables.unset("ownTicketId");
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Create fixture returns 201", () => pm.response.to.have.status(200));
+      if (pm.response.code === 201) {
+        const data = pm.response.json();
+        pm.test("Has ticket id", () => pm.expect(data.id).to.exist);
+        if (data.id) pm.collectionVariables.set("ownTicketId", String(data.id));
+      }
+    language: text/javascript
+order: 1000

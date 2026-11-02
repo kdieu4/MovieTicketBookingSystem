@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{authBaseUrl}}/auth/register"
+method: POST
+body:
+  type: json
+  content: |-
+    {
+        "fullName": "aa",
+        "email": "abc@gmail.com",
+        "phoneNumber": "1234567890",
+        "password": "Abc@12345",
+        "confirmPassword": "Abc@12345"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Register returns 200", () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 831140538616206
