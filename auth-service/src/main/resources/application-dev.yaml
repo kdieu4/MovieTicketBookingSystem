@@ -23,6 +23,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
+    open-in-view: false
 
 jwt:
   expiryHour: 24
@@ -30,3 +31,6 @@ jwt:
   secretKey: 6A8h6Z5PrjWegTOVl3avQuKtzX23I1U9Y7X12ZW94lc=
   refreshKey: DrF2Q9TpJhFjeDpCCFnJLH0hL6liQQahK1EK++wmYSA=
   resetKey: U2kSTGb1ahQjRut5rNdmh2tnari65Jo7DqVFIZQwPWo=
+
+app:
+  demo-ticket-enabled: true

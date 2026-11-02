@@ -6,6 +6,7 @@ import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 
@@ -40,17 +41,24 @@ public class User extends BaseEntity implements UserDetails {
     private String phoneNumber;
 
     @Column(nullable = false)
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     private Set<UserHasRole> roles = new HashSet<>();
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
-//    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "status")
+    @Column(name = "status", nullable = false)
     private UserStatus status = UserStatus.ACTIVE;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+        return roles.stream()
+                .map(UserHasRole::getRole)
+                .map(Role::getName)
+                .map(name -> name.startsWith("ROLE_")
+                        ? name
+                        : "ROLE_" + name)
+                .map(SimpleGrantedAuthority::new)
+                .toList();
     }
 
     @Override

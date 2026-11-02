@@ -2,12 +2,16 @@ package com.mtbs.auth_service.service.impl;
 
 import com.mtbs.auth_service.domain.dto.request.ChangePasswordRequest;
 import com.mtbs.auth_service.domain.dto.request.LoginRequest;
+import com.mtbs.auth_service.domain.dto.request.RegisterRequest;
 import com.mtbs.auth_service.domain.dto.response.TokenResponse;
 import com.mtbs.auth_service.domain.entity.RedisToken;
 import com.mtbs.auth_service.domain.entity.User;
+import com.mtbs.auth_service.exception.InvalidDataException;
+import com.mtbs.auth_service.exception.ResourceNotFoundException;
 import com.mtbs.auth_service.repository.UserRepository;
 import com.mtbs.auth_service.service.*;
 import com.mtbs.auth_service.util.TokenType;
+import com.mtbs.auth_service.util.UserStatus;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -68,7 +72,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public TokenResponse refreshToken(HttpServletRequest request) {
         String refreshToken = request.getHeader(REFERER);
         if (StringUtils.isBlank(refreshToken)) {
-            throw new IllegalArgumentException("Token must be not blank");
+            throw new InvalidDataException("Token must be not blank");
         }
 
         // extract user from token
@@ -82,7 +86,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         if (!jwtService.isValid(refreshToken, user, TokenType.REFRESH_TOKEN)) {
             System.out.println("User email: " + user.getEmail());
-            throw new IllegalArgumentException("Token is invalid");
+            throw new InvalidDataException("Token is invalid");
         }
 
         String accessToken = jwtService.generateToken(user);
@@ -100,7 +104,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public String logout(HttpServletRequest request) {
         String accessToken = request.getHeader(REFERER);
         if (StringUtils.isBlank(accessToken)) {
-            throw new IllegalArgumentException("Token must be not blank");
+            throw new InvalidDataException("Token must be not blank");
         }
 
         final String email = jwtService.extractEmail(accessToken, TokenType.ACCESS_TOKEN);
@@ -118,7 +122,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         User user = userService.getByEmail(email);
         // Kiem tra nguoi dung co hoat dong ko
         if (!user.isEnabled()) {
-            throw new IllegalArgumentException("User not active");
+            throw new InvalidDataException("User not active");
         }
         // Tao reset token
         String resetToken = jwtService.generateResetToken(user);
@@ -151,11 +155,27 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public String changePassword(ChangePasswordRequest request) {
         User user = validateToken(request.secretKey());
         if (!request.password().equals(request.confirmPassword())) {
-            throw new IllegalArgumentException("Password not match");
+            throw new InvalidDataException("Password not match");
         }
         user.setPassword(passwordEncoder.encode(request.password()));
         userService.saveUser(user);
         return "Changed";
+    }
+
+    @Override
+    public void register(RegisterRequest request) {
+        if (userRepository.existsByEmail(request.email())) {
+            throw new ResourceNotFoundException("Email da ton tai");
+        }
+        User user = User.builder()
+                .fullName(request.fullName())
+                .email(request.email())
+                .phoneNumber(request.phoneNumber())
+                .password(passwordEncoder.encode(request.password()))
+                .status(UserStatus.ACTIVE)
+                .build();
+
+        userRepository.save(user);
     }
 
     private User validateToken(String secretKey) {
@@ -163,11 +183,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         var user = userService.getByEmail(email);
 
         if (!user.isEnabled()) {
-            throw new IllegalArgumentException("User not active");
+            throw new InvalidDataException("User not active");
         }
 
         if (!jwtService.isValid(secretKey, user, TokenType.RESET_TOKEN)) {
-            throw new IllegalArgumentException("Not allow access with this token");
+            throw new InvalidDataException("Not allow access with this token");
         }
         return user;
     }
