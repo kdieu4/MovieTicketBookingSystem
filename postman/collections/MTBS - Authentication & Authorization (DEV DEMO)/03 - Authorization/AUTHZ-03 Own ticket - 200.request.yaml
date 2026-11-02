@@ -1,0 +1,16 @@
+$kind: http-request
+name: AUTHZ-03 Own ticket -> 200
+url: "{{ticketBaseUrl}}/ticket/{{ownTicketId}}"
+method: GET
+body:
+  type: text
+  content: ""
+auth:
+  type: bearer
+  credentials:
+    token: "{{userToken}}"
+scripts:
+  - type: afterResponse
+    code: pm.test("Expected HTTP 200", () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 3000

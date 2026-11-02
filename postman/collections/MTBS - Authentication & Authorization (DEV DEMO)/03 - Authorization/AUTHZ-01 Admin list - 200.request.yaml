@@ -1,0 +1,13 @@
+$kind: http-request
+name: AUTHZ-01 Admin list -> 200
+url: "{{ticketBaseUrl}}/ticket"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{adminToken}}"
+scripts:
+  - type: afterResponse
+    code: pm.test("Expected HTTP 200", () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 1000

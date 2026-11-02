@@ -1,0 +1,13 @@
+$kind: http-request
+name: AUTHZ-04 Other ticket -> 403
+url: "{{ticketBaseUrl}}/ticket/{{otherTicketId}}"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{userToken}}"
+scripts:
+  - type: afterResponse
+    code: pm.test("Expected HTTP 403", () => pm.response.to.have.status(403));
+    language: text/javascript
+order: 4000
