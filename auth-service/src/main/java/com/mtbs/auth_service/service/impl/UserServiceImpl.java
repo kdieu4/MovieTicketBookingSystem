@@ -29,7 +29,6 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(userId).orElseThrow(
                 () -> new UsernameNotFoundException("Khong tim thay nguoi dung")
         );
-
         return UserResponse.from(user);
     }
 
