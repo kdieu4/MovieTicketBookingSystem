@@ -4,8 +4,9 @@
  */
 package com.mtbs.movie_service.domain.dto.response;
 
+import com.mtbs.movie_service.domain.entity.enums.RoomType;
 import com.mtbs.movie_service.domain.entity.enums.ShowtimeStatus;
- 
+
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 /**
@@ -16,10 +17,15 @@ public record ShowtimeResponse(
         Long showtimeId,
         Long movieId,
         Long roomId,
+        String roomName,
+        RoomType roomType,
+        Long cinemaId,
+        String cinemaName,
+        String cinemaAddress,
+        String cinemaCity,
         OffsetDateTime startTime,
         OffsetDateTime endTime,
         BigDecimal basePrice,
         ShowtimeStatus status
 ) {
-
 }

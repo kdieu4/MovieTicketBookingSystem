@@ -18,6 +18,24 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(ShowtimeNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleShowtimeNotFound(
+            ShowtimeNotFoundException ex, HttpServletRequest request) {
+        return ErrorResponseFactory.build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(SeatUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleSeatUnavailable(
+            SeatUnavailableException ex, HttpServletRequest request) {
+        return ErrorResponseFactory.build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleBadRequest(
+            IllegalArgumentException ex, HttpServletRequest request) {
+        return ErrorResponseFactory.build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
         return ErrorResponseFactory.build(

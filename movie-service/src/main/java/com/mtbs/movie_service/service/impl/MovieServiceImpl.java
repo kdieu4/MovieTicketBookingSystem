@@ -15,7 +15,9 @@ import com.mtbs.movie_service.repository.GenreRepository;
 import com.mtbs.movie_service.repository.MovieRepository;
 import com.mtbs.movie_service.service.MovieService;
 import com.mtbs.movie_service.specification.MovieSpecifications;
+import jakarta.persistence.criteria.Expression;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,8 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class MovieServiceImpl implements MovieService {
+
+    private static final int MAX_SUGGESTIONS = 20;
 
     private final MovieRepository movieRepository;
     private final GenreRepository genreRepository;
@@ -80,6 +84,48 @@ public class MovieServiceImpl implements MovieService {
         return movieRepository.findAll(spec).stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MovieResponse> searchByKeyword(String keyword, int limit) {
+        if (keyword == null || keyword.isBlank()) {
+            return List.of();
+        }
+        int size = Math.min(Math.max(limit, 1), MAX_SUGGESTIONS);
+
+        return movieRepository.findAll(keywordSpec(keyword.trim()), PageRequest.of(0, size))
+                .getContent().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private Specification<Movie> keywordSpec(String keyword) {
+        String escaped = keyword.toLowerCase()
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
+        String contains = "%" + escaped + "%";
+        String prefix = escaped + "%";
+
+        return (root, query, cb) -> {
+            Expression<String> title = cb.lower(root.get("title"));
+            Expression<String> director = cb.lower(root.get("director"));
+
+            if (query != null && query.getResultType() != Long.class && query.getResultType() != long.class) {
+                query.orderBy(
+                        cb.asc(cb.<Integer>selectCase()
+                                .when(cb.like(title, prefix, '\\'), 0)
+                                .otherwise(1)),
+                        cb.asc(root.get("title"))
+                );
+            }
+
+            return cb.or(
+                    cb.like(title, contains, '\\'),
+                    cb.like(director, contains, '\\')
+            );
+        };
     }
 
     private Movie findMovieOrThrow(Long movieId) {
