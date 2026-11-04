@@ -4,6 +4,7 @@
  */
 package com.mtbs.movie_service.service;
 
+import com.mtbs.movie_service.domain.dto.request.CinemaRequest;
 import com.mtbs.movie_service.domain.dto.response.CinemaResponse;
 
 import java.util.List;
@@ -16,4 +17,14 @@ public interface CinemaService {
     List<CinemaResponse> getAllCinemas();
 
     CinemaResponse getCinemaById(Long cinemaId);
+
+    List<String> getAllCities();
+
+    List<CinemaResponse> getCinemasByCity(String city, String movieTitle);
+
+    CinemaResponse createCinema(CinemaRequest request);
+
+    CinemaResponse updateCinema(Long cinemaId, CinemaRequest request);
+
+    void deleteCinema(Long cinemaId);
 }

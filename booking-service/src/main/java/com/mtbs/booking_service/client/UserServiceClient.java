@@ -3,6 +3,7 @@ package com.mtbs.booking_service.client;
 import com.mtbs.booking_service.domain.dto.response.UserResponse;
 import com.mtbs.booking_service.exception.ServiceUnavailableException;
 import com.mtbs.booking_service.exception.UserNotFoundException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
@@ -14,9 +15,9 @@ public class UserServiceClient {
 
     private final RestClient restClient;
 
-    public UserServiceClient() {
+    public UserServiceClient(@Value("${user-service.base-url}") String userServiceBaseUrl) {
         this.restClient = RestClient.builder()
-                .baseUrl("http://localhost:8081")
+                .baseUrl(userServiceBaseUrl)
                 .build();
     }
 

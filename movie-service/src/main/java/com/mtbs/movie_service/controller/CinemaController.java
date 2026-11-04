@@ -4,15 +4,15 @@
  */
 package com.mtbs.movie_service.controller;
 
+import com.mtbs.movie_service.domain.dto.request.CinemaRequest;
 import com.mtbs.movie_service.domain.dto.response.CinemaResponse;
 import com.mtbs.movie_service.service.CinemaService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 /**
@@ -20,19 +20,51 @@ import java.util.List;
  * @author quanghieu
  */
 @RestController
-@RequestMapping("/api/cinemas")
+@RequestMapping("/api")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class CinemaController {
 
     private final CinemaService cinemaService;
 
-    @GetMapping
+    @GetMapping("/getCinemas")
     public ResponseEntity<List<CinemaResponse>> getAllCinemas() {
         return ResponseEntity.ok(cinemaService.getAllCinemas());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<CinemaResponse> getCinemaById(@PathVariable Long id) {
+    @GetMapping("/getCinemaById")
+    public ResponseEntity<CinemaResponse> getCinemaById(@RequestParam Long id) {
         return ResponseEntity.ok(cinemaService.getCinemaById(id));
+    }
+
+    @GetMapping("/getCities")
+    public ResponseEntity<List<String>> getAllCities() {
+        return ResponseEntity.ok(cinemaService.getAllCities());
+    }
+
+    @GetMapping("/getCinemasByCity")
+    public ResponseEntity<List<CinemaResponse>> getCinemasByCity(
+            @RequestParam String city,
+            @RequestParam(required = false) String movieTitle) {
+        return ResponseEntity.ok(cinemaService.getCinemasByCity(city, movieTitle));
+    }
+
+    @PostMapping("/createCinema")
+    public ResponseEntity<CinemaResponse> createCinema(@Valid @RequestBody CinemaRequest request) {
+        CinemaResponse response = cinemaService.createCinema(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PutMapping("/updateCinema")
+    public ResponseEntity<CinemaResponse> updateCinema(
+            @RequestParam Long id,
+            @Valid @RequestBody CinemaRequest request) {
+        return ResponseEntity.ok(cinemaService.updateCinema(id, request));
+    }
+
+    @DeleteMapping("/deleteCinema")
+    public ResponseEntity<Void> deleteCinema(@RequestParam Long id) {
+        cinemaService.deleteCinema(id);
+        return ResponseEntity.noContent().build();
     }
 }

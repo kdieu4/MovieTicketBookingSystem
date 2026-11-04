@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+
 /**
  *
  * @author quanghieu
@@ -50,6 +51,10 @@ public class SeatServiceImpl implements SeatService {
     @Override
     @Transactional
     public SeatResponse createSeat(SeatRequest request) {
+        if (seatRepository.existsByRoom_RoomIdAndSeatRowAndSeatNumber(
+                request.roomId(), request.seatRow(), request.seatNumber())) {
+            throw new IllegalArgumentException("Vị trí ghế (Hàng " + request.seatRow() + ", Số " + request.seatNumber() + ") đã tồn tại trong phòng này");
+        }
         Seat seat = new Seat();
         applyRequest(seat, request);
         return toResponse(seatRepository.save(seat));
@@ -59,6 +64,11 @@ public class SeatServiceImpl implements SeatService {
     @Transactional
     public SeatResponse updateSeat(Long seatId, SeatRequest request) {
         Seat seat = findSeatOrThrow(seatId);
+        boolean isLocationChanged = !seat.getSeatRow().equals(request.seatRow()) || !seat.getSeatNumber().equals(request.seatNumber());
+        if (isLocationChanged && seatRepository.existsByRoom_RoomIdAndSeatRowAndSeatNumber(
+                request.roomId(), request.seatRow(), request.seatNumber())) {
+            throw new IllegalArgumentException("Vị trí ghế đã tồn tại trong phòng này");
+        }
         applyRequest(seat, request);
         return toResponse(seatRepository.save(seat));
     }

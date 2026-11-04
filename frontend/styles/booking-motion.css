@@ -1,0 +1,100 @@
+/* Hiệu ứng dùng chung cho luồng: chọn thông tin -> tìm suất chiếu -> chọn ghế */
+
+@keyframes bm-menu-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes bm-item-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes bm-month-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes bm-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes bm-pop {
+  0%   { transform: scale(0.92); }
+  55%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+@keyframes bm-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Dropdown và lịch */
+.bm-menu  { transform-origin: top center; animation: bm-menu-in 180ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.bm-item  { animation: bm-item-in 220ms ease-out both; }
+.bm-month { animation: bm-month-in 220ms ease-out both; }
+
+/* Danh sách suất chiếu xuất hiện lần lượt */
+.bm-rise { animation: bm-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Giờ chiếu được chọn */
+.bm-chip-pop { animation: bm-pop 280ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* Nút tìm kiếm đang tải */
+.bm-spinner {
+  width: 14px; height: 14px; border-radius: 9999px;
+  border: 2px solid currentColor; border-right-color: transparent;
+  animation: bm-spin 700ms linear infinite;
+}
+
+/* Vùng mở rộng mượt: dùng grid-template-rows 0fr -> 1fr nên không cần biết chiều cao trước */
+.bm-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 360ms ease;
+}
+.bm-reveal[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.bm-reveal > .bm-reveal-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@keyframes bm-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+.bm-shake { animation: bm-shake 380ms ease-in-out; }
+
+/* Bảng suất chiếu dạng cửa sổ nổi */
+.bm-modal {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 240ms ease, visibility 0s linear 240ms;
+}
+.bm-modal[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+.bm-modal-panel {
+  transform: translateY(18px) scale(0.97);
+  opacity: 0;
+  transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1), opacity 260ms ease;
+}
+.bm-modal[data-open="true"] .bm-modal-panel {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bm-shake { animation: none !important; }
+  .bm-modal, .bm-modal-panel { transition: none !important; }
+  .bm-menu, .bm-item, .bm-month, .bm-rise, .bm-chip-pop { animation: none !important; }
+  .bm-reveal { transition: none !important; }
+  .bm-spinner { animation-duration: 1800ms; }
+}
