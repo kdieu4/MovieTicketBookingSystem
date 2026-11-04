@@ -1,0 +1,39 @@
+$kind: collection
+description: Chạy bằng Collection Runner theo thứ tự. /ticket ở auth-service là endpoint DEV chỉ để chứng minh 401/403/200. Không commit token/password thật.
+variables:
+  - key: authBaseUrl
+    value: http://localhost:8085
+    disabled: false
+  - key: ticketBaseUrl
+    value: http://localhost:8085
+    disabled: false
+  - key: adminEmail
+    value: ""
+    disabled: false
+  - key: adminPassword
+    value: ""
+    disabled: false
+  - key: userEmail
+    value: ""
+    disabled: false
+  - key: userPassword
+    value: ""
+    disabled: false
+  - key: user2Email
+    value: ""
+    disabled: false
+  - key: user2Password
+    value: ""
+    disabled: false
+  - key: userToken
+    secret: true
+    disabled: false
+  - key: user2Token
+    secret: true
+    disabled: false
+  - key: invalidToken
+    value: this.is.not.a.jwt
+    disabled: false
+  - key: adminToken
+    secret: true
+    disabled: false
