@@ -23,6 +23,9 @@ public class UserResponse {
     private String phoneNumber;
     private LocalDateTime createdAt;
 
+    /** Thoi diem lan cuoi cap nhat. Huu ich khi client can theo doi thay doi. */
+    private LocalDateTime updatedAt;
+
     /** Chuyen tu entity sang response. */
     public static UserResponse from(User user) {
         if (user == null) {
@@ -34,6 +37,7 @@ public class UserResponse {
                 .email(user.getEmail())
                 .phoneNumber(user.getPhoneNumber())
                 .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
                 .build();
     }
 }
