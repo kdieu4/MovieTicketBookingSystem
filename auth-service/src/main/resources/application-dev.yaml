@@ -1,0 +1,36 @@
+server:
+  port: 8085
+
+spring:
+  config:
+    activate:
+      profile: dev
+  application:
+    name: auth-service
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/auth_db?createDatabaseIfNotExist=true}
+    username: ${DB_USERNAME:auth_user}
+    password: ${DB_PASSWORD:auth_password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  redis:
+    host: localhost
+    port: 6379
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
+jwt:
+  expiryHour: 24
+  expiryDay: 14
+  secretKey: 6A8h6Z5PrjWegTOVl3avQuKtzX23I1U9Y7X12ZW94lc=
+  refreshKey: DrF2Q9TpJhFjeDpCCFnJLH0hL6liQQahK1EK++wmYSA=
+  resetKey: U2kSTGb1ahQjRut5rNdmh2tnari65Jo7DqVFIZQwPWo=
+
+app:
+  demo-ticket-enabled: true

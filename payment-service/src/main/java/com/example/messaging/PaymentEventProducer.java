@@ -1,5 +1,6 @@
 package com.example.messaging;
 
+import com.example.config.RabbitMQConfig;
 import com.example.domain.dto.response.PaymentCompletedEvent;
 import com.example.domain.entity.Payment;
 import lombok.RequiredArgsConstructor;

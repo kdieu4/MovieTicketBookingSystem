@@ -1,0 +1,11 @@
+$kind: http-request
+name: AUTHZ-05 No token -> 401
+url: "{{ticketBaseUrl}}/ticket"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: pm.test("Expected HTTP 401", () => pm.response.to.have.status(401));
+    language: text/javascript
+order: 5000

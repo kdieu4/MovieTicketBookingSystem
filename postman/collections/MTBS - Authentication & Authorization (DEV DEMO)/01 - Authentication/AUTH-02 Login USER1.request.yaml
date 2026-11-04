@@ -1,0 +1,28 @@
+$kind: http-request
+url: "{{authBaseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{userEmail}}",
+      "password": "{{userPassword}}",
+      "platform": "WEB"
+    }
+scripts:
+  - type: beforeRequest
+    code: pm.collectionVariables.unset("userToken");
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Login returns 200", () => pm.response.to.have.status(200));
+      if (pm.response.code === 200) {
+        const json = pm.response.json();
+        const data = json.data ?? json;
+        pm.test("Has access token", () => pm.expect(data.accessToken).to.be.a('string').and.not.empty);
+        if (data.accessToken) pm.collectionVariables.set("userToken", data.accessToken);
+      }
+    language: text/javascript
+order: 2000
