@@ -1,9 +1,12 @@
+
 package com.example.messaging;
 
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
@@ -13,18 +16,33 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitMQConfig {
 
     public static final String BOOKING_EXCHANGE = "booking.exchange";
+
     public static final String BOOKING_CREATED_QUEUE = "booking.created.queue";
+    public static final String PAYMENT_COMPLETED_QUEUE = "payment.completed.queue";
+
     public static final String BOOKING_CREATED_ROUTING_KEY = "booking.created";
     public static final String PAYMENT_COMPLETED_ROUTING_KEY = "payment.completed";
 
     @Bean
-    public DirectExchange bookingExchange() {return new DirectExchange(BOOKING_EXCHANGE);}
+    public DirectExchange bookingExchange() {
+        return new DirectExchange(BOOKING_EXCHANGE);
+    }
 
     @Bean
-    public Queue bookingCreatedQueue() {return new Queue(BOOKING_CREATED_QUEUE, true);}
+    public Queue bookingCreatedQueue() {
+        return new Queue(BOOKING_CREATED_QUEUE, true);
+    }
 
     @Bean
-    public Binding bookingCreatedBinding(Queue bookingCreatedQueue, DirectExchange bookingExchange) {
+    public Queue paymentCompletedQueue() {
+        return new Queue(PAYMENT_COMPLETED_QUEUE, true);
+    }
+
+    @Bean
+    public Binding bookingCreatedBinding(
+            Queue bookingCreatedQueue,
+            DirectExchange bookingExchange) {
+
         return BindingBuilder
                 .bind(bookingCreatedQueue)
                 .to(bookingExchange)
@@ -32,7 +50,29 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Binding paymentCompletedBinding(
+            Queue paymentCompletedQueue,
+            DirectExchange bookingExchange) {
+
+        return BindingBuilder
+                .bind(paymentCompletedQueue)
+                .to(bookingExchange)
+                .with(PAYMENT_COMPLETED_ROUTING_KEY);
+    }
+
+    @Bean
     public MessageConverter messageConverter() {
         return new JacksonJsonMessageConverter();
+    }
+
+    @Bean
+    public RabbitTemplate rabbitTemplate(
+            ConnectionFactory connectionFactory,
+            MessageConverter messageConverter) {
+
+        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
+        rabbitTemplate.setMessageConverter(messageConverter);
+
+        return rabbitTemplate;
     }
 }

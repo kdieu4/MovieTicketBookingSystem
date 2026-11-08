@@ -28,62 +28,52 @@ public class MovieServiceClient {
 
     // Lấy thông tin Showtime
     public ShowtimeResponse getShowtimeById(Long showtimeId) {
-
         try {
-
             return restClient.get()
-                    .uri("/api/showtimes/{showtimeId}", showtimeId)
+                    .uri("/api/getShowtimeById?id={id}", showtimeId)
                     .retrieve()
                     .body(ShowtimeResponse.class);
 
         } catch (HttpClientErrorException.NotFound ex) {
-
             throw new ShowtimeNotFoundException(
                     "Không tìm thấy Showtime với ID: " + showtimeId
             );
 
         } catch (ResourceAccessException ex) {
-
             throw new ServiceUnavailableException(
                     "Movie Service không phản hồi hoặc timeout"
             );
 
         } catch (RestClientException ex) {
-
             throw new ServiceUnavailableException(
-                    "Không thể kết nối đến Movie Service" + ex.getMessage()
+                    "Không thể kết nối đến Movie Service: " + ex.getMessage()
             );
         }
     }
 
-    // Lấy danh sách ghế của phòng
-    public List<SeatResponse> getSeatsByRoomId(Long roomId) {
-
+    // Lấy danh sách ghế theo suất chiếu
+    public List<SeatResponse> getSeatsByShowtime(Long showtimeId) {
         try {
-
             return restClient.get()
-                    .uri("/api/rooms/{roomId}/seats", roomId)
+                    .uri("/api/getSeatsByShowtime?showtimeId={id}", showtimeId)
                     .retrieve()
                     .body(
                             new ParameterizedTypeReference<List<SeatResponse>>() {}
                     );
 
         } catch (HttpClientErrorException.NotFound ex) {
-
             throw new InvalidSeatException(
-                    "Không tìm thấy phòng hoặc danh sách ghế"
+                    "Không tìm thấy danh sách ghế của suất chiếu"
             );
 
         } catch (ResourceAccessException ex) {
-
             throw new ServiceUnavailableException(
                     "Movie Service không phản hồi hoặc timeout"
             );
 
         } catch (RestClientException ex) {
-
             throw new ServiceUnavailableException(
-                    "Không thể kết nối đến Movie Service"
+                    "Không thể kết nối đến Movie Service: " + ex.getMessage()
             );
         }
     }
