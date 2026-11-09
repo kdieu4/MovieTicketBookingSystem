@@ -301,6 +301,7 @@ export default function BookingFlow({
   onSearchSettled,
   // onContinue,
   onCreatePayment,
+  onCreateBooking,
   variant = "modal",
 }) {
   const inline = variant === "inline";
@@ -347,6 +348,12 @@ export default function BookingFlow({
   const switchingRef = useRef(false);
   // Chiều cao khung nội dung, đo tự động để khung giãn ra, co lại mượt khi đổi bước
   const [bodyHeight, setBodyHeight] = useState(null);
+
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [activeBooking, setActiveBooking] = useState(null);
+
+  const creatingBookingRef = useRef(false);
+  const bookingRequestIdRef = useRef(null);
 
   const closeButtonRef = useRef(null);
   const headerRef = useRef(null);
@@ -511,6 +518,10 @@ export default function BookingFlow({
     setPaymentData(null);
     setPaymentError("");
     setPaymentLoading(false);
+    setActiveBooking(null);
+    setBookingLoading(false);
+    bookingRequestIdRef.current = null;
+    creatingBookingRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, searchId]);
 
@@ -788,6 +799,14 @@ export default function BookingFlow({
   }
 
   function handleChooseShowtime(showtime) {
+    if (handedOffRef.current) {
+      setNotice({
+        type: "error",
+        text: "Đã tạo Booking. Vui lòng hủy đơn trước khi đổi ghế hoặc suất chiếu.",
+      });
+
+      return;
+    }
     // Suất đã qua giờ thì không cho chọn (nút cũng đã bị disabled, đây là lớp bảo vệ thứ hai)
     if (new Date(showtime.startTime).getTime() <= Date.now()) return;
     runTransition("forward", () => {
@@ -802,6 +821,13 @@ export default function BookingFlow({
 
   // Quay lại bước n (1: thành phố, 2: rạp, 3: suất chiếu). Chỉ xóa những lựa chọn nằm sau bước đó.
   function handleBackTo(n) {
+    if (handedOffRef.current) {
+      setNotice({
+        type: "error",
+        text: "Đơn đặt vé đã được tạo. Vui lòng hủy đơn trước khi đổi suất chiếu.",
+      });
+      return;
+    }
     runTransition("back", () => {
       releaseHeldSeats();
       lastSeatsRef.current = [];
@@ -835,23 +861,31 @@ export default function BookingFlow({
   async function toggleSeat(seat) {
     if (!selectedShowtime) return;
 
+    if (
+      pendingRef.current > 0 ||
+      bookingLoading ||
+      paymentOpen ||
+      paymentLoading ||
+      handedOffRef.current
+    ) {
+      return;
+    }
+
     if (paymentOpen || paymentLoading || handedOffRef.current) {
       return;
     }
 
     const showtimeId = selectedShowtime.id;
     const isSelected = selectedSeats.some((s) => s.id === seat.id);
+    bookingRequestIdRef.current = null;
+    pendingRef.current += 1;
+    setSeatUpdating(true);
 
     setNotice(null);
     // Cập nhật giao diện ngay, sau đó đồng bộ lại với server
     setSelectedSeats((current) =>
       isSelected ? current.filter((s) => s.id !== seat.id) : [...current, seat],
     );
-
-    if (pendingRef.current > 0) return;
-
-    pendingRef.current += 1;
-    setSeatUpdating(true);
 
     try {
       if (isSelected) {
@@ -864,14 +898,22 @@ export default function BookingFlow({
           sessionId: getSessionId(),
           seatIds: [seat.id],
         });
-        setHoldUntil(result.holdUntil);
+        setHoldUntil((previous) => {
+          if (!previous) return result.holdUntil;
+
+          // Giữ mốc hết hạn sớm hơn để tránh
+          // hiển thị sai khi mỗi ghế có TTL riêng.
+          return new Date(result.holdUntil) < new Date(previous)
+            ? result.holdUntil
+            : previous;
+        });
       }
+      invalidateSeats(showtimeId);
     } catch (err) {
       needsSyncRef.current = true;
       setNotice({ type: "error", text: err.message });
     } finally {
       pendingRef.current -= 1;
-      // Trạng thái giữ ghế vừa đổi nên cache cũ không còn đúng cho lần mở sau
       invalidateSeats(showtimeId);
       // Giao diện đã cập nhật ngay khi bấm, nên thành công thì không cần tải lại cả sơ đồ ghế
       if (pendingRef.current === 0 && needsSyncRef.current) {
@@ -882,6 +924,7 @@ export default function BookingFlow({
           console.error("Lỗi khi làm mới sơ đồ ghế:", err);
         }
       }
+      setSeatUpdating(false);
     }
   }
 
@@ -890,95 +933,167 @@ export default function BookingFlow({
   const cinemaName =
     selectedShowtime?.cinemaName || (allCinemas ? "" : cinema || "");
 
-  function handleContinue() {
-    console.log("Nút tiếp tục được click");
-    // Kiểm tra đã chọn suất chiếu
-    if (!selectedShowtime) {
+  async function handleContinue() {
+    console.log("DEBUG:", {
+      showtime: selectedShowtime,
+      seats: selectedSeats,
+      holdUntil,
+      pending: pendingRef.current,
+      onCreateBooking: typeof onCreateBooking,
+    });
+    // 1. Ngăn request trùng
+    if (creatingBookingRef.current) {
       return;
     }
 
-    // Kiểm tra đã chọn ghế
+    // 2. Nếu Booking đã tồn tại, mở lại Payment Modal
+    if (activeBooking?.bookingId) {
+      setPaymentOpen(true);
+      return;
+    }
+
+    // 3. Kiểm tra suất chiếu
+    if (!selectedShowtime) {
+      setNotice({
+        type: "error",
+        text: "Vui lòng chọn suất chiếu.",
+      });
+      return;
+    }
+
+    // 4. Kiểm tra danh sách ghế
     if (selectedSeats.length === 0) {
       setNotice({
         type: "error",
         text: "Vui lòng chọn ít nhất một ghế.",
       });
-
       return;
     }
 
-    // Chờ các request giữ/trả ghế hoàn tất
+    // 5. Không tạo Booking khi đang giữ/trả ghế
     if (pendingRef.current > 0) {
       setNotice({
         type: "error",
-        text: "Hệ thống đang xác nhận giữ ghế. Vui lòng thử lại.",
+        text: "Đang xác nhận giữ ghế, vui lòng thử lại.",
       });
-
       return;
     }
 
-    // Chưa có thông tin giữ ghế hợp lệ
+    // 6. Kiểm tra thời hạn
     const expiresAt = new Date(holdUntil).getTime();
 
     if (!holdUntil || Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
       setNotice({
         type: "error",
-        text: "Thời gian giữ ghế đã hết hoặc chưa được xác nhận.",
+        text: "Thời gian giữ ghế đã hết.",
       });
-
       return;
     }
 
-    // Xóa thông báo cũ
-    setNotice(null);
-    setPaymentError("");
+    // 7. Kiểm tra callback
+    if (typeof onCreateBooking !== "function") {
+      setNotice({
+        type: "error",
+        text: "Chưa kết nối Booking Service.",
+      });
+      return;
+    }
 
-    // Chỉ mở modal. Chưa chuyển quyền quản lý ghế.
-    setPaymentOpen(true);
+    // 8. Tạo requestId ổn định
+    if (!bookingRequestIdRef.current) {
+      bookingRequestIdRef.current = crypto.randomUUID();
+    }
+
+    creatingBookingRef.current = true;
+    setBookingLoading(true);
+    setNotice(null);
+
+    console.log("Đang gọi Booking Service...");
+    try {
+      // 9. Gọi Booking Service thông qua component cha
+      const booking = await onCreateBooking({
+        showtime: selectedShowtime,
+        seats: selectedSeats,
+        sessionId: getSessionId(),
+        requestId: bookingRequestIdRef.current,
+      });
+
+      // 10. Kiểm tra response
+      if (!booking?.bookingId) {
+        throw new Error("Booking Service không trả về bookingId.");
+      }
+
+      // 11. Lưu Booking được backend xác nhận
+      setActiveBooking(booking);
+
+      // Backend đã tiếp nhận quyền giữ ghế
+      handedOffRef.current = true;
+
+      holdRef.current = {
+        showtimeId: null,
+        seatIds: [],
+      };
+
+      if (booking.holdUntil) {
+        setHoldUntil(booking.holdUntil);
+      }
+
+      // 12. Mở Payment Modal
+      setPaymentOpen(true);
+    } catch (error) {
+      console.error("Lỗi tạo Booking:", error);
+      setNotice({
+        type: "error",
+        text: error.message || "Không thể tạo Booking.",
+      });
+
+      // Không tự giải phóng ghế khi lỗi không rõ trạng thái.
+      // Backend cần xác minh idempotency khi người dùng thử lại.
+    } finally {
+      creatingBookingRef.current = false;
+      setBookingLoading(false);
+    }
   }
 
   async function handleCreatePayment() {
     if (paymentLoading) return;
 
+    if (!activeBooking?.bookingId) {
+      setPaymentError("Chưa có đơn đặt vé hợp lệ.");
+      return;
+    }
+
     if (typeof onCreatePayment !== "function") {
       setPaymentError("Chưa kết nối chức năng tạo thanh toán với backend.");
-
       return;
     }
+    // const expiresAt = new Date(holdUntil).getTime();
 
-    const expiresAt = new Date(holdUntil).getTime();
-
-    if (!holdUntil || Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
-      setPaymentError("Phiên giữ ghế đã hết hạn. Vui lòng chọn lại ghế.");
-
-      return;
-    }
+    // if (!holdUntil || Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
+    //   setPaymentError("Phiên giữ ghế đã hết hạn. Vui lòng chọn lại ghế.");
+    //   return;
+    // }
 
     setPaymentLoading(true);
     setPaymentError("");
 
     try {
-      const result = await onCreatePayment({
-        showtime: selectedShowtime,
-        seats: selectedSeats,
-        total,
-        holdUntil,
-        city,
-        cinema: cinemaName,
-        sessionId: getSessionId(),
+      const payment = await onCreatePayment({
+        bookingId: activeBooking.bookingId,
+        // showtime: selectedShowtime,
+        // seats: selectedSeats,
+        // total,
+        // holdUntil,
+        // city,
+        // cinema: cinemaName,
+        // sessionId: getSessionId(),
       });
 
-      if (!result?.qrCodeUrl && !result?.payUrl) {
-        throw new Error("Backend không trả về thông tin thanh toán MoMo.");
+      if (!payment?.qrCodeUrl && !payment?.payUrl) {
+        throw new Error("Payment Service không trả về dữ liệu thanh toán.");
       }
 
-      setPaymentData(result);
-
-      // Chỉ đánh dấu bàn giao khi backend đã tạo Booking.
-      // Callback phải trả về bookingId thực tế.
-      if (result.bookingId) {
-        handedOffRef.current = true;
-      }
+      setPaymentData(payment);
     } catch (err) {
       setPaymentError(err.message || "Không thể tạo giao dịch thanh toán.");
     } finally {
@@ -1659,17 +1774,39 @@ export default function BookingFlow({
                         </div>
                       </div>
 
-                      <button
+                      {/* <button
                         type="button"
                         onClick={() => {
                           console.log("Button clicked!");
                           handleContinue();
                         }}
-                        disabled={!hasSeats}
+                        disabled={
+                          !hasSeats ||
+                          bookingLoading ||
+                          seatUpdating ||
+                          paymentLoading
+                        }
                         className="mt-5 flex h-11 w-full items-center justify-center gap-1.5 rounded-full bg-[var(--color-brand-fill)] text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-fill-hover)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2"
                       >
                         Tiếp tục
                         <span aria-hidden="true">→</span>
+                      </button> */}
+                      <button
+                        type="button"
+                        onClick={handleContinue}
+                        disabled={
+                          !hasSeats ||
+                          bookingLoading ||
+                          seatUpdating ||
+                          paymentLoading
+                        }
+                        className="mt-5 flex h-11 w-full items-center justify-center gap-1.5 rounded-full bg-[var(--color-brand-fill)] text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-fill-hover)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {bookingLoading
+                          ? "Đang tạo đơn đặt vé..."
+                          : activeBooking
+                            ? "Tiếp tục thanh toán"
+                            : "Tiếp tục"}
                       </button>
                       <p className="mt-3 text-center text-[12px] text-[var(--color-text-tertiary)]">
                         Bạn có thể quay lại để đổi ghế trước khi thanh toán.
@@ -1707,10 +1844,11 @@ export default function BookingFlow({
     <PaymentQrModal
       open={paymentOpen}
       onClose={handleClosePayment}
+      bookingId={activeBooking?.bookingId}
       showtime={selectedShowtime}
       cinema={cinemaName}
       seats={selectedSeats}
-      total={total}
+      total={activeBooking?.amount ?? total}
       holdUntil={holdUntil}
       payment={paymentData}
       loading={paymentLoading}

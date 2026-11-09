@@ -2,8 +2,14 @@ package com.mtbs.booking_service.domain.dto.response;
 
 import com.mtbs.booking_service.domain.entity.BookingStatus;
 
+import lombok.Getter;
+import lombok.Setter;
+
+import java.time.OffsetDateTime;
 import java.util.List;
 
+@Getter
+@Setter
 public class BookingResponse {
 
     private Long bookingId;
@@ -18,54 +24,9 @@ public class BookingResponse {
 
     private BookingStatus status;
 
+    private OffsetDateTime holdUntil;
+
     public BookingResponse() {
     }
 
-    public Long getBookingId() {
-        return bookingId;
-    }
-
-    public void setBookingId(Long bookingId) {
-        this.bookingId = bookingId;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-
-    public Long getShowtimeId() {
-        return showtimeId;
-    }
-
-    public void setShowtimeId(Long showtimeId) {
-        this.showtimeId = showtimeId;
-    }
-
-    public List<Long> getSeatIds() {
-        return seatIds;
-    }
-
-    public void setSeatIds(List<Long> seatIds) {
-        this.seatIds = seatIds;
-    }
-
-    public double getAmount() {
-        return amount;
-    }
-
-    public void setAmount(double amount) {
-        this.amount = amount;
-    }
-
-    public BookingStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(BookingStatus status) {
-        this.status = status;
-    }
 }

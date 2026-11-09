@@ -39,20 +39,17 @@ public class MovieServiceClient {
         } catch (HttpClientErrorException.NotFound ex) {
 
             throw new ShowtimeNotFoundException(
-                    "Không tìm thấy Showtime với ID: " + showtimeId
-            );
+                    "Không tìm thấy Showtime với ID: " + showtimeId);
 
         } catch (ResourceAccessException ex) {
 
             throw new ServiceUnavailableException(
-                    "Movie Service không phản hồi hoặc timeout"
-            );
+                    "Movie Service không phản hồi hoặc timeout");
 
         } catch (RestClientException ex) {
 
             throw new ServiceUnavailableException(
-                    "Không thể kết nối đến Movie Service" + ex.getMessage()
-            );
+                    "Không thể kết nối đến Movie Service" + ex.getMessage());
         }
     }
 
@@ -65,26 +62,23 @@ public class MovieServiceClient {
                     .uri("/api/rooms/{roomId}/seats", roomId)
                     .retrieve()
                     .body(
-                            new ParameterizedTypeReference<List<SeatResponse>>() {}
-                    );
+                            new ParameterizedTypeReference<List<SeatResponse>>() {
+                            });
 
         } catch (HttpClientErrorException.NotFound ex) {
 
             throw new InvalidSeatException(
-                    "Không tìm thấy phòng hoặc danh sách ghế"
-            );
+                    "Không tìm thấy phòng hoặc danh sách ghế");
 
         } catch (ResourceAccessException ex) {
 
             throw new ServiceUnavailableException(
-                    "Movie Service không phản hồi hoặc timeout"
-            );
+                    "Movie Service không phản hồi hoặc timeout");
 
         } catch (RestClientException ex) {
 
             throw new ServiceUnavailableException(
-                    "Không thể kết nối đến Movie Service"
-            );
+                    "Không thể kết nối đến Movie Service");
         }
     }
 }

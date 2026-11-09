@@ -1,23 +1,31 @@
 package com.mtbs.booking_service.domain.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
-@Table(name = "booking_details")
+@Table(name = "booking_details", uniqueConstraints = @UniqueConstraint(columnNames = { "booking_id",
+        "showtime_seat_id" }))
+@Getter
+@Setter
+@NoArgsConstructor
 public class BookingSeat {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "booking_detail_id")
     private Long bookingDetailId;
 
-    private Long bookingId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "booking_id", nullable = false)
+    private Booking booking;
 
+    @Column(name = "showtime_seat_id", nullable = false)
     private Long showtimeSeatId;
 
     private double price;
-
-    public BookingSeat() {
-    }
 
     public Long getBookingDetailId() {
         return bookingDetailId;
@@ -25,14 +33,6 @@ public class BookingSeat {
 
     public void setBookingDetailId(Long bookingDetailId) {
         this.bookingDetailId = bookingDetailId;
-    }
-
-    public Long getBookingId() {
-        return bookingId;
-    }
-
-    public void setBookingId(Long bookingId) {
-        this.bookingId = bookingId;
     }
 
     public Long getShowtimeSeatId() {

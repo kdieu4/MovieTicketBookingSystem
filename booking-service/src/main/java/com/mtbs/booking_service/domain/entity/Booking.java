@@ -1,10 +1,17 @@
 package com.mtbs.booking_service.domain.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.time.OffsetDateTime;
+
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 @Entity
+@Getter
+@Setter
 @Table(name = "bookings")
 public class Booking {
 
@@ -29,6 +36,12 @@ public class Booking {
 
     @Column(name = "booking_code", nullable = false, unique = true)
     private String bookingCode;
+
+    @Column(name = "client_request_id", unique = true)
+    private String clientRequestId;
+
+    @Column(name = "payment_expires_at")
+    private OffsetDateTime paymentExpiresAt;
 
     public String getBookingCode() {
         return bookingCode;

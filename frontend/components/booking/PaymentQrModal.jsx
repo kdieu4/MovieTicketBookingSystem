@@ -49,6 +49,7 @@ function formatRemaining(seconds) {
 export default function PaymentQrModal({
   open,
   onClose,
+  bookingId,
   showtime,
   cinema,
   seats = [],
@@ -159,6 +160,14 @@ export default function PaymentQrModal({
       <div className="relative grid max-h-[90vh] overflow-y-auto md:grid-cols-[1.15fr_1fr]">
         {/* CỘT TRÁI: THÔNG TIN VÉ */}
         <section className="p-6 sm:p-8">
+          <div className="mb-4">
+            <p className="text-[12px] text-[var(--color-text-secondary)]">
+              MÃ ĐẶT VÉ
+            </p>
+            <p className="mt-1 text-[15px] font-semibold text-[var(--color-brand-primary)]">
+              {bookingId ? `#${bookingId}` : "Chưa tạo Booking"}
+            </p>
+          </div>
           <div className="mb-6 flex items-center gap-3">
             <span
               className="

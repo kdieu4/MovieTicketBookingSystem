@@ -8,6 +8,7 @@ import Footer from "@/components/layout/Footer";
 import Badge from "@/components/common/Badge";
 import BookingFlow from "@/components/booking/BookingFlow";
 import TrailerModal from "@/components/movie/TrailerModal";
+import { createBooking } from "@/services/bookingApi";
 import {
   IconArrowLeft,
   IconClock,
@@ -32,6 +33,51 @@ export default function MovieDetailClient({ movie }) {
     () => (movieTitle ? { movieTitle } : null),
     [movieTitle],
   );
+
+  // const handleCreateBooking = useCallback(async (payload) => {
+  //   const token = window.sessionStorage.getItem("access_token");
+
+  //   // Tạm thời đọc userId từ phiên đăng nhập.
+  //   // Cần thay bằng dữ liệu người dùng do Auth Service xác thực.
+  //   const userId = Number(window.sessionStorage.getItem("user_id"));
+
+  //   if (!token || !Number.isInteger(userId) || userId <= 0) {
+  //     throw new Error("Không tìm thấy phiên đăng nhập hợp lệ.");
+  //   }
+
+  //   return createBooking(
+  //     {
+  //       userId,
+  //       showtimeId: payload.showtime.id,
+  //       seatIds: payload.seats.map((seat) => seat.id),
+  //       sessionId: payload.sessionId,
+  //       requestId: payload.requestId,
+  //     },
+  //     token,
+  //   );
+  // }, []);
+
+  const handleCreateBooking = useCallback(async (payload) => {
+    // Chỉ cho phép bỏ qua đăng nhập ở môi trường Development
+    if (process.env.NODE_ENV !== "development") {
+      throw new Error("Chức năng đăng nhập chưa được tích hợp.");
+    }
+
+    // const userId = Number(process.env.NEXT_PUBLIC_DEV_USER_ID);
+    const userId = 1;
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      throw new Error("Chưa cấu hình DEV_USER_ID hợp lệ.");
+    }
+
+    return createBooking({
+      userId,
+      showtimeId: payload.showtime.id,
+      seatIds: payload.seats.map((seat) => seat.id),
+      sessionId: payload.sessionId,
+      requestId: payload.requestId,
+    });
+  }, []);
 
   // Bấm Tiếp tục ở bước chọn ghế: lưu lựa chọn rồi sang trang thanh toán
   // const handleContinue = useCallback(
@@ -215,6 +261,7 @@ export default function MovieDetailClient({ movie }) {
               variant="inline"
               filters={bookingFilters}
               searchId={1}
+              onCreateBooking={handleCreateBooking}
               // onContinue={handleContinue}
             />
           </section>
