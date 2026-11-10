@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 /**
  * Du lieu User tra ra ngoai.
@@ -21,10 +21,10 @@ public class UserResponse {
     private String fullName;
     private String email;
     private String phoneNumber;
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     /** Thoi diem lan cuoi cap nhat. Huu ich khi client can theo doi thay doi. */
-    private LocalDateTime updatedAt;
+    private OffsetDateTime updatedAt;
 
     /** Chuyen tu entity sang response. */
     public static UserResponse from(User user) {

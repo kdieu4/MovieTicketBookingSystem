@@ -69,6 +69,7 @@ class UserServiceImplTest {
         User user = userRepository.save(User.builder()
                 .fullName("Nguoi Dung Moi")
                 .email(email)
+                .passwordHash("test-hash")
                 .phoneNumber(phone)
                 .build());
 

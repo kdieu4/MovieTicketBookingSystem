@@ -3,20 +3,21 @@ package com.mtbs.user_service.domain.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 /**
  * Entity User.
  *
- * Luu y: pham vi tuan nay CHUA dung Authentication, JWT va Role
- * (theo yeu cau issue #3), nen khong co truong password / role / status.
+ * Luu y: pham vi hien tai CHUA dung Authentication, JWT va Role
+ * (theo yeu cau issue #3), nhung van map du cac cot DB de khong lech schema.
  */
 @Entity
 @Table(name = "users", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_users_email", columnNames = "email"),
-        @UniqueConstraint(name = "uk_users_phone_number", columnNames = "phone_number")
+        @UniqueConstraint(name = "uk_users_email", columnNames = "email")
 })
 @Getter
 @Setter
@@ -37,15 +38,24 @@ public class User {
     @Column(nullable = false, length = 150)
     private String email;
 
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
+
     /** So dien thoai */
-    @Column(name = "phone_number", nullable = false, length = 15)
+    @Column(name = "phone_number", length = 15)
     private String phoneNumber;
 
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(columnDefinition = "user_role_enum", nullable = false)
+    @Builder.Default
+    private Role role = Role.CUSTOMER;
+
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "created_at", updatable = false, nullable = false)
+    private OffsetDateTime createdAt;
 
     @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    @Column(name = "updated_at", nullable = false)
+    private OffsetDateTime updatedAt;
 }

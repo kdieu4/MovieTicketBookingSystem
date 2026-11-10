@@ -12,7 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -260,9 +260,9 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.updatedAt").exists())
                 .andExpect(result -> {
                     String json = result.getResponse().getContentAsString();
-                    LocalDateTime inResponse = LocalDateTime.parse(
+                    OffsetDateTime inResponse = OffsetDateTime.parse(
                             (String) JsonPath.read(json, "$.updatedAt"));
-                    LocalDateTime trongDb = userRepository.findById(1L).orElseThrow().getUpdatedAt();
+                    OffsetDateTime trongDb = userRepository.findById(1L).orElseThrow().getUpdatedAt();
 
                     assertThat(inResponse).isEqualTo(trongDb);
                 });
@@ -420,6 +420,7 @@ class UserControllerTest {
         long id = userRepository.save(User.builder()
                 .fullName(ten)
                 .email("xoa." + System.nanoTime() + "@mtbs.vn")
+                .passwordHash("test-hash")
                 .phoneNumber("09" + (int) (Math.random() * 89999999 + 10000000))
                 .build()).getId();
 
