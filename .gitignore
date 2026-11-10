@@ -8,3 +8,6 @@ booking-service/bin/
 # IntelliJ IDEA
 .idea/
 *.iml
+
+# graphify knowledge graph output
+graphify-out/
