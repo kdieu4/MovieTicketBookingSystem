@@ -58,5 +58,3 @@ export function loadSeats(showtimeId, signal) {
   inflight.set(key, promise);
   return promise;
 }
-
-

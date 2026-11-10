@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import TrailerModal from '../movie/TrailerModal';
 import BookingFlow, { prefetchCities } from '@/components/booking/BookingFlow';
+import { IconStar } from '@/components/common/Icons';
+import { formatRating, formatVoteCount } from '@/utils/movieHelpers';
 
 // Mỗi phần tử của hero vào lần lượt, tổng thời gian dưới 300ms để không bắt người dùng chờ.
 const stagger = (ms) => ({ animationDelay: `${ms}ms`, animationFillMode: 'both' });
@@ -54,6 +56,8 @@ export default function FeaturedSection({
   const activePoster = activeMovie?.posterUrl || activeMovie?.poster_url || activeMovie?.bannerUrl || activeMovie?.backdropUrl || '';
   const activeAgeRating = activeMovie?.ageRating || activeMovie?.ageRestriction;
   const activeDuration = activeMovie?.duration || activeMovie?.durationMinutes;
+  const activeRating = formatRating(activeMovie?.tmdbRating);
+  const activeVotes = formatVoteCount(activeMovie?.tmdbVoteCount);
 
   return (
     <>
@@ -84,6 +88,16 @@ export default function FeaturedSection({
                 <span className="hero-badge">Đang chiếu</span>
                 {activeAgeRating && <span className="hero-badge">{activeAgeRating}</span>}
                 {activeDuration && <span className="hero-badge">{activeDuration} phút</span>}
+                {activeRating && (
+                  <span
+                    className="hero-badge inline-flex items-center gap-1"
+                    aria-label={`Điểm TMDB ${activeRating}${activeVotes ? ` trên ${activeVotes} lượt đánh giá` : ''}`}
+                  >
+                    <IconStar className="h-3 w-3 text-[var(--color-brand-primary)]" />
+                    {activeRating}
+                    {activeVotes && <span className="text-[var(--color-stage-muted)]">· {activeVotes}</span>}
+                  </span>
+                )}
               </div>
 
               <h1

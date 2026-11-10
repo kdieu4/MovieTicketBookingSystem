@@ -8,17 +8,21 @@ import Footer from '@/components/layout/Footer';
 import Badge from '@/components/common/Badge';
 import BookingFlow from '@/components/booking/BookingFlow';
 import TrailerModal from '@/components/movie/TrailerModal';
-import { IconArrowLeft, IconClock, IconCalendar, IconPlay } from '@/components/common/Icons';
+import TmdbReviews from '@/components/movie/TmdbReviews';
+import { IconArrowLeft, IconClock, IconCalendar, IconPlay, IconStar } from '@/components/common/Icons';
 import { Reveal } from '@/components/common/Ascii';
-import { AGE_LABEL, STATUS_LABEL, formatDuration } from '@/utils/movieHelpers';
+import { AGE_LABEL, STATUS_LABEL, formatDuration, formatRating, formatVoteCount } from '@/utils/movieHelpers';
 import '@/styles/booking-motion.css';
 
 // Khóa lưu dữ liệu đặt vé để trang thanh toán đọc lại
 const CHECKOUT_KEY = 'mtbs-checkout';
 
-export default function MovieDetailClient({ movie }) {
+export default function MovieDetailClient({ movie, reviews = [] }) {
   const router = useRouter();
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
+
+  const rating = formatRating(movie?.tmdbRating);
+  const votes = formatVoteCount(movie?.tmdbVoteCount);
 
   // BookingFlow đặt lại toàn bộ khi filters đổi tham chiếu, nên bắt buộc phải memo.
   // Phải khai báo trước các return sớm bên dưới.
@@ -136,6 +140,19 @@ export default function MovieDetailClient({ movie }) {
                 </span>
               )}
               {movie.ageRestriction && <Badge>{AGE_LABEL[movie.ageRestriction] ?? movie.ageRestriction}</Badge>}
+              {rating && (
+                <span
+                  className="inline-flex items-center gap-1.5"
+                  title="Điểm trung bình trên TMDB"
+                  aria-label={`Điểm TMDB ${rating}${votes ? ` trên ${votes} lượt đánh giá` : ''}`}
+                >
+                  <IconStar className="h-3.5 w-3.5 text-[var(--color-brand-primary)]" />
+                  <span className="font-semibold tabular-nums text-[var(--color-text-primary)]">{rating}</span>
+                  {votes && (
+                    <span className="text-[var(--color-text-tertiary)]">({votes} lượt)</span>
+                  )}
+                </span>
+              )}
             </div>
 
             {genres.length > 0 && (
@@ -178,6 +195,9 @@ export default function MovieDetailClient({ movie }) {
             )}
           </div>
         </div>
+
+        {/* Review TMDB: đặt trước CTA đặt vé để người dùng có thêm thông tin */}
+        <TmdbReviews reviews={reviews} />
 
         {/* Luồng đặt vé hiện thẳng trong trang: thành phố, rạp, suất chiếu rồi sơ đồ ghế */}
         <section className="mt-10 scroll-mt-24 md:mt-12">

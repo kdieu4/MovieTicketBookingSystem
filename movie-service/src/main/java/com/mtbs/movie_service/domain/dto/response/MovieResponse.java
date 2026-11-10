@@ -29,7 +29,9 @@ public record MovieResponse(
         String actors,
         List<GenreResponse> genres,
         OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
+        OffsetDateTime updatedAt,
+        Double tmdbRating,
+        Integer tmdbVoteCount
 ) {
 
 }

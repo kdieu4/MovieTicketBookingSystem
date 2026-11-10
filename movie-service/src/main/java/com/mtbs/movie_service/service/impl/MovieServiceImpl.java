@@ -179,7 +179,9 @@ public class MovieServiceImpl implements MovieService {
                 movie.getActors(),
                 genres,
                 movie.getCreatedAt(),
-                movie.getUpdatedAt()
+                movie.getUpdatedAt(),
+                movie.getTmdbRating(),
+                movie.getTmdbVoteCount()
         );
     }
 }

@@ -37,6 +37,8 @@ export function mapMovie(movie) {
     trailerUrl: movie.trailerUrl ?? null,
     director: movie.director ?? null,
     actors: movie.actors ?? null,
+    tmdbRating: movie.tmdbRating ?? null,
+    tmdbVoteCount: movie.tmdbVoteCount ?? null,
   };
 }
 
