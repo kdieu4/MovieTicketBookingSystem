@@ -1,5 +1,10 @@
 package com.mtbs.booking_service.domain.dto.response;
 
-public class UserResponse {
+import lombok.Getter;
+import lombok.Setter;
 
+@Setter
+@Getter
+public class UserResponse {
+    private Long id;
 }

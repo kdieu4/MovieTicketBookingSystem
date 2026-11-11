@@ -14,11 +14,16 @@ import org.springframework.web.client.RestClientException;
 public class UserServiceClient {
 
     private final RestClient restClient;
+    private final String internalApiKey;
 
-    public UserServiceClient(@Value("${user-service.base-url}") String userServiceBaseUrl) {
+    public UserServiceClient(
+            @Value("${user-service.base-url}") String userServiceBaseUrl,
+            @Value("${user-service.internal-api-key}") String internalApiKey) {
+
         this.restClient = RestClient.builder()
                 .baseUrl(userServiceBaseUrl)
                 .build();
+        this.internalApiKey = internalApiKey;
     }
 
     public UserResponse getUserById(Long userId) {
@@ -33,20 +38,51 @@ public class UserServiceClient {
         } catch (HttpClientErrorException.NotFound ex) {
 
             throw new UserNotFoundException(
-                    "Không tìm thấy User với ID: " + userId
-            );
+                    "Không tìm thấy User với ID: " + userId);
 
         } catch (ResourceAccessException ex) {
 
             throw new ServiceUnavailableException(
-                    "User Service không phản hồi hoặc timeout"
-            );
+                    "User Service không phản hồi hoặc timeout");
 
         } catch (RestClientException ex) {
 
             throw new ServiceUnavailableException(
-                    "Không thể kết nối đến User Service"
-            );
+                    "Không thể kết nối đến User Service");
+        }
+    }
+
+    public UserResponse getUserByAuthUserId(Long authUserId) {
+
+        try {
+            UserResponse user = restClient.get()
+                    .uri("/api/users/internal/profiles/by-auth-user/{authUserId}", authUserId)
+                    .header("X-Internal-Api-Key", internalApiKey)
+                    .retrieve()
+                    .body(UserResponse.class);
+
+            if (user == null || user.getId() == null) {
+                throw new ServiceUnavailableException("User Service trả về hồ sơ không hợp lệ");
+            }
+
+            return user;
+
+        } catch (HttpClientErrorException.NotFound ex) {
+            throw new UserNotFoundException(
+                    "Không tìm thấy hồ sơ với Auth User ID: " + authUserId);
+
+        } catch (HttpClientErrorException.Unauthorized
+                | HttpClientErrorException.Forbidden ex) {
+            throw new ServiceUnavailableException(
+                    "Booking Service không được phép truy cập User Service");
+
+        } catch (ResourceAccessException ex) {
+            throw new ServiceUnavailableException(
+                    "User Service không phản hồi hoặc timeout");
+
+        } catch (RestClientException ex) {
+            throw new ServiceUnavailableException(
+                    "Không thể truy xuất hồ sơ từ User Service");
         }
     }
 }
