@@ -1,5 +1,6 @@
 package com.mtbs.user_service.service.impl;
 
+import com.mtbs.user_service.domain.dto.request.CreateUserProfileRequest;
 import com.mtbs.user_service.domain.dto.request.UserRequest;
 import com.mtbs.user_service.domain.dto.response.PageResponse;
 import com.mtbs.user_service.domain.dto.response.UserResponse;
@@ -9,6 +10,8 @@ import com.mtbs.user_service.exception.UserNotFoundException;
 import com.mtbs.user_service.repository.UserRepository;
 import com.mtbs.user_service.service.UserService;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -20,11 +23,6 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
 
-    /**
-     * Tim user theo ID.
-     * Khong tim thay -> nem UserNotFoundException,
-     * GlobalExceptionHandler se chuyen thanh HTTP 404 Not Found.
-     */
     @Override
     @Transactional(readOnly = true)
     public UserResponse getUserById(Long id) {
@@ -34,13 +32,6 @@ public class UserServiceImpl implements UserService {
         return UserResponse.from(user);
     }
 
-    /**
-     * Lay danh sach user co phan trang.
-     * <p>
-     * Luon gan sort mac dinh (id asc) khi client khong truyen {@code ?sort=}.
-     * Neu de trong, MySQL co the tra cac trang theo thu tu bat ky -> cung du
-     * lieu nhung ban ghi co the bi trung hoac mat giua cac trang.
-     */
     @Override
     @Transactional(readOnly = true)
     public PageResponse<UserResponse> getUsers(Pageable pageable) {
@@ -51,16 +42,6 @@ public class UserServiceImpl implements UserService {
         return PageResponse.from(userRepository.findAll(effective), UserResponse::from);
     }
 
-    /**
-     * Cap nhat thong tin user theo ID.
-     * <p>
-     * Kiem tra trung email / so dien thoai TRUOC khi ghi. Neu khong kiem tra,
-     * MySQL nem DataIntegrityViolationException - thong bao loi do kho doc, va
-     * khi nhieu request chay song song van co kha nang ghi trung.
-     * <p>
-     * Cac truy van kiem tra loai trừ chinh user dang cap nhat, nen sua user
-     * ma giu nguyên email/sdt vẫn hợp lệ.
-     */
     @Override
     @Transactional
     public UserResponse updateUser(Long id, UserRequest request) {
@@ -87,13 +68,6 @@ public class UserServiceImpl implements UserService {
         return UserResponse.from(userRepository.saveAndFlush(user));
     }
 
-    /**
-     * Xoa user theo ID.
-     * <p>
-     * Dung findById truoc khi xoa de nem UserNotFoundException (404).
-     * Neu goi deleteById luon, JPA khong bao loi - client nhan 204 du user
-     * khong ton tai, khong phan biet duoc "da xoa" voi "chua co gi".
-     */
     @Override
     @Transactional
     public void deleteUser(Long id) {
@@ -101,5 +75,78 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new UserNotFoundException(id));
 
         userRepository.delete(user);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse createUserProfile(CreateUserProfileRequest request) {
+
+        Long authUserId = request.authUserId();
+        String fullName = request.fullName().trim();
+        String email = request.email().trim();
+        String phoneNumber = request.phoneNumber().trim();
+
+        // 1. Kiểm tra authUserId đã tồn tại chưa
+        var existingUser = userRepository.findByAuthUserId(authUserId);
+
+        if (existingUser.isPresent()) {
+            User user = existingUser.get();
+
+            // Không cho phép cùng authUserId liên kết với dữ liệu khác
+            if (!user.getEmail().equalsIgnoreCase(email)
+                    || !user.getFullName().equals(fullName)
+                    || !user.getPhoneNumber().equals(phoneNumber)) {
+
+                throw new DuplicateUserDataException(
+                        "authUserId",
+                        authUserId.toString());
+            }
+
+            // Request trùng hợp lệ: trả về hồ sơ cũ
+            return UserResponse.from(user);
+        }
+
+        // 2. Kiểm tra email
+        if (userRepository.existsByEmail(email)) {
+            throw new DuplicateUserDataException("Email", email);
+        }
+
+        // 3. Kiểm tra số điện thoại
+        if (userRepository.existsByPhoneNumber(phoneNumber)) {
+            throw new DuplicateUserDataException(
+                    "So dien thoai",
+                    phoneNumber);
+        }
+
+        // 4. Tạo hồ sơ mới
+        User user = User.builder()
+                .authUserId(authUserId)
+                .fullName(fullName)
+                .email(email)
+                .phoneNumber(phoneNumber)
+                .build();
+
+        // 5. Lưu vào database
+        try {
+            User savedUser = userRepository.saveAndFlush(user);
+
+            return UserResponse.from(savedUser);
+
+        } catch (DataIntegrityViolationException ex) {
+            // Xử lý trường hợp hai request đồng thời tạo dữ liệu trùng
+            throw new DuplicateUserDataException(
+                    "User profile",
+                    authUserId.toString());
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserResponse getUserByAuthUserId(Long authUserId) {
+
+        User user = userRepository.findByAuthUserId(authUserId)
+                .orElseThrow(() -> new UserNotFoundException(authUserId));
+
+        return UserResponse.from(user);
     }
 }
