@@ -35,9 +35,6 @@ export default function MovieDetailClient({ movie }) {
     [movieTitle],
   );
 
-  // const handleCreateBooking = useCallback(async (payload) => {
-  //   const token = window.sessionStorage.getItem("access_token");
-
   //   // Tạm thời đọc userId từ phiên đăng nhập.
   //   // Cần thay bằng dữ liệu người dùng do Auth Service xác thực.
   //   const userId = Number(window.sessionStorage.getItem("user_id"));
@@ -59,30 +56,32 @@ export default function MovieDetailClient({ movie }) {
   // }, []);
 
   const handleCreateBooking = useCallback(async (payload) => {
-    // Chỉ cho phép bỏ qua đăng nhập ở môi trường Development
-    if (process.env.NODE_ENV !== "development") {
-      throw new Error("Chức năng đăng nhập chưa được tích hợp.");
+    console.log("MovieDetailClient - Callback được gọi");
+
+    const token = sessionStorage.getItem("mtbs_access_token");
+    const userId = Number(sessionStorage.getItem("mtbs_user_id"));
+
+    console.log("MovieDetailClient - Has Token:", Boolean(token));
+
+    if (!token || !Number.isSafeInteger(userId) || userId <= 0) {
+      throw new Error("Vui lòng đăng nhập trước khi đặt vé.");
     }
 
-    // const userId = Number(process.env.NEXT_PUBLIC_DEV_USER_ID);
-    const userId = 1;
-
-    if (!Number.isInteger(userId) || userId <= 0) {
-      throw new Error("Chưa cấu hình DEV_USER_ID hợp lệ.");
-    }
-
-    return createBooking({
-      userId,
-      showtimeId: payload.showtime.id,
-      seatIds: payload.seats.map((seat) => seat.id),
-      sessionId: payload.sessionId,
-      requestId: payload.requestId,
-    });
+    return createBooking(
+      {
+        userId,
+        showtimeId: payload.showtime.id,
+        seatIds: payload.seats.map((seat) => seat.id),
+        sessionId: payload.sessionId,
+        requestId: payload.requestId,
+      },
+      token,
+    );
   }, []);
 
-  const handleCreatePayment = useCallback(async ({ bookingId }) => {
-    return createVNPayPayment(bookingId);
-  }, []);
+  // const handleCreatePayment = useCallback(async ({ bookingId }) => {
+  //   return createVNPayPayment(bookingId);
+  // }, []);
 
   // Bấm Tiếp tục ở bước chọn ghế: lưu lựa chọn rồi sang trang thanh toán
   // const handleContinue = useCallback(

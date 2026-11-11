@@ -1,38 +1,8 @@
-// import { apiRequest } from "./apiClient";
-// const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
-// /**
-//  * Tạo đơn đặt vé
-//  *
-//  * @param {Object} bookingData
-//  * @param {string} token
-//  * @returns {Promise<Object>}
-//  */
-// export async function createBooking(bookingData, token) {
-//   return apiRequest("http://localhost:8082/api/bookings", {
-//     method: "POST",
-//     token,
-//     body: bookingData,
-//   });
-// }
-
-// /**
-//  * Lấy thông tin booking theo ID
-//  *
-//  * @param {number|string} bookingId
-//  * @param {string} token
-//  * @returns {Promise<Object>}
-//  */
-// export async function getBooking(bookingId, token) {
-//   return apiRequest(`http://localhost:8082/api/bookings/${bookingId}`, {
-//     method: "GET",
-//     token,
-//   });
-// }
-
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
 export async function createBooking(bookingData, token) {
+  console.log("Booking API - Has Token:", Boolean(token));
   const response = await fetch(`http://localhost:8082/api/bookings`, {
     method: "POST",
     headers: {
