@@ -34,6 +34,3 @@ variables:
   - key: invalidToken
     value: this.is.not.a.jwt
     disabled: false
-  - key: adminToken
-    secret: true
-    disabled: false
