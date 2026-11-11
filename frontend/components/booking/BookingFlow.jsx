@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import SeatPicker, { SEAT_ANIMATIONS } from "./SeatPicker";
 import { Reveal, Skeleton } from "@/components/common/Ascii";
+import { getPaymentById, waitForPayment } from "@/services/paymentApi";
 import {
   getCachedSeats,
   getSessionId,
@@ -351,6 +352,7 @@ export default function BookingFlow({
 
   const [bookingLoading, setBookingLoading] = useState(false);
   const [activeBooking, setActiveBooking] = useState(null);
+  const [confirmedBooking, setConfirmedBooking] = useState(null);
 
   const creatingBookingRef = useRef(false);
   const bookingRequestIdRef = useRef(null);
@@ -518,12 +520,36 @@ export default function BookingFlow({
     setPaymentData(null);
     setPaymentError("");
     setPaymentLoading(false);
+    setConfirmedBooking(null);
     setActiveBooking(null);
     setBookingLoading(false);
     bookingRequestIdRef.current = null;
     creatingBookingRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, searchId]);
+
+  useEffect(() => {
+    function restorePayment() {
+      const saved = localStorage.getItem("mtbs-paid-booking");
+      if (!saved) return;
+
+      const ticket = JSON.parse(saved);
+
+      // Chỉ hiển thị vé tại đúng trang phim đã đặt.
+      if (ticket.returnPath?.split("?")[0] !== window.location.pathname) {
+        return;
+      }
+
+      setConfirmedBooking(ticket);
+      setPaymentOpen(false);
+    }
+
+    restorePayment();
+
+    window.addEventListener("storage", restorePayment);
+
+    return () => window.removeEventListener("storage", restorePayment);
+  }, [filters?.movieTitle]);
 
   // Bước 1: tải danh sách thành phố khi chưa có thành phố, ưu tiên lấy từ cache
   const needCities = !city;
@@ -682,7 +708,17 @@ export default function BookingFlow({
     };
   }, [selectedShowtime, refreshSeats]);
 
-  const step = !city ? 1 : !cinema ? 2 : !selectedShowtime ? 3 : 4;
+  // const step = !city ? 1 : !cinema ? 2 : !selectedShowtime ? 3 : 4;
+
+  const step = confirmedBooking
+    ? 5
+    : !city
+      ? 1
+      : !cinema
+        ? 2
+        : !selectedShowtime
+          ? 3
+          : 4;
 
   // Đổi bước thì cuộn về đầu vùng nội dung.
   // Chế độ nội tuyến: khung không tự cuộn, nên chỉ cuộn trang khi đầu luồng đã trôi lên khỏi màn hình.
@@ -753,6 +789,59 @@ export default function BookingFlow({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, inline, paymentOpen]);
+
+  useEffect(() => {
+    if (!paymentData?.payUrl || !activeBooking?.bookingId || confirmedBooking) {
+      return;
+    }
+
+    let cancelled = false;
+    let checking = false;
+
+    async function checkPayment() {
+      if (checking) return;
+      checking = true;
+
+      try {
+        const ref = new URL(paymentData.payUrl).searchParams.get("vnp_TxnRef");
+        if (!/^P\d+$/.test(ref || "")) return;
+
+        const payment = await getPaymentById(Number(ref.slice(1)));
+
+        if (
+          cancelled ||
+          payment.paymentStatus !== "SUCCESS" ||
+          Number(payment.bookingId) !== Number(activeBooking.bookingId)
+        )
+          return;
+
+        const ticket = JSON.parse(
+          localStorage.getItem("mtbs-checkout") || "null",
+        );
+
+        if (Number(ticket?.bookingId) !== Number(activeBooking.bookingId)) {
+          return;
+        }
+
+        localStorage.setItem("mtbs-paid-booking", JSON.stringify(ticket));
+        setConfirmedBooking(ticket);
+        setPaymentOpen(false);
+      } catch {
+        // Tiếp tục kiểm tra ở lần sau
+      } finally {
+        checking = false;
+      }
+    }
+
+    checkPayment();
+
+    const interval = setInterval(checkPayment, 2000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [paymentData?.payUrl, activeBooking?.bookingId, confirmedBooking]);
 
   function closeModal() {
     // Chỉ giải phóng khi backend chưa tiếp nhận Booking
@@ -1026,6 +1115,21 @@ export default function BookingFlow({
       // 11. Lưu Booking được backend xác nhận
       setActiveBooking(booking);
 
+      localStorage.setItem(
+        "mtbs-checkout",
+        JSON.stringify({
+          bookingId: booking.bookingId,
+          showtime: {
+            movieTitle: selectedShowtime.movieTitle,
+            startTime: selectedShowtime.startTime,
+          },
+          cinema: cinemaName,
+          seats: selectedSeats.map(seatName),
+          amount: booking.amount ?? total,
+          returnPath: window.location.pathname + window.location.search,
+        }),
+      );
+
       // Backend đã tiếp nhận quyền giữ ghế
       handedOffRef.current = true;
 
@@ -1040,6 +1144,8 @@ export default function BookingFlow({
 
       // 12. Mở Payment Modal
       setPaymentOpen(true);
+
+      await handleCreatePayment(booking.bookingId);
     } catch (error) {
       console.error("Lỗi tạo Booking:", error);
       setNotice({
@@ -1055,47 +1161,43 @@ export default function BookingFlow({
     }
   }
 
-  async function handleCreatePayment() {
-    if (paymentLoading) return;
-
-    if (!activeBooking?.bookingId) {
-      setPaymentError("Chưa có đơn đặt vé hợp lệ.");
-      return;
-    }
-
-    if (typeof onCreatePayment !== "function") {
-      setPaymentError("Chưa kết nối chức năng tạo thanh toán với backend.");
-      return;
-    }
-    // const expiresAt = new Date(holdUntil).getTime();
-
-    // if (!holdUntil || Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
-    //   setPaymentError("Phiên giữ ghế đã hết hạn. Vui lòng chọn lại ghế.");
-    //   return;
-    // }
+  async function handleCreatePayment(bookingId = activeBooking?.bookingId) {
+    if (paymentLoading || !bookingId) return;
 
     setPaymentLoading(true);
     setPaymentError("");
 
     try {
-      const payment = await onCreatePayment({
-        bookingId: activeBooking.bookingId,
-        // showtime: selectedShowtime,
-        // seats: selectedSeats,
-        // total,
-        // holdUntil,
-        // city,
-        // cinema: cinemaName,
-        // sessionId: getSessionId(),
-      });
+      // Chờ RabbitMQ Consumer tạo Payment (Retry + Exponential Backoff)
+      await waitForPayment(bookingId);
 
-      if (!payment?.qrCodeUrl && !payment?.payUrl) {
-        throw new Error("Payment Service không trả về dữ liệu thanh toán.");
+      const payment = await onCreatePayment({ bookingId });
+
+      if (!payment?.payUrl) {
+        throw new Error("VNPay không trả về payUrl.");
       }
 
       setPaymentData(payment);
-    } catch (err) {
-      setPaymentError(err.message || "Không thể tạo giao dịch thanh toán.");
+
+      const txnRef = new URL(payment.payUrl).searchParams.get("vnp_TxnRef");
+
+      const match = txnRef?.match(/^P(\d+)$/);
+
+      if (!match) {
+        throw new Error("Mã giao dịch VNPay không hợp lệ");
+      }
+
+      const ticket = JSON.parse(localStorage.getItem("mtbs-checkout"));
+
+      localStorage.setItem(
+        "mtbs-checkout",
+        JSON.stringify({
+          ...ticket,
+          paymentId: Number(match[1]),
+        }),
+      );
+    } catch (error) {
+      setPaymentError(error.message);
     } finally {
       setPaymentLoading(false);
     }
@@ -1815,6 +1917,49 @@ export default function BookingFlow({
                   </div>
                 </div>
               )}
+              {/* BƯỚC 5: XÁC NHẬN */}
+              {step === 5 && confirmedBooking && (
+                <section className="mx-auto max-w-xl rounded-xl border p-8">
+                  <h2 className="mb-5 text-2xl font-semibold text-green-600">
+                    ✓ Đặt vé thành công!
+                  </h2>
+
+                  <div className="space-y-3 text-sm">
+                    <p>
+                      <strong>Mã đặt vé:</strong> #{confirmedBooking.bookingId}
+                    </p>
+
+                    <p>
+                      <strong>Phim:</strong>{" "}
+                      {confirmedBooking.showtime.movieTitle}
+                    </p>
+
+                    <p>
+                      <strong>Suất chiếu:</strong>{" "}
+                      {new Date(
+                        confirmedBooking.showtime.startTime,
+                      ).toLocaleString("vi-VN")}
+                    </p>
+
+                    <p>
+                      <strong>Rạp:</strong> {confirmedBooking.cinema}
+                    </p>
+
+                    <p>
+                      <strong>Ghế:</strong> {confirmedBooking.seats.join(", ")}
+                    </p>
+
+                    <p>
+                      <strong>Tổng tiền:</strong>{" "}
+                      {formatVND(confirmedBooking.amount)}
+                    </p>
+
+                    <p className="font-semibold text-green-600">
+                      Trạng thái thanh toán: SUCCESS
+                    </p>
+                  </div>
+                </section>
+              )}
             </div>
           </div>
         </div>
@@ -1854,7 +1999,8 @@ export default function BookingFlow({
       loading={paymentLoading}
       error={paymentError}
       onCreateQr={
-        typeof onCreatePayment === "function" ? handleCreatePayment : undefined
+        // typeof onCreatePayment === "function" ? handleCreatePayment : undefined
+        () => handleCreatePayment()
       }
     />
   );

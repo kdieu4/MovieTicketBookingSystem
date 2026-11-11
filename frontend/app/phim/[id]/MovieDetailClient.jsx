@@ -9,6 +9,7 @@ import Badge from "@/components/common/Badge";
 import BookingFlow from "@/components/booking/BookingFlow";
 import TrailerModal from "@/components/movie/TrailerModal";
 import { createBooking } from "@/services/bookingApi";
+import { createVNPayPayment } from "@/services/paymentApi";
 import {
   IconArrowLeft,
   IconClock,
@@ -77,6 +78,10 @@ export default function MovieDetailClient({ movie }) {
       sessionId: payload.sessionId,
       requestId: payload.requestId,
     });
+  }, []);
+
+  const handleCreatePayment = useCallback(async ({ bookingId }) => {
+    return createVNPayPayment(bookingId);
   }, []);
 
   // Bấm Tiếp tục ở bước chọn ghế: lưu lựa chọn rồi sang trang thanh toán
@@ -262,6 +267,8 @@ export default function MovieDetailClient({ movie }) {
               filters={bookingFilters}
               searchId={1}
               onCreateBooking={handleCreateBooking}
+              // onCreatePayment={handleCreatePayment}
+              onCreatePayment={({ bookingId }) => createVNPayPayment(bookingId)}
               // onContinue={handleContinue}
             />
           </section>

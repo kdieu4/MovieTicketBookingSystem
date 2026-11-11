@@ -116,10 +116,32 @@ export default function PaymentQrModal({
     return null;
   }
 
+  // const expired = remaining === 0;
+  // const qrValue = payment?.qrCodeUrl || null;
+  // const payUrl = payment?.payUrl || null;
+  // const hasPayment = Boolean(qrValue || payUrl);
+
+  // let safePayUrl = null;
+
+  // if (payUrl) {
+  //   try {
+  //     const url = new URL(payUrl);
+
+  //     if (
+  //       url.protocol === "https:" &&
+  //       url.hostname === "sandbox.vnpayment.vn"
+  //     ) {
+  //       safePayUrl = url.toString();
+  //     }
+  //   } catch {
+  //     // Không mở URL không hợp lệ
+  //   }
+
+  // const qrValue = safePayUrl;
+  // const hasPayment = Boolean(safePayUrl);
+
   const expired = remaining === 0;
-  const qrValue = payment?.qrCodeUrl || null;
   const payUrl = payment?.payUrl || null;
-  const hasPayment = Boolean(qrValue || payUrl);
 
   let safePayUrl = null;
 
@@ -127,15 +149,33 @@ export default function PaymentQrModal({
     try {
       const url = new URL(payUrl);
 
+      // Chỉ chấp nhận VNPay Sandbox
       if (
         url.protocol === "https:" &&
-        ["test-payment.momo.vn", "payment.momo.vn"].includes(url.hostname)
+        url.hostname === "sandbox.vnpayment.vn"
       ) {
         safePayUrl = url.toString();
       }
     } catch {
-      // Không mở URL không hợp lệ
+      // URL không hợp lệ
     }
+  }
+
+  // QR chứa đường dẫn thanh toán VNPay
+  const qrValue = safePayUrl;
+  const hasPayment = Boolean(safePayUrl);
+
+  {
+    qrValue && !expired && (
+      <QRCodeSVG
+        value={qrValue}
+        size={216}
+        level="L"
+        bgColor="#FFFFFF"
+        fgColor="#000000"
+        title="QR mở trang thanh toán VNPay"
+      />
+    );
   }
 
   return createPortal(
@@ -348,15 +388,8 @@ export default function PaymentQrModal({
             </p>
 
             <h3 className="mt-2 text-[20px] font-semibold text-[var(--color-text-primary)]">
-              Thanh toán bằng MoMo
+              Thanh toán bằng VNPay
             </h3>
-
-            <p
-              id="seenema-payment-description"
-              className="mt-2 text-[13px] text-[var(--color-text-secondary)]"
-            >
-              Sử dụng ứng dụng MoMo để quét mã QR.
-            </p>
           </div>
 
           {/* KHUNG QR */}
@@ -378,7 +411,7 @@ export default function PaymentQrModal({
                 level="M"
                 bgColor="transparent"
                 fgColor="currentColor"
-                title="Mã QR thanh toán MoMo"
+                title="Mã QR thanh toán VNPay"
               />
             ) : expired ? (
               <p className="text-[13px] text-[var(--color-system-error)]">
@@ -451,7 +484,7 @@ export default function PaymentQrModal({
                 text-[var(--color-brand-on-primary)]
               "
             >
-              Mở trang thanh toán MoMo
+              Mở trang thanh toán VNPay
             </a>
           )}
 
@@ -466,7 +499,7 @@ export default function PaymentQrModal({
 
           {!onCreateQr && !hasPayment && (
             <p className="text-[12px] text-[var(--color-text-secondary)]">
-              Chế độ xem trước: chưa kết nối Booking Service và MoMo Sandbox.
+              Chế độ xem trước: chưa kết nối Booking Service và VNPay Sandbox.
             </p>
           )}
 
