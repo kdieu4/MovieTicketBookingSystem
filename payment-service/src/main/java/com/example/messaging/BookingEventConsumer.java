@@ -1,5 +1,6 @@
 package com.example.messaging;
 
+import com.example.config.RabbitMQConfig;
 import com.example.domain.dto.request.BookingCreatedEvent;
 import com.example.domain.entity.Payment;
 import com.example.service.PaymentService;
