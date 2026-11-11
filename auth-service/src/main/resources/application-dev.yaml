@@ -2,6 +2,10 @@ server:
   port: 8085
 
 spring:
+  http:
+    clients:
+      connect-timeout: 2s
+      read-timeout: 5s
   config:
     activate:
       profile: dev
@@ -34,3 +38,6 @@ jwt:
 
 app:
   demo-ticket-enabled: true
+  user-service:
+    base-url: ${USER_SERVICE_BASE_URL:http://localhost:8081}
+    internal-api-key: ${USER_SERVICE_INTERNAL_API_KEY}
