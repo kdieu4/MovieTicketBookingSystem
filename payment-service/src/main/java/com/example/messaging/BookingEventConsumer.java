@@ -27,8 +27,8 @@ public class BookingEventConsumer {
                 payment.getId(),
                 payment.getStatus());
 
-        Payment processedPayment = paymentService.processPayment(payment.getId());
+        // Payment processedPayment = paymentService.processPayment(payment.getId());
 
-        paymentEventProducer.sendPaymentCompleted(processedPayment);
+        // paymentEventProducer.sendPaymentCompleted(processedPayment);
     }
 }
