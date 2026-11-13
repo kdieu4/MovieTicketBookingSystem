@@ -63,7 +63,7 @@ public class PaymentEventConsumer {
 
         // Lấy danh sách ghế thuộc booking
         List<Long> seatIds = bookingSeatRepository
-                .findAllByBookingId(booking.getBookingId())
+                .findByBooking_BookingId(booking.getBookingId())
                 .stream()
                 .map(BookingSeat::getShowtimeSeatId)
                 .collect(Collectors.toList());
@@ -80,7 +80,6 @@ public class PaymentEventConsumer {
 
         System.out.println(
                 "Booking " + booking.getBookingId()
-                        + " updated to PAID and event published"
-        );
+                        + " updated to PAID and event published");
     }
 }
