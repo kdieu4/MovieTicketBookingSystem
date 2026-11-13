@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import TermsModal from "@/components/legal/TermsModal";
+import { loginUser, registerUser } from "@/services/authApi";
 
 // Đổi cho khớp backend của bạn. Hai endpoint dự kiến: POST /auth/login và POST /auth/register
 const API_BASE_URL =
@@ -78,25 +79,24 @@ const STRENGTH_COLOR = [
   "bg-[var(--color-system-success)]",
 ];
 
-// ---------- Gọi API ----------
-async function postJson(path, body) {
-  let res;
-  try {
-    res = await fetch(`${API_BASE_URL}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  } catch {
-    throw new Error("Không kết nối được máy chủ. Vui lòng thử lại sau.");
-  }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok)
-    throw new Error(
-      data.message || data.error || "Có lỗi xảy ra. Vui lòng thử lại.",
-    );
-  return data;
-}
+// // ---------- Gọi API ----------
+// async function postJson(path, body) {
+//   let res;
+//   try {
+//     res = await fetch(`${API_BASE_URL}${path}`, {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify(body),
+//     });
+//   } catch {
+//     throw new Error("Không kết nối được máy chủ. Vui lòng thử lại sau.");
+//   }
+//   const data = await res.json().catch(() => ({}));
+//   if (!res.ok) {
+//     throw new Error(data.message || data.error || "Có lỗi xảy ra.");
+//   }
+//   return data;
+// }
 
 // ---------- Trang ----------
 export default function AuthPage() {
@@ -150,21 +150,28 @@ export default function AuthPage() {
     setLoading(true);
     setLoginBanner({ tone: "error", message: "" });
     try {
-      const response = await postJson("/auth/login", {
+      const response = await loginUser({
         email: login.email.trim(),
         password: login.password,
-        // rememberMe: login.remember,
+        rememberMe: login.remember,
       });
 
-      const { accessToken, userId } = response.data ?? {};
+      const { userId } = response.data ?? {};
 
-      if (!accessToken || !userId) {
-        throw new Error("Dữ liệu đăng nhập không hợp lệ");
+      // const { accessToken, userId } = response.data ?? {};
+      if (userId == null) {
+        throw new Error("Dữ liệu đăng nhập không hợp lệ.");
       }
 
+      // if (!accessToken || !userId) {
+      //   throw new Error("Dữ liệu đăng nhập không hợp lệ");
+      // }
+
       // Lưu phiên đăng nhập tạm thời
-      sessionStorage.setItem("mtbs_access_token", accessToken);
+      sessionStorage.removeItem("mtbs_access_token");
       sessionStorage.setItem("mtbs_user_id", String(userId));
+
+      window.dispatchEvent(new Event("mtbs-auth-changed"));
 
       router.push("/");
     } catch (err) {
@@ -185,12 +192,18 @@ export default function AuthPage() {
     setLoading(true);
     setRegisterBanner({ tone: "error", message: "" });
     try {
-      await postJson("/auth/register", {
+      const response = await registerUser({
         fullName: register.fullName.trim(),
         email: register.email.trim(),
-        phone: register.phone.trim(),
+        phoneNumber: register.phone.trim(),
         password: register.password,
+        confirmPassword: register.confirm,
       });
+
+      if (response.status !== 201) {
+        throw new Error(response.message || "Đăng ký thất bại.");
+      }
+
       // Đăng ký xong: chuyển sang tab đăng nhập, điền sẵn email
       setLogin({ ...INITIAL_LOGIN, email: register.email.trim() });
       setLoginErrors({});
