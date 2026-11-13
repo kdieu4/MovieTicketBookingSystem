@@ -1,35 +1,86 @@
 const PAYMENT_BASE_URL = "http://localhost:8084/api/v1";
 
+// export async function createVNPayPayment(bookingId) {
+//   const response = await fetch(`${PAYMENT_BASE_URL}/vnpay`, {
+//     method: "POST",
+//     headers: {
+//       "Content-Type": "application/json",
+//     },
+//     body: JSON.stringify({ bookingId }),
+//   });
+
+//   if (!response.ok) {
+//     throw new Error(`Payment API Error: ${response.status}`);
+//   }
+
+//   return response.json();
+// }
+
 export async function createVNPayPayment(bookingId) {
-  const response = await fetch(`${PAYMENT_BASE_URL}/vnpay`, {
+  const response = await fetch("/api/payments/vnpay/create", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "same-origin",
     body: JSON.stringify({ bookingId }),
+    cache: "no-store",
   });
 
+  const data = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(`Payment API Error: ${response.status}`);
+    const error = new Error(
+      data?.message || `Payment API Error: ${response.status}`,
+    );
+    error.status = response.status;
+    throw error;
   }
 
-  return response.json();
+  if (!data?.payUrl) {
+    throw new Error("Payment Service không trả về payUrl.");
+  }
+  return data;
 }
 
 export async function getPaymentById(paymentId) {
-  const response = await fetch(
-    `http://localhost:8084/api/v1/payments/${paymentId}`,
-    { cache: "no-store" },
-  );
+  const response = await fetch(`/api/payments/${paymentId}`, {
+    method: "GET",
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+
+  const result = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error("Không thể kiểm tra trạng thái thanh toán");
+    throw new Error(
+      result?.message || "Không thể kiểm tra trạng thái thanh toán.",
+    );
   }
 
-  const result = await response.json();
+  // Giữ nguyên cấu trúc response hiện tại của Payment Service.
+  const payment = result?.data?.data;
 
-  return result.data.data;
+  if (!payment) {
+    throw new Error("Dữ liệu Payment không hợp lệ.");
+  }
+
+  return payment;
 }
+
+// export async function getPaymentById(paymentId) {
+//   const response = await fetch(
+//     `http://localhost:8084/api/v1/payments/${paymentId}`,
+//     { cache: "no-store" },
+//   );
+
+//   if (!response.ok) {
+//     throw new Error("Không thể kiểm tra trạng thái thanh toán");
+//   }
+
+//   const result = await response.json();
+
+//   return result.data.data;
+// }
 
 export async function waitForPayment(bookingId) {
   const deadline = Date.now() + 10000; // Tổng timeout: 10 giây
@@ -38,12 +89,12 @@ export async function waitForPayment(bookingId) {
     const remaining = deadline - Date.now();
     if (remaining <= 0) break;
 
-    const response = await fetch(
-      `http://localhost:8084/api/v1/payments/booking/${bookingId}`,
-      {
-        signal: AbortSignal.timeout(Math.min(2000, remaining)),
-      },
-    );
+    const response = await fetch(`/api/payments/booking/${bookingId}`, {
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store",
+      signal: AbortSignal.timeout(Math.min(2000, remaining)),
+    });
 
     if (response.ok) {
       return await response.json();

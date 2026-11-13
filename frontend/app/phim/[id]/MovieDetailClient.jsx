@@ -35,6 +35,38 @@ export default function MovieDetailClient({ movie }) {
     [movieTitle],
   );
 
+  // const handleCreateBooking = useCallback(async (payload) => {
+  //   const userId = Number(sessionStorage.getItem("mtbs_user_id"));
+
+  //   if (!Number.isSafeInteger(userId) || userId <= 0) {
+  //     throw new Error("Không tìm thấy thông tin tài khoản.");
+  //   }
+
+  //   return createBooking({
+  //     userId,
+  //     showtimeId: payload.showtime.id,
+  //     seatIds: payload.seats.map((seat) => seat.id),
+  //     sessionId: payload.sessionId,
+  //     requestId: payload.requestId,
+  //   });
+  // }, []);
+
+  const handleCreateBooking = async (payload) => {
+    const userId = Number(sessionStorage.getItem("mtbs_user_id"));
+
+    if (!Number.isSafeInteger(userId) || userId <= 0) {
+      throw new Error("Không tìm thấy thông tin tài khoản.");
+    }
+
+    return createBooking({
+      userId,
+      showtimeId: payload.showtime.id,
+      seatIds: payload.seats.map((seat) => seat.id),
+      sessionId: payload.sessionId,
+      requestId: payload.requestId,
+    });
+  };
+
   //   // Tạm thời đọc userId từ phiên đăng nhập.
   //   // Cần thay bằng dữ liệu người dùng do Auth Service xác thực.
   //   const userId = Number(window.sessionStorage.getItem("user_id"));
@@ -55,29 +87,29 @@ export default function MovieDetailClient({ movie }) {
   //   );
   // }, []);
 
-  const handleCreateBooking = useCallback(async (payload) => {
-    console.log("MovieDetailClient - Callback được gọi");
+  // const handleCreateBooking = useCallback(async (payload) => {
+  //   console.log("MovieDetailClient - Callback được gọi");
 
-    const token = sessionStorage.getItem("mtbs_access_token");
-    const userId = Number(sessionStorage.getItem("mtbs_user_id"));
+  //   const token = sessionStorage.getItem("mtbs_access_token");
+  //   const userId = Number(sessionStorage.getItem("mtbs_user_id"));
 
-    console.log("MovieDetailClient - Has Token:", Boolean(token));
+  //   console.log("MovieDetailClient - Has Token:", Boolean(token));
 
-    if (!token || !Number.isSafeInteger(userId) || userId <= 0) {
-      throw new Error("Vui lòng đăng nhập trước khi đặt vé.");
-    }
+  //   if (!token || !Number.isSafeInteger(userId) || userId <= 0) {
+  //     throw new Error("Vui lòng đăng nhập trước khi đặt vé.");
+  //   }
 
-    return createBooking(
-      {
-        userId,
-        showtimeId: payload.showtime.id,
-        seatIds: payload.seats.map((seat) => seat.id),
-        sessionId: payload.sessionId,
-        requestId: payload.requestId,
-      },
-      token,
-    );
-  }, []);
+  //   return createBooking(
+  //     {
+  //       userId,
+  //       showtimeId: payload.showtime.id,
+  //       seatIds: payload.seats.map((seat) => seat.id),
+  //       sessionId: payload.sessionId,
+  //       requestId: payload.requestId,
+  //     },
+  //     token,
+  //   );
+  // }, []);
 
   // const handleCreatePayment = useCallback(async ({ bookingId }) => {
   //   return createVNPayPayment(bookingId);

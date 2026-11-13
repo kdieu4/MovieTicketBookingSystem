@@ -155,43 +155,45 @@ export default function BookingPageClient({ showtimeId }) {
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="mb-8 text-2xl font-bold">Đặt vé xem phim</h1>
+    <RequireAuth>
+      <main className="mx-auto max-w-6xl px-4 py-8">
+        <h1 className="mb-8 text-2xl font-bold">Đặt vé xem phim</h1>
 
-      <SeatPicker
-        loadingSeats={loadingSeats}
-        seatsByRow={seatsByRow}
-        selectedSeats={selectedSeats}
-        onToggleSeat={handleToggleSeat}
-      />
+        <SeatPicker
+          loadingSeats={loadingSeats}
+          seatsByRow={seatsByRow}
+          selectedSeats={selectedSeats}
+          onToggleSeat={handleToggleSeat}
+        />
 
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold">Thông tin đặt vé</h2>
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold">Thông tin đặt vé</h2>
 
-        <p>Số lượng ghế: {selectedSeats.length}</p>
+          <p>Số lượng ghế: {selectedSeats.length}</p>
 
-        <p>
-          Ghế đã chọn:{" "}
-          {selectedSeats
-            .map((seat) => `${seat.row}${seat.number}`)
-            .join(", ") || "Chưa chọn"}
-        </p>
-
-        {error && (
-          <p role="alert" className="mt-3 text-red-500">
-            {error}
+          <p>
+            Ghế đã chọn:{" "}
+            {selectedSeats
+              .map((seat) => `${seat.row}${seat.number}`)
+              .join(", ") || "Chưa chọn"}
           </p>
-        )}
 
-        <button
-          type="button"
-          onClick={handleBooking}
-          disabled={submitting || loadingSeats || selectedSeats.length === 0}
-          className="mt-5 rounded-lg bg-orange-500 px-6 py-3 font-semibold text-white disabled:opacity-50"
-        >
-          {submitting ? "Đang tạo booking..." : "Tiếp tục thanh toán"}
-        </button>
-      </div>
-    </main>
+          {error && (
+            <p role="alert" className="mt-3 text-red-500">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={handleBooking}
+            disabled={submitting || loadingSeats || selectedSeats.length === 0}
+            className="mt-5 rounded-lg bg-orange-500 px-6 py-3 font-semibold text-white disabled:opacity-50"
+          >
+            {submitting ? "Đang tạo booking..." : "Tiếp tục thanh toán"}
+          </button>
+        </div>
+      </main>
+    </RequireAuth>
   );
 }

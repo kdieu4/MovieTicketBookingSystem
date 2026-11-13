@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import SeatPicker, { SEAT_ANIMATIONS } from "./SeatPicker";
 import { Reveal, Skeleton } from "@/components/common/Ascii";
 import { getPaymentById, waitForPayment } from "@/services/paymentApi";
+import RequireAuth from "@/components/auth/RequireAuth";
+import { getSession } from "@/services/authApi";
 import {
   getCachedSeats,
   getSessionId,
@@ -52,6 +54,25 @@ const FLOW_STYLES = `
 `;
 
 const EMPTY_LIST = { status: "idle", items: [] };
+
+async function ensureAuthenticated() {
+  try {
+    const hasSession = await getSession();
+
+    if (hasSession) {
+      return true;
+    }
+
+    window.location.assign("/dang-nhap");
+    return false;
+  } catch (error) {
+    console.error("Authentication check failed:", error);
+
+    window.alert("Không thể kiểm tra phiên đăng nhập.");
+
+    return false;
+  }
+}
 
 function prefersReducedMotion() {
   return (
@@ -790,58 +811,174 @@ export default function BookingFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, inline, paymentOpen]);
 
+  // useEffect(() => {
+  //   if (!paymentData?.payUrl || !activeBooking?.bookingId || confirmedBooking) {
+  //     return;
+  //   }
+
+  //   let cancelled = false;
+  //   let checking = false;
+
+  //   async function checkPayment() {
+  //     if (checking) return;
+  //     checking = true;
+
+  //     try {
+  //       const ref = new URL(paymentData.payUrl).searchParams.get("vnp_TxnRef");
+  //       if (!/^P\d+$/.test(ref || "")) return;
+
+  //       const payment = await getPaymentById(Number(ref.slice(1)));
+
+  //       if (
+  //         cancelled ||
+  //         payment.paymentStatus !== "SUCCESS" ||
+  //         Number(payment.bookingId) !== Number(activeBooking.bookingId)
+  //       )
+  //         return;
+
+  //       const ticket = JSON.parse(
+  //         localStorage.getItem("mtbs-checkout") || "null",
+  //       );
+
+  //       if (Number(ticket?.bookingId) !== Number(activeBooking.bookingId)) {
+  //         return;
+  //       }
+
+  //       localStorage.setItem("mtbs-paid-booking", JSON.stringify(ticket));
+  //       setConfirmedBooking(ticket);
+  //       setPaymentOpen(false);
+  //     } catch {
+  //       // Tiếp tục kiểm tra ở lần sau
+  //     } finally {
+  //       checking = false;
+  //     }
+  //   }
+
+  //   checkPayment();
+
+  //   const interval = setInterval(checkPayment, 2000);
+
+  //   return () => {
+  //     cancelled = true;
+  //     clearInterval(interval);
+  //   };
+  // }, [paymentData?.payUrl, activeBooking?.bookingId, confirmedBooking]);
+
   useEffect(() => {
-    if (!paymentData?.payUrl || !activeBooking?.bookingId || confirmedBooking) {
+    if (
+      !paymentOpen ||
+      !paymentData?.payUrl ||
+      !activeBooking?.bookingId ||
+      confirmedBooking
+    ) {
       return;
     }
 
     let cancelled = false;
-    let checking = false;
+    let timeoutId = null;
+
+    const bookingId = Number(activeBooking.bookingId);
+    const startedAt = Date.now();
+
+    // Giới hạn Polling trong 5 phút
+    const MAX_POLLING_TIME = 5 * 60 * 1000;
+    const POLLING_INTERVAL = 3000;
+
+    let paymentId;
+
+    try {
+      const ref = new URL(paymentData.payUrl).searchParams.get("vnp_TxnRef");
+
+      if (!/^P\d+$/.test(ref || "")) {
+        return;
+      }
+
+      paymentId = Number(ref.slice(1));
+
+      if (!Number.isSafeInteger(paymentId) || paymentId <= 0) {
+        return;
+      }
+    } catch {
+      return;
+    }
 
     async function checkPayment() {
-      if (checking) return;
-      checking = true;
-
       try {
-        const ref = new URL(paymentData.payUrl).searchParams.get("vnp_TxnRef");
-        if (!/^P\d+$/.test(ref || "")) return;
+        const payment = await getPaymentById(paymentId);
 
-        const payment = await getPaymentById(Number(ref.slice(1)));
+        if (cancelled) return;
 
-        if (
-          cancelled ||
-          payment.paymentStatus !== "SUCCESS" ||
-          Number(payment.bookingId) !== Number(activeBooking.bookingId)
-        )
-          return;
-
-        const ticket = JSON.parse(
-          localStorage.getItem("mtbs-checkout") || "null",
-        );
-
-        if (Number(ticket?.bookingId) !== Number(activeBooking.bookingId)) {
+        // Kiểm tra Payment thuộc đúng Booking
+        if (Number(payment.bookingId) !== bookingId) {
+          setPaymentError("Payment không khớp với Booking.");
           return;
         }
 
-        localStorage.setItem("mtbs-paid-booking", JSON.stringify(ticket));
-        setConfirmedBooking(ticket);
-        setPaymentOpen(false);
-      } catch {
-        // Tiếp tục kiểm tra ở lần sau
-      } finally {
-        checking = false;
+        const status = payment.paymentStatus;
+
+        // Thanh toán thành công
+        if (status === "SUCCESS") {
+          let ticket = null;
+
+          try {
+            ticket = JSON.parse(
+              localStorage.getItem("mtbs-checkout") || "null",
+            );
+          } catch {
+            // Không đọc được dữ liệu checkout
+          }
+
+          if (Number(ticket?.bookingId) !== bookingId) {
+            setPaymentError(
+              "Thanh toán thành công nhưng không tìm thấy dữ liệu vé. Vui lòng kiểm tra lịch sử đặt vé.",
+            );
+            return;
+          }
+
+          localStorage.setItem("mtbs-paid-booking", JSON.stringify(ticket));
+
+          setConfirmedBooking(ticket);
+          setPaymentOpen(false);
+          return;
+        }
+
+        // Trạng thái thanh toán kết thúc nhưng không thành công
+        if (["FAILED", "CANCELLED", "EXPIRED"].includes(status)) {
+          setPaymentError(`Giao dịch đã kết thúc với trạng thái ${status}.`);
+          return;
+        }
+      } catch (error) {
+        if (cancelled) return;
+
+        console.error("Lỗi kiểm tra Payment:", error);
       }
+
+      if (cancelled) return;
+
+      // Không tiếp tục Polling vô thời hạn
+      if (Date.now() - startedAt >= MAX_POLLING_TIME) {
+        setPaymentError(
+          "Đã dừng kiểm tra tự động. Vui lòng tra cứu trạng thái thanh toán.",
+        );
+        return;
+      }
+
+      // Chỉ gửi request tiếp theo sau khi request hiện tại hoàn tất
+      timeoutId = setTimeout(checkPayment, POLLING_INTERVAL);
     }
 
     checkPayment();
 
-    const interval = setInterval(checkPayment, 2000);
-
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      clearTimeout(timeoutId);
     };
-  }, [paymentData?.payUrl, activeBooking?.bookingId, confirmedBooking]);
+  }, [
+    paymentOpen,
+    paymentData?.payUrl,
+    activeBooking?.bookingId,
+    confirmedBooking,
+  ]);
 
   function closeModal() {
     // Chỉ giải phóng khi backend chưa tiếp nhận Booking
@@ -1097,6 +1234,7 @@ export default function BookingFlow({
     setBookingLoading(true);
     setNotice(null);
 
+    if (!(await ensureAuthenticated())) return;
     console.log("Đang gọi Booking Service...");
     try {
       // 9. Gọi Booking Service thông qua component cha

@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import Image from 'next/image';
-import TrailerModal from '../movie/TrailerModal';
-import BookingFlow, { prefetchCities } from '@/components/booking/BookingFlow';
+import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
+import TrailerModal from "../movie/TrailerModal";
+import { createBooking } from "@/services/bookingApi";
+import BookingFlow, { prefetchCities } from "@/components/booking/BookingFlow";
 
 // Mỗi phần tử của hero vào lần lượt, tổng thời gian dưới 300ms để không bắt người dùng chờ.
-const stagger = (ms) => ({ animationDelay: `${ms}ms`, animationFillMode: 'both' });
+const stagger = (ms) => ({
+  animationDelay: `${ms}ms`,
+  animationFillMode: "both",
+});
 
 export default function FeaturedSection({
   movies = [],
@@ -23,7 +27,7 @@ export default function FeaturedSection({
   const [searching, setSearching] = useState(false);
 
   const activeMovie = movies[selectedMovieIndex] || movies[0];
-  const activeTitle = activeMovie?.title || activeMovie?.name || '';
+  const activeTitle = activeMovie?.title || activeMovie?.name || "";
 
   // Kích hoạt hiệu ứng mỗi khi phim được chọn thay đổi
   useEffect(() => {
@@ -50,8 +54,17 @@ export default function FeaturedSection({
     );
   }
 
-  const activeDescription = activeMovie?.description || activeMovie?.overview || activeMovie?.synopsis || '';
-  const activePoster = activeMovie?.posterUrl || activeMovie?.poster_url || activeMovie?.bannerUrl || activeMovie?.backdropUrl || '';
+  const activeDescription =
+    activeMovie?.description ||
+    activeMovie?.overview ||
+    activeMovie?.synopsis ||
+    "";
+  const activePoster =
+    activeMovie?.posterUrl ||
+    activeMovie?.poster_url ||
+    activeMovie?.bannerUrl ||
+    activeMovie?.backdropUrl ||
+    "";
   const activeAgeRating = activeMovie?.ageRating || activeMovie?.ageRestriction;
   const activeDuration = activeMovie?.duration || activeMovie?.durationMinutes;
 
@@ -80,10 +93,17 @@ export default function FeaturedSection({
           <div className="relative grid gap-8 px-5 pb-16 pt-8 sm:px-8 sm:pb-20 sm:pt-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-center lg:gap-12 lg:px-14 lg:pb-24 lg:pt-14">
             {/* Cột chữ */}
             <div key={fadeKey} className="order-2 lg:order-1">
-              <div style={stagger(0)} className="animate-fade-in flex flex-wrap items-center gap-2">
+              <div
+                style={stagger(0)}
+                className="animate-fade-in flex flex-wrap items-center gap-2"
+              >
                 <span className="hero-badge">Đang chiếu</span>
-                {activeAgeRating && <span className="hero-badge">{activeAgeRating}</span>}
-                {activeDuration && <span className="hero-badge">{activeDuration} phút</span>}
+                {activeAgeRating && (
+                  <span className="hero-badge">{activeAgeRating}</span>
+                )}
+                {activeDuration && (
+                  <span className="hero-badge">{activeDuration} phút</span>
+                )}
               </div>
 
               <h1
@@ -103,12 +123,18 @@ export default function FeaturedSection({
               )}
 
               {activeMovie.genres && activeMovie.genres.length > 0 && (
-                <p style={stagger(180)} className="animate-fade-in mt-4 text-[13px] font-medium text-[var(--color-stage-muted)]">
-                  {activeMovie.genres.join(', ')}
+                <p
+                  style={stagger(180)}
+                  className="animate-fade-in mt-4 text-[13px] font-medium text-[var(--color-stage-muted)]"
+                >
+                  {activeMovie.genres.join(", ")}
                 </p>
               )}
 
-              <div style={stagger(240)} className="animate-fade-in mt-8 flex flex-wrap items-center gap-3">
+              <div
+                style={stagger(240)}
+                className="animate-fade-in mt-8 flex flex-wrap items-center gap-3"
+              >
                 <button
                   type="button"
                   onClick={handleBook}
@@ -117,9 +143,21 @@ export default function FeaturedSection({
                   disabled={searching}
                   className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--color-brand-fill)] px-7 text-sm font-semibold text-[var(--color-brand-on-primary)] transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-[var(--color-brand-fill-hover)] active:scale-[0.98] disabled:cursor-wait disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-stage-bg)]"
                 >
-                  <span>{searching ? 'Đang tải suất chiếu...' : 'Đặt vé ngay'}</span>
+                  <span>
+                    {searching ? "Đang tải suất chiếu..." : "Đặt vé ngay"}
+                  </span>
                   {!searching && (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
                       <line x1="5" y1="12" x2="19" y2="12" />
                       <polyline points="12 5 19 12 12 19" />
                     </svg>
@@ -155,11 +193,19 @@ export default function FeaturedSection({
                         aria-pressed={isSelected}
                         className={`relative h-14 w-10 flex-shrink-0 overflow-hidden rounded-[8px] transition-[opacity,transform] duration-200 ease-[var(--ease-out)] ${
                           isSelected
-                            ? 'ring-2 ring-[var(--color-brand-primary)] ring-offset-2 ring-offset-[var(--color-stage-bg)]'
-                            : 'opacity-55 hover:opacity-100'
+                            ? "ring-2 ring-[var(--color-brand-primary)] ring-offset-2 ring-offset-[var(--color-stage-bg)]"
+                            : "opacity-55 hover:opacity-100"
                         }`}
                       >
-                        {poster && <Image src={poster} alt="" fill sizes="40px" className="object-cover" />}
+                        {poster && (
+                          <Image
+                            src={poster}
+                            alt=""
+                            fill
+                            sizes="40px"
+                            className="object-cover"
+                          />
+                        )}
                       </button>
                     );
                   })}
@@ -181,7 +227,10 @@ export default function FeaturedSection({
                     className="animate-fade-in object-cover"
                   />
                 )}
-                <div aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-[22px] ring-1 ring-inset ring-white/15" />
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 rounded-[22px] ring-1 ring-inset ring-white/15"
+                />
               </div>
 
               {movies.length > 1 && (
@@ -198,11 +247,19 @@ export default function FeaturedSection({
                         aria-pressed={isSelected}
                         className={`relative h-14 w-10 flex-shrink-0 overflow-hidden rounded-[8px] transition-[opacity,transform] duration-200 ease-[var(--ease-out)] ${
                           isSelected
-                            ? 'ring-2 ring-[var(--color-brand-primary)] ring-offset-2 ring-offset-[var(--color-stage-bg)]'
-                            : 'opacity-55 hover:-translate-y-0.5 hover:opacity-100'
+                            ? "ring-2 ring-[var(--color-brand-primary)] ring-offset-2 ring-offset-[var(--color-stage-bg)]"
+                            : "opacity-55 hover:-translate-y-0.5 hover:opacity-100"
                         }`}
                       >
-                        {poster && <Image src={poster} alt="" fill sizes="40px" className="object-cover" />}
+                        {poster && (
+                          <Image
+                            src={poster}
+                            alt=""
+                            fill
+                            sizes="40px"
+                            className="object-cover"
+                          />
+                        )}
                       </button>
                     );
                   })}
@@ -233,7 +290,17 @@ export default function FeaturedSection({
 
 function PlayIconSmall() {
   return (
-    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="1"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <polygon points="5 3 19 12 5 21 5 3" />
     </svg>
   );
