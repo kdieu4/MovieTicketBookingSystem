@@ -1,6 +1,5 @@
 package com.example.messaging;
 
-import com.example.config.RabbitMQConfig;
 import com.example.domain.dto.response.PaymentCompletedEvent;
 import com.example.domain.entity.Payment;
 import lombok.RequiredArgsConstructor;
@@ -16,13 +15,13 @@ public class PaymentEventProducer {
     private final RabbitTemplate rabbitTemplate;
 
     public void sendPaymentCompleted(Payment payment) {
+
         PaymentCompletedEvent event = PaymentCompletedEvent.from(payment);
 
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.BOOKING_EXCHANGE,
                 RabbitMQConfig.PAYMENT_COMPLETED_ROUTING_KEY,
-                event
-        );
+                event);
 
         log.info("Published PaymentCompletedEvent: {}", event);
     }

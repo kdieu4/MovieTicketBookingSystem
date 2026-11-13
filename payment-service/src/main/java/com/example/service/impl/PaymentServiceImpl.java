@@ -1,3 +1,4 @@
+
 package com.example.service.impl;
 
 import com.example.domain.dto.response.PaymentResponse;
@@ -7,9 +8,12 @@ import com.example.exception.PaymentNotFoundException;
 import com.example.exception.PaymentProcessingException;
 import com.example.service.PaymentService;
 import com.example.repository.PaymentRepository;
+import com.example.messaging.PaymentEventProducer;
+
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -18,7 +22,9 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PaymentServiceImpl implements PaymentService {
+
     PaymentRepository paymentRepository;
+    PaymentEventProducer paymentEventProducer;
 
     @Override
     public Payment createPayment(Long bookingId, BigDecimal amount) {
@@ -27,6 +33,7 @@ public class PaymentServiceImpl implements PaymentService {
                 .amount(amount)
                 .status(PaymentStatus.PENDING)
                 .build();
+
         return paymentRepository.save(payment);
     }
 
@@ -45,12 +52,20 @@ public class PaymentServiceImpl implements PaymentService {
 
         try {
             payment.setStatus(PaymentStatus.SUCCESS);
-            return paymentRepository.save(payment);
+
+            Payment savedPayment = paymentRepository.save(payment);
+
+            // Gửi sự kiện thanh toán thành công sang Booking Service
+            paymentEventProducer.sendPaymentCompleted(savedPayment);
+
+            return savedPayment;
+
         } catch (Exception e) {
             payment.setStatus(PaymentStatus.FAILED);
             paymentRepository.save(payment);
 
-            throw new PaymentProcessingException("Failed to process payment: " + paymentId);
+            throw new PaymentProcessingException(
+                    "Failed to process payment: " + paymentId);
         }
     }
 }
