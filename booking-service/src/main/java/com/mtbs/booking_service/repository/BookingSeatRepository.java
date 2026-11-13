@@ -7,7 +7,7 @@ import java.util.List;
 import org.springframework.data.repository.query.Param;
 
 public interface BookingSeatRepository extends JpaRepository<BookingSeat, Long> {
-        List<BookingSeat> findAllByBookingId(Long bookingId);
+        // List<BookingSeat> findAllByBookingId(Long bookingId);
 
         // @Query("""
         // SELECT COUNT(bs) > 0

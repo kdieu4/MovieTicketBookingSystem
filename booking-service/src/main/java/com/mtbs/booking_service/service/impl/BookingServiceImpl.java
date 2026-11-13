@@ -120,6 +120,7 @@ public class BookingServiceImpl implements BookingService {
                                                 BookingSeat item = new BookingSeat();
                                                 item.setBooking(savedBooking);
                                                 item.setShowtimeSeatId(seatId);
+                                                item.setPrice(showtime.getBasePrice());
                                                 return item;
                                         })
                                         .toList();
