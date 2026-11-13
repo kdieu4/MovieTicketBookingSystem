@@ -12,6 +12,6 @@ package com.mtbs.user_service.exception;
 public class DuplicateUserDataException extends RuntimeException {
 
     public DuplicateUserDataException(String field, String value) {
-        super(field + " '" + value + "' da duoc su dung boi nguoi dung khac");
+        super(field + " '" + value + "' đã được sử dụng bởi người dùng khác");
     }
 }

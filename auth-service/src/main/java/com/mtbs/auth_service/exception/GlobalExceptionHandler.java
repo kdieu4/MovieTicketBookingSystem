@@ -19,10 +19,10 @@ import java.util.Date;
 @ResponseStatus(HttpStatus.BAD_REQUEST)
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler({MethodArgumentNotValidException.class,
+    @ExceptionHandler({ MethodArgumentNotValidException.class,
             HandlerMethodValidationException.class,
             ConstraintViolationException.class,
-            MissingServletRequestParameterException.class})
+            MissingServletRequestParameterException.class })
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleValidationException(Exception e, WebRequest request) {
         System.out.println("----------handle validation exception-------");
@@ -50,7 +50,7 @@ public class GlobalExceptionHandler {
         return response;
     }
 
-    @ExceptionHandler({MethodArgumentTypeMismatchException.class})
+    @ExceptionHandler({ MethodArgumentTypeMismatchException.class })
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorResponse handleInternalErrorException(Exception e, WebRequest request) {
         System.out.println("----------handle internal error exception-------");
@@ -73,6 +73,19 @@ public class GlobalExceptionHandler {
         errorResponse.setPath(request.getDescription(false).replace("uri=", ""));
         errorResponse.setStatus(HttpStatus.NOT_FOUND.value());
         errorResponse.setError(HttpStatus.NOT_FOUND.getReasonPhrase());
+        errorResponse.setMessage(e.getMessage());
+
+        return errorResponse;
+    }
+
+    @ExceptionHandler(DuplicateResouceException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleDuplicateResouceException(DuplicateResouceException e, WebRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse();
+        errorResponse.setTimestamp(new Date());
+        errorResponse.setPath(request.getDescription(false).replace("uri=", ""));
+        errorResponse.setStatus(HttpStatus.CONFLICT.value());
+        errorResponse.setError(HttpStatus.CONFLICT.getReasonPhrase());
         errorResponse.setMessage(e.getMessage());
 
         return errorResponse;

@@ -6,6 +6,7 @@ import com.mtbs.auth_service.domain.dto.request.RegisterRequest;
 import com.mtbs.auth_service.domain.dto.response.TokenResponse;
 import com.mtbs.auth_service.domain.entity.RedisToken;
 import com.mtbs.auth_service.domain.entity.User;
+import com.mtbs.auth_service.exception.DuplicateResouceException;
 import com.mtbs.auth_service.exception.InvalidDataException;
 import com.mtbs.auth_service.exception.ResourceNotFoundException;
 import com.mtbs.auth_service.repository.UserRepository;
@@ -31,6 +32,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import static org.springframework.http.HttpHeaders.REFERER;
 
+import java.util.DuplicateFormatFlagsException;
 import java.util.Map;
 
 @Slf4j
@@ -115,7 +117,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public String logout(HttpServletRequest request) {
-        String accessToken = request.getHeader(REFERER);
+        String authorization = request.getHeader("Authorization");
+        // String accessToken = request.getHeader(REFERER);
+
+        if (StringUtils.isBlank(authorization)
+                || !authorization.startsWith("Bearer ")) {
+            throw new InvalidDataException("Authorization header is invalid");
+        }
+
+        String accessToken = authorization.substring(7);
+
         if (StringUtils.isBlank(accessToken)) {
             throw new InvalidDataException("Token must be not blank");
         }
@@ -126,7 +137,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         // delete token permanent
         redisTokenService.delete(user.getEmail());
 
-        return "Deleted";
+        return "Logout successfully";
     }
 
     @Override
@@ -178,7 +189,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public void register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.email())) {
-            throw new ResourceNotFoundException("Email da ton tai");
+            throw new DuplicateResouceException("Email đã được sử dụng bởi người dùng khác!");
         }
         User user = User.builder()
                 .fullName(request.fullName())
@@ -227,8 +238,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
             // Dữ liệu đã tồn tại nhưng không khớp
             if (status == 409) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "User profile conflict. Manual reconciliation required.");
+                String message = "Dữ liệu người dùng đã tồn tại.";
+
+                Map<?, ?> response = ex.getResponseBodyAs(Map.class);
+                if (response != null && response.get("message") instanceof String msg
+                        && !msg.isBlank()) {
+                    message = msg;
+                }
+
+                throw new DuplicateResouceException(message);
             }
 
             // User Service gặp lỗi HTTP

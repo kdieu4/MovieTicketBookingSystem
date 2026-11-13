@@ -114,7 +114,7 @@ public class UserServiceImpl implements UserService {
         // 3. Kiểm tra số điện thoại
         if (userRepository.existsByPhoneNumber(phoneNumber)) {
             throw new DuplicateUserDataException(
-                    "So dien thoai",
+                    "Số điện thoại ",
                     phoneNumber);
         }
 
