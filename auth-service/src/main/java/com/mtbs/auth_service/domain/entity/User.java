@@ -3,16 +3,11 @@ package com.mtbs.auth_service.domain.entity;
 import com.mtbs.auth_service.util.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -40,6 +35,7 @@ public class User extends BaseEntity implements UserDetails {
     @Column(nullable = false)
     private String phoneNumber;
 
+    @Builder.Default
     @Column(nullable = false)
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     private Set<UserHasRole> roles = new HashSet<>();
@@ -69,7 +65,7 @@ public class User extends BaseEntity implements UserDetails {
     @Override
     public boolean isAccountNonExpired() {
         return true;
-//        return UserDetails.super.isAccountNonExpired();
+        // return UserDetails.super.isAccountNonExpired();
     }
 
     @Override
@@ -80,12 +76,12 @@ public class User extends BaseEntity implements UserDetails {
     @Override
     public boolean isCredentialsNonExpired() {
         return true;
-//        return UserDetails.super.isCredentialsNonExpired();
+        // return UserDetails.super.isCredentialsNonExpired();
     }
 
     @Override
     public boolean isEnabled() {
         return true;
-//        return UserDetails.super.isEnabled();
+        // return UserDetails.super.isEnabled();
     }
 }

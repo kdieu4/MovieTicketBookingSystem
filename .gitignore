@@ -8,3 +8,7 @@ booking-service/bin/
 # IntelliJ IDEA
 .idea/
 *.iml
+
+**/.next/
+
+**/node_modules/

@@ -1,6 +1,6 @@
 "use client";
 
-import { Skeleton } from '@/components/common/Ascii';
+import { Skeleton } from "@/components/common/Ascii";
 
 export const SEAT_ANIMATIONS = `
 @keyframes sp-seat-in {
@@ -29,11 +29,21 @@ export const SEAT_ANIMATIONS = `
 }
 `;
 
-export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, onToggleSeat }) {
+export default function SeatPicker({
+  loadingSeats,
+  seatsByRow,
+  selectedSeats,
+  onToggleSeat,
+}) {
   if (loadingSeats) {
     return (
       <div role="status" aria-live="polite">
-        <Skeleton rows={1} width="100%" height={6} className="mx-auto mb-10 max-w-xl rounded-full" />
+        <Skeleton
+          rows={1}
+          width="100%"
+          height={6}
+          className="mx-auto mb-10 max-w-xl rounded-full"
+        />
         <div className="overflow-x-auto pb-2">
           <div className="mx-auto flex min-w-[500px] flex-col items-center gap-3">
             {Array.from({ length: 6 }).map((_, row) => (
@@ -73,7 +83,7 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
         </svg>
         <span
           className="sp-fade mt-1 block text-[11px] font-semibold tracking-[0.25em] text-[var(--color-text-tertiary)] uppercase"
-          style={{ animationDelay: '300ms' }}
+          style={{ animationDelay: "300ms" }}
         >
           MÀN HÌNH
         </span>
@@ -83,7 +93,9 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
         <div className="mx-auto flex w-max flex-col items-center gap-3">
           {seatsByRow.map(([rowLabel, rowSeats], rowIndex) => {
             // FIX LỖI NHÂN ĐÔI GHẾ: Lọc loại bỏ các object ghế bị trùng số (number) trong cùng một hàng
-            const uniqueSeats = Array.from(new Map(rowSeats.map(seat => [seat.number, seat])).values());
+            const uniqueSeats = Array.from(
+              new Map(rowSeats.map((seat) => [seat.number, seat])).values(),
+            );
 
             return (
               <div key={rowLabel} className="flex items-center gap-3">
@@ -95,47 +107,63 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
                 </span>
                 <div className="flex items-center gap-2">
                   {uniqueSeats.map((seat, seatIndex) => {
-                    const isSelected = selectedSeats.some((s) => s.id === seat.id);
-                    const isSold = seat.isSold;
-                    const isVip = seat.type === 'VIP';
-                    const isDouble = seat.type === 'DOUBLE' || seat.type === 'SWEETBOX' || seat.type === 'COUPLE';
+                    const isSelected = selectedSeats.some(
+                      (s) => s.id === seat.id,
+                    );
+                    const isSold =
+                      seat.isSold === true ||
+                      seat.isLocked === true ||
+                      ["LOCKED", "BOOKED"].includes(
+                        String(seat.status ?? "").toUpperCase(),
+                      );
+                    const isVip = seat.type === "VIP";
+                    const isDouble =
+                      seat.type === "DOUBLE" ||
+                      seat.type === "SWEETBOX" ||
+                      seat.type === "COUPLE";
 
                     let seatClass =
-                      'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border-[var(--color-border-separator)] hover:border-[var(--color-brand-primary)] hover:bg-[var(--color-fill-tertiary)]';
+                      "bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border-[var(--color-border-separator)] hover:border-[var(--color-brand-primary)] hover:bg-[var(--color-fill-tertiary)]";
 
                     if (isSold) {
                       seatClass =
-                        'bg-[var(--color-fill-tertiary)] text-[var(--color-text-quaternary)] border-transparent cursor-not-allowed';
+                        "bg-[var(--color-fill-tertiary)] text-[var(--color-text-quaternary)] border-transparent cursor-not-allowed";
                     } else if (isSelected) {
                       seatClass =
-                        'sp-pop bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] border-[var(--color-brand-primary)] font-semibold shadow-[var(--shadow-low)]';
+                        "sp-pop bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] border-[var(--color-brand-primary)] font-semibold shadow-[var(--shadow-low)]";
                     } else if (isVip) {
                       seatClass =
-                        'bg-[var(--color-bg-primary)] border-[var(--color-system-warning)] text-[var(--color-system-warning)] font-semibold hover:bg-[var(--color-fill-tertiary)]';
+                        "bg-[var(--color-bg-primary)] border-[var(--color-system-warning)] text-[var(--color-system-warning)] font-semibold hover:bg-[var(--color-fill-tertiary)]";
                     } else if (isDouble) {
                       seatClass =
-                        'bg-[var(--color-bg-primary)] border-[var(--color-brand-primary)] text-[var(--color-brand-primary)] font-semibold hover:bg-[var(--color-fill-tertiary)]';
+                        "bg-[var(--color-bg-primary)] border-[var(--color-brand-primary)] text-[var(--color-brand-primary)] font-semibold hover:bg-[var(--color-fill-tertiary)]";
                     }
 
-                    const seatLabel = `${seat.row ?? rowLabel}${String(seat.number).padStart(2, '0')}`;
+                    const seatLabel = `${seat.row ?? rowLabel}${String(seat.number).padStart(2, "0")}`;
 
                     return (
                       <span
                         key={seat.id}
                         className="sp-seat-in inline-flex"
-                        style={{ animationDelay: `${Math.min(rowIndex * 45 + seatIndex * 14, 700)}ms` }}
+                        style={{
+                          animationDelay: `${Math.min(rowIndex * 45 + seatIndex * 14, 700)}ms`,
+                        }}
                       >
                         <button
                           type="button"
                           disabled={isSold}
                           aria-pressed={isSelected}
-                          aria-label={isSold ? `Ghế ${seatLabel} đã bán` : `Ghế ${seatLabel}`}
+                          aria-label={
+                            isSold
+                              ? `Ghế ${seatLabel} đã bán`
+                              : `Ghế ${seatLabel}`
+                          }
                           onClick={() => onToggleSeat(seat)}
                           className={`flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] border text-[11px] transition-all duration-200 ease-out ${
-                            isSold ? '' : 'hover:scale-110 active:scale-90'
+                            isSold ? "" : "hover:scale-110 active:scale-90"
                           } ${seatClass}`}
                         >
-                          {String(seat.number).padStart(2, '0')}
+                          {String(seat.number).padStart(2, "0")}
                         </button>
                       </span>
                     );
@@ -149,7 +177,7 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
 
       <div
         className="sp-fade mt-8 flex flex-wrap items-center justify-center gap-5 border-t border-[var(--color-border-separator)] pt-5 text-[12px] text-[var(--color-text-secondary)]"
-        style={{ animationDelay: '500ms' }}
+        style={{ animationDelay: "500ms" }}
       >
         <div className="flex items-center gap-2">
           <span className="h-4 w-4 rounded-[var(--radius-xs)] border border-[var(--color-border-separator)] bg-[var(--color-bg-primary)]" />
@@ -174,7 +202,8 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
       </div>
 
       <p className="mt-5 text-center text-[12px] text-[var(--color-text-tertiary)]">
-        Chọn ghế trống để tiếp tục. Ghế được chọn sẽ hiển thị màu nhấn thương hiệu.
+        Chọn ghế trống để tiếp tục. Ghế được chọn sẽ hiển thị màu nhấn thương
+        hiệu.
       </p>
     </div>
   );

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+
 /**
  *
  * @author quanghieu
@@ -38,8 +39,8 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
               )
             """, nativeQuery = true)
     int insertMissingSeats(@Param("showtimeId") Long showtimeId,
-                           @Param("roomId") Long roomId,
-                           @Param("now") OffsetDateTime now);
+            @Param("roomId") Long roomId,
+            @Param("now") OffsetDateTime now);
 
     List<ShowtimeSeat> findByShowtime_ShowtimeIdAndStatus(Long showtimeId, SeatStatus status);
 
@@ -59,12 +60,12 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
                         AND (s.holdUntil IS NULL OR s.holdUntil < :now OR s.holdBy = :holder)))
             """)
     int holdSeat(@Param("seatId") Long seatId,
-                 @Param("showtimeId") Long showtimeId,
-                 @Param("holder") String holder,
-                 @Param("now") OffsetDateTime now,
-                 @Param("holdUntil") OffsetDateTime holdUntil,
-                 @Param("available") SeatStatus available,
-                 @Param("holding") SeatStatus holding);
+            @Param("showtimeId") Long showtimeId,
+            @Param("holder") String holder,
+            @Param("now") OffsetDateTime now,
+            @Param("holdUntil") OffsetDateTime holdUntil,
+            @Param("available") SeatStatus available,
+            @Param("holding") SeatStatus holding);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
@@ -79,11 +80,11 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
                AND s.holdBy = :holder
             """)
     int releaseSeats(@Param("seatIds") List<Long> seatIds,
-                     @Param("showtimeId") Long showtimeId,
-                     @Param("holder") String holder,
-                     @Param("now") OffsetDateTime now,
-                     @Param("available") SeatStatus available,
-                     @Param("holding") SeatStatus holding);
+            @Param("showtimeId") Long showtimeId,
+            @Param("holder") String holder,
+            @Param("now") OffsetDateTime now,
+            @Param("available") SeatStatus available,
+            @Param("holding") SeatStatus holding);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
@@ -99,12 +100,50 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
                AND s.holdUntil >= :now
             """)
     int confirmSeats(@Param("seatIds") List<Long> seatIds,
-                     @Param("showtimeId") Long showtimeId,
-                     @Param("holder") String holder,
-                     @Param("now") OffsetDateTime now,
-                     @Param("holding") SeatStatus holding,
-                     @Param("booked") SeatStatus booked);
-    
+            @Param("showtimeId") Long showtimeId,
+            @Param("holder") String holder,
+            @Param("now") OffsetDateTime now,
+            @Param("holding") SeatStatus holding,
+            @Param("booked") SeatStatus booked);
+
     @Query("SELECT ss.seat.seatId FROM ShowtimeSeat ss WHERE ss.showtime.showtimeId = :showtimeId")
     List<Long> findSeatIdsByShowtimeId(@Param("showtimeId") Long showtimeId);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            UPDATE ShowtimeSeat ss
+            SET ss.holdBy = :bookingOwner,
+                ss.holdUntil = :holdUntil
+            WHERE ss.showtime.showtimeId = :showtimeId
+              AND ss.showtimeSeatId IN :seatIds
+              AND ss.status = :holding
+              AND ss.holdBy = :sessionId
+              AND ss.holdUntil > :now
+            """)
+    int claimSeatsForBooking(
+            @Param("showtimeId") Long showtimeId,
+            @Param("seatIds") List<Long> seatIds,
+            @Param("sessionId") String sessionId,
+            @Param("bookingOwner") String bookingOwner,
+            @Param("now") OffsetDateTime now,
+            @Param("holdUntil") OffsetDateTime holdUntil,
+            @Param("holding") SeatStatus holding);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            UPDATE ShowtimeSeat ss
+            SET ss.status = :available,
+                ss.holdBy = null,
+                ss.holdUntil = null
+            WHERE ss.showtime.showtimeId = :showtimeId
+              AND ss.showtimeSeatId IN :seatIds
+              AND ss.status = :holding
+              AND ss.holdBy = :bookingOwner
+            """)
+    int releaseBookingClaim(
+            @Param("showtimeId") Long showtimeId,
+            @Param("seatIds") List<Long> seatIds,
+            @Param("bookingOwner") String bookingOwner,
+            @Param("holding") SeatStatus holding,
+            @Param("available") SeatStatus available);
 }

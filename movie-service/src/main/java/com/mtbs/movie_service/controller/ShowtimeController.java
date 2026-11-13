@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+
 /**
  *
  * @author quanghieu
@@ -101,5 +102,11 @@ public class ShowtimeController {
     public ResponseEntity<Void> deleteShowtime(@RequestParam Long id) {
         showtimeService.deleteShowtime(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/showtimes/{id}")
+    public ResponseEntity<ShowtimeResponse> getShowtimeByIdPath(@PathVariable Long id) {
+
+        return ResponseEntity.ok(showtimeService.getShowtimeById(id));
     }
 }

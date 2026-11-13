@@ -1,20 +1,36 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import SeatPicker, { SEAT_ANIMATIONS } from './SeatPicker';
-import { Reveal, Skeleton } from '@/components/common/Ascii';
-import { getCachedSeats, getSessionId, invalidateSeats, loadSeats } from '@/services/seatApi';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import SeatPicker, { SEAT_ANIMATIONS } from "./SeatPicker";
+import { Reveal, Skeleton } from "@/components/common/Ascii";
+import { getPaymentById, waitForPayment } from "@/services/paymentApi";
+import RequireAuth from "@/components/auth/RequireAuth";
+import { getSession } from "@/services/authApi";
+import {
+  getCachedSeats,
+  getSessionId,
+  invalidateSeats,
+  loadSeats,
+} from "@/services/seatApi";
+import PaymentQrModal from "./PaymentQrModal";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8083/api';
-const TIME_ZONE = 'Asia/Ho_Chi_Minh';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8083/api";
+const TIME_ZONE = "Asia/Ho_Chi_Minh";
 const STEP_OUT_MS = 170;
 
 // Giá trị rạp mà Hero Section gửi khi người dùng không chọn rạp cụ thể
-const ALL_CINEMAS = 'Tất cả rạp';
+const ALL_CINEMAS = "Tất cả rạp";
 
 // Các bước hiển thị trên thanh tiến trình. Bước 5 (Xác nhận) sẽ nối với phần thanh toán sau.
-const STEP_LABELS = ['Thành phố', 'Rạp chiếu', 'Suất chiếu', 'Chọn ghế', 'Xác nhận'];
+const STEP_LABELS = [
+  "Thành phố",
+  "Rạp chiếu",
+  "Suất chiếu",
+  "Chọn ghế",
+  "Xác nhận",
+];
 
 // Hệ số giá theo loại ghế, tạm thời dùng ở frontend.
 // Khi backend trả sẵn seat.price cho từng ghế thì giá trị đó được ưu tiên và bảng này không còn dùng.
@@ -37,64 +53,86 @@ const FLOW_STYLES = `
 }
 `;
 
-const EMPTY_LIST = { status: 'idle', items: [] };
+const EMPTY_LIST = { status: "idle", items: [] };
+
+async function ensureAuthenticated() {
+  try {
+    const hasSession = await getSession();
+
+    if (hasSession) {
+      return true;
+    }
+
+    window.location.assign("/dang-nhap");
+    return false;
+  } catch (error) {
+    console.error("Authentication check failed:", error);
+
+    window.alert("Không thể kiểm tra phiên đăng nhập.");
+
+    return false;
+  }
+}
 
 function prefersReducedMotion() {
-  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+  );
 }
 
 function formatTime(iso) {
-  return new Date(iso).toLocaleTimeString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
+  return new Date(iso).toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
     hour12: false,
     timeZone: TIME_ZONE,
   });
 }
 
 function formatLongDate(iso) {
-  return new Date(iso).toLocaleDateString('vi-VN', {
-    weekday: 'long',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
+  return new Date(iso).toLocaleDateString("vi-VN", {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
     timeZone: TIME_ZONE,
   });
 }
 
 function formatDate(isoDate) {
-  if (!isoDate) return '';
-  const [y, m, d] = isoDate.split('-');
+  if (!isoDate) return "";
+  const [y, m, d] = isoDate.split("-");
   return `${d}/${m}/${y}`;
 }
 
-const WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+const WEEKDAYS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
 // Khóa ngày dạng YYYY-MM-DD của một suất chiếu, tính theo múi giờ rạp để khớp với giờ hiển thị
 function dateKeyOf(iso) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
     timeZone: TIME_ZONE,
   }).formatToParts(new Date(iso));
   const get = (type) => parts.find((p) => p.type === type)?.value;
-  return `${get('year')}-${get('month')}-${get('day')}`;
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
 // Khóa ngày của máy người dùng, dùng để biết hôm nay là ngày nào
 function localDateKey(ms) {
   const d = new Date(ms);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 // Bỏ dấu tiếng Việt để gõ "bo gia" vẫn tìm ra "Bố Già"
 function foldText(text) {
-  return String(text || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D')
+  return String(text || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
     .toLowerCase();
 }
 
@@ -107,22 +145,22 @@ function matchesText(text, query) {
 }
 
 function formatVND(amount) {
-  return `${Number(amount || 0).toLocaleString('vi-VN')}đ`;
+  return `${Number(amount || 0).toLocaleString("vi-VN")}đ`;
 }
 
 function seatName(seat) {
-  return `${seat.row}${String(seat.number).padStart(2, '0')}`;
+  return `${seat.row}${String(seat.number).padStart(2, "0")}`;
 }
 
 function getSeatPrice(seat, showtime) {
-  if (typeof seat.price === 'number') return seat.price;
+  if (typeof seat.price === "number") return seat.price;
   const base = Number(showtime?.basePrice ?? 0);
   return Math.round(base * (SEAT_PRICE_MULTIPLIER[seat.type] ?? 1));
 }
 
 // Tổng tiền: số chạy dần từ giá trị cũ lên giá trị mới và phóng nhẹ cùng đường cong với sp-pop của SeatPicker.
 // Cập nhật thẳng vào DOM bằng requestAnimationFrame nên không kéo cả modal và sơ đồ ghế render lại mỗi khung hình.
-function AnimatedPrice({ value, className = '' }) {
+function AnimatedPrice({ value, className = "" }) {
   const ref = useRef(null);
   const shownRef = useRef(value);
   // Nội dung ban đầu cố định, React không đụng lại text node nên không bị nháy giá trị cuối trước khi chạy
@@ -139,8 +177,12 @@ function AnimatedPrice({ value, className = '' }) {
     }
 
     el.animate?.(
-      [{ transform: 'scale(1)' }, { transform: 'scale(1.12)', offset: 0.45 }, { transform: 'scale(1)' }],
-      { duration: 320, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
+      [
+        { transform: "scale(1)" },
+        { transform: "scale(1.12)", offset: 0.45 },
+        { transform: "scale(1)" },
+      ],
+      { duration: 320, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)" },
     );
 
     const duration = 420;
@@ -159,7 +201,10 @@ function AnimatedPrice({ value, className = '' }) {
   }, [value]);
 
   return (
-    <span ref={ref} className={`inline-block origin-left tabular-nums will-change-transform ${className}`}>
+    <span
+      ref={ref}
+      className={`inline-block origin-left tabular-nums will-change-transform ${className}`}
+    >
       {initialText}
     </span>
   );
@@ -193,14 +238,19 @@ function sameIds(a, b) {
 
 // Gọi API giữ / trả ghế. Ném lỗi kèm thông báo từ backend nếu thất bại.
 async function seatAction(action, showtimeId, body) {
-  const res = await fetch(`${API_BASE_URL}/${action}?showtimeId=${showtimeId}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  const res = await fetch(
+    `${API_BASE_URL}/${action}?showtimeId=${showtimeId}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new Error(data?.message || 'Không thể cập nhật ghế, vui lòng thử lại.');
+    throw new Error(
+      data?.message || "Không thể cập nhật ghế, vui lòng thử lại.",
+    );
   }
   return data;
 }
@@ -219,15 +269,18 @@ async function fetchList(path, params, signal) {
 
 // Backend có thể trả chuỗi hoặc object, chuẩn hóa về một dạng duy nhất
 function toCity(item) {
-  const name = typeof item === 'string' ? item : item?.name ?? item?.city ?? item?.cityName ?? '';
+  const name =
+    typeof item === "string"
+      ? item
+      : (item?.name ?? item?.city ?? item?.cityName ?? "");
   return { name: String(name).trim() };
 }
 
 function toCinema(item) {
-  if (typeof item === 'string') return { name: item.trim(), address: '' };
+  if (typeof item === "string") return { name: item.trim(), address: "" };
   return {
-    name: String(item?.name ?? item?.cinemaName ?? '').trim(),
-    address: String(item?.address ?? '').trim(),
+    name: String(item?.name ?? item?.cinemaName ?? "").trim(),
+    address: String(item?.address ?? "").trim(),
   };
 }
 
@@ -246,7 +299,7 @@ const citiesCache = new Map();
 // Gọi khi người dùng đưa chuột vào nút đặt vé, để khi bấm thì danh sách thành phố đã sẵn
 export function prefetchCities(movieTitle) {
   if (!movieTitle || citiesCache.has(movieTitle)) return;
-  fetchList('getCities', { movieTitle })
+  fetchList("getCities", { movieTitle })
     .then((list) => citiesCache.set(movieTitle, uniqueByName(list.map(toCity))))
     .catch(() => {});
 }
@@ -264,15 +317,23 @@ export function prefetchCities(movieTitle) {
  * variant: 'modal' (mặc định, cửa sổ toàn màn hình) | 'inline' (hiện thẳng trong trang, không có nền mờ và nút đóng).
  * Với 'inline', filters phải được giữ ổn định giữa các lần render (dùng useMemo), nếu không luồng sẽ bị đặt lại liên tục.
  */
-export default function BookingFlow({ filters, searchId, onSearchSettled, onContinue, variant = 'modal' }) {
-  const inline = variant === 'inline';
+export default function BookingFlow({
+  filters,
+  searchId,
+  onSearchSettled,
+  // onContinue,
+  onCreatePayment,
+  onCreateBooking,
+  variant = "modal",
+}) {
+  const inline = variant === "inline";
   const [open, setOpen] = useState(false);
 
   // Lựa chọn của người dùng theo từng bước
   const [city, setCity] = useState(null);
   const [cinema, setCinema] = useState(null);
   const [selectedShowtime, setSelectedShowtime] = useState(null);
-  const [cinemaQuery, setCinemaQuery] = useState('');
+  const [cinemaQuery, setCinemaQuery] = useState("");
 
   // Dữ liệu từng bước: { status: 'idle' | 'loading' | 'ready' | 'empty' | 'error', items }
   const [cities, setCities] = useState(EMPTY_LIST);
@@ -291,12 +352,31 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   const [holdUntil, setHoldUntil] = useState(null);
   const [notice, setNotice] = useState(null); // { type: 'error', text }
 
+  // Trạng thái cửa sổ thanh toán
+  const [paymentOpen, setPaymentOpen] = useState(false);
+
+  // Dữ liệu thanh toán do backend trả về
+  const [paymentData, setPaymentData] = useState(null);
+
+  // Trạng thái tạo giao dịch
+  const [paymentLoading, setPaymentLoading] = useState(false);
+
+  // Thông báo lỗi thanh toán
+  const [paymentError, setPaymentError] = useState("");
+
   // Chuyển bước: 'forward' | 'back' | null (đang đứng yên)
   const [leaving, setLeaving] = useState(null);
-  const dirRef = useRef('forward');
+  const dirRef = useRef("forward");
   const switchingRef = useRef(false);
   // Chiều cao khung nội dung, đo tự động để khung giãn ra, co lại mượt khi đổi bước
   const [bodyHeight, setBodyHeight] = useState(null);
+
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [activeBooking, setActiveBooking] = useState(null);
+  const [confirmedBooking, setConfirmedBooking] = useState(null);
+
+  const creatingBookingRef = useRef(false);
+  const bookingRequestIdRef = useRef(null);
 
   const closeButtonRef = useRef(null);
   const headerRef = useRef(null);
@@ -308,13 +388,14 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   // Đã chuyển sang bước thanh toán: giữ nguyên ghế khi component bị gỡ thay vì trả lại
   const handedOffRef = useRef(false);
 
-  const movieQuery = filters?.movieTitle ?? '';
+  const movieQuery = filters?.movieTitle ?? "";
 
   // Đặt điểm bắt đầu theo filters ngay trong lúc render, không chờ effect. Nếu để effect làm việc này
   // thì ở lần render đầu city vẫn là null và effect tải thành phố sẽ kịp gọi getCities trước khi city được đặt.
   // Có sẵn city thì bỏ qua bước thành phố, có sẵn cả cinema thì bỏ qua luôn bước rạp.
   const [syncedFilters, setSyncedFilters] = useState(null);
   const [syncedSearchId, setSyncedSearchId] = useState(null);
+  const [seatUpdating, setSeatUpdating] = useState(false);
   if (filters && (filters !== syncedFilters || searchId !== syncedSearchId)) {
     setSyncedFilters(filters);
     setSyncedSearchId(searchId);
@@ -370,9 +451,9 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
       if (!raf) raf = requestAnimationFrame(animate);
     };
 
-    node.addEventListener('wheel', onWheel, { passive: false });
+    node.addEventListener("wheel", onWheel, { passive: false });
     dayStripCleanupRef.current = () => {
-      node.removeEventListener('wheel', onWheel);
+      node.removeEventListener("wheel", onWheel);
       if (raf) cancelAnimationFrame(raf);
     };
   }, []);
@@ -396,7 +477,10 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     };
   }, [selectedShowtime, selectedSeats]);
 
-  const total = selectedSeats.reduce((sum, s) => sum + getSeatPrice(s, selectedShowtime), 0);
+  const total = selectedSeats.reduce(
+    (sum, s) => sum + getSeatPrice(s, selectedShowtime),
+    0,
+  );
 
   // Trả ngay các ghế đang giữ (khi đóng bảng, quay lại bước trước, hoặc mở lại)
   const releaseHeldSeats = useCallback(() => {
@@ -404,7 +488,10 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     holdRef.current = { showtimeId: null, seatIds: [] };
     if (showtimeId && seatIds.length > 0) {
       invalidateSeats(showtimeId);
-      seatAction('releaseSeats', showtimeId, { sessionId: getSessionId(), seatIds }).catch(() => {});
+      seatAction("releaseSeats", showtimeId, {
+        sessionId: getSessionId(),
+        seatIds,
+      }).catch(() => {});
     }
   }, []);
 
@@ -413,7 +500,7 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     () => () => {
       if (!handedOffRef.current) releaseHeldSeats();
     },
-    [releaseHeldSeats]
+    [releaseHeldSeats],
   );
 
   const refreshSeats = useCallback(async (showtimeId, signal) => {
@@ -432,10 +519,12 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   // city và cinema đã được đặt theo filters ở phần đồng bộ trong lúc render phía trên.
   useEffect(() => {
     if (!filters) return;
-    releaseHeldSeats();
+    if (!handedOffRef.current) {
+      releaseHeldSeats();
+    }
     lastSeatsRef.current = [];
     lastHoldRef.current = null;
-    dirRef.current = 'forward';
+    dirRef.current = "forward";
     handedOffRef.current = false;
 
     setOpen(true);
@@ -444,12 +533,44 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     setHoldUntil(null);
     setNotice(null);
     setSelectedDate(null);
-    setCinemaQuery('');
+    setCinemaQuery("");
     setCinemas(EMPTY_LIST);
     setShowtimes(EMPTY_LIST);
     setNow(Date.now());
+    setPaymentOpen(false);
+    setPaymentData(null);
+    setPaymentError("");
+    setPaymentLoading(false);
+    setConfirmedBooking(null);
+    setActiveBooking(null);
+    setBookingLoading(false);
+    bookingRequestIdRef.current = null;
+    creatingBookingRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, searchId]);
+
+  useEffect(() => {
+    function restorePayment() {
+      const saved = localStorage.getItem("mtbs-paid-booking");
+      if (!saved) return;
+
+      const ticket = JSON.parse(saved);
+
+      // Chỉ hiển thị vé tại đúng trang phim đã đặt.
+      if (ticket.returnPath?.split("?")[0] !== window.location.pathname) {
+        return;
+      }
+
+      setConfirmedBooking(ticket);
+      setPaymentOpen(false);
+    }
+
+    restorePayment();
+
+    window.addEventListener("storage", restorePayment);
+
+    return () => window.removeEventListener("storage", restorePayment);
+  }, [filters?.movieTitle]);
 
   // Bước 1: tải danh sách thành phố khi chưa có thành phố, ưu tiên lấy từ cache
   const needCities = !city;
@@ -458,24 +579,27 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     const key = filters.movieTitle;
     const cached = citiesCache.get(key);
     if (cached) {
-      setCities({ status: cached.length > 0 ? 'ready' : 'empty', items: cached });
+      setCities({
+        status: cached.length > 0 ? "ready" : "empty",
+        items: cached,
+      });
       if (onSearchSettled) onSearchSettled();
       return;
     }
 
     const controller = new AbortController();
-    setCities({ status: 'loading', items: [] });
+    setCities({ status: "loading", items: [] });
 
-    fetchList('getCities', { movieTitle: key }, controller.signal)
+    fetchList("getCities", { movieTitle: key }, controller.signal)
       .then((list) => {
         const items = uniqueByName(list.map(toCity));
         citiesCache.set(key, items);
-        setCities({ status: items.length > 0 ? 'ready' : 'empty', items });
+        setCities({ status: items.length > 0 ? "ready" : "empty", items });
       })
       .catch((err) => {
-        if (err.name === 'AbortError') return;
-        console.error('Lỗi khi tải thành phố:', err);
-        setCities({ status: 'error', items: [] });
+        if (err.name === "AbortError") return;
+        console.error("Lỗi khi tải thành phố:", err);
+        setCities({ status: "error", items: [] });
       })
       .finally(() => {
         if (!controller.signal.aborted && onSearchSettled) onSearchSettled();
@@ -490,17 +614,21 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   useEffect(() => {
     if (!filters || !needCinemas) return;
     const controller = new AbortController();
-    setCinemas({ status: 'loading', items: [] });
+    setCinemas({ status: "loading", items: [] });
 
-    fetchList('getCinemasByCity', { city, movieTitle: movieQuery }, controller.signal)
+    fetchList(
+      "getCinemasByCity",
+      { city, movieTitle: movieQuery },
+      controller.signal,
+    )
       .then((list) => {
         const items = uniqueByName(list.map(toCinema));
-        setCinemas({ status: items.length > 0 ? 'ready' : 'empty', items });
+        setCinemas({ status: items.length > 0 ? "ready" : "empty", items });
       })
       .catch((err) => {
-        if (err.name === 'AbortError') return;
-        console.error('Lỗi khi tải rạp chiếu:', err);
-        setCinemas({ status: 'error', items: [] });
+        if (err.name === "AbortError") return;
+        console.error("Lỗi khi tải rạp chiếu:", err);
+        setCinemas({ status: "error", items: [] });
       })
       .finally(() => {
         if (!controller.signal.aborted && onSearchSettled) onSearchSettled();
@@ -515,18 +643,27 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   useEffect(() => {
     if (!filters || !city || !cinema) return;
     const controller = new AbortController();
-    setShowtimes({ status: 'loading', items: [] });
+    setShowtimes({ status: "loading", items: [] });
 
     fetchList(
-      'searchShowtimes',
-      { city, cinema: cinema === ALL_CINEMAS ? '' : cinema, movieTitle: movieQuery },
-      controller.signal
+      "searchShowtimes",
+      {
+        city,
+        cinema: cinema === ALL_CINEMAS ? "" : cinema,
+        movieTitle: movieQuery,
+      },
+      controller.signal,
     )
-      .then((list) => setShowtimes({ status: list.length > 0 ? 'ready' : 'empty', items: list }))
+      .then((list) =>
+        setShowtimes({
+          status: list.length > 0 ? "ready" : "empty",
+          items: list,
+        }),
+      )
       .catch((err) => {
-        if (err.name === 'AbortError') return;
-        console.error('Lỗi khi tải suất chiếu:', err);
-        setShowtimes({ status: 'error', items: [] });
+        if (err.name === "AbortError") return;
+        console.error("Lỗi khi tải suất chiếu:", err);
+        setShowtimes({ status: "error", items: [] });
       })
       .finally(() => {
         if (!controller.signal.aborted && onSearchSettled) onSearchSettled();
@@ -547,14 +684,14 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   // Ở bước chọn ghế: làm mới sơ đồ mỗi 15 giây để thấy ghế người khác vừa đặt.
   // Bỏ qua khi tab đang ẩn hoặc đang có yêu cầu giữ/trả ghế chạy dở.
   useEffect(() => {
-    if (!open || !selectedShowtime) return;
+    if (!open || !selectedShowtime || paymentOpen) return;
     const showtimeId = selectedShowtime.id;
     const id = setInterval(() => {
       if (document.hidden || pendingRef.current > 0) return;
       refreshSeats(showtimeId).catch(() => {});
     }, 15000);
     return () => clearInterval(id);
-  }, [open, selectedShowtime, refreshSeats]);
+  }, [open, selectedShowtime, refreshSeats, paymentOpen]);
 
   // Tải sơ đồ ghế khi chọn suất chiếu. Dùng dữ liệu vừa prefetch nếu còn mới để mở ghế ngay.
   useEffect(() => {
@@ -575,9 +712,12 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
 
     refreshSeats(selectedShowtime.id, controller.signal)
       .catch((err) => {
-        if (err.name === 'AbortError') return;
-        console.error('Lỗi khi tải ghế:', err);
-        setNotice({ type: 'error', text: 'Không tải được sơ đồ ghế, vui lòng thử lại.' });
+        if (err.name === "AbortError") return;
+        console.error("Lỗi khi tải ghế:", err);
+        setNotice({
+          type: "error",
+          text: "Không tải được sơ đồ ghế, vui lòng thử lại.",
+        });
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoadingSeats(false);
@@ -589,7 +729,17 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     };
   }, [selectedShowtime, refreshSeats]);
 
-  const step = !city ? 1 : !cinema ? 2 : !selectedShowtime ? 3 : 4;
+  // const step = !city ? 1 : !cinema ? 2 : !selectedShowtime ? 3 : 4;
+
+  const step = confirmedBooking
+    ? 5
+    : !city
+      ? 1
+      : !cinema
+        ? 2
+        : !selectedShowtime
+          ? 3
+          : 4;
 
   // Đổi bước thì cuộn về đầu vùng nội dung.
   // Chế độ nội tuyến: khung không tự cuộn, nên chỉ cuộn trang khi đầu luồng đã trôi lên khỏi màn hình.
@@ -601,7 +751,10 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
       }
       const panel = panelRef.current;
       if (panel && panel.getBoundingClientRect().top < 0) {
-        panel.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+        panel.scrollIntoView({
+          behavior: prefersReducedMotion() ? "auto" : "smooth",
+          block: "start",
+        });
       }
       return;
     }
@@ -618,17 +771,19 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
 
     const measure = () => {
       // Nội tuyến: khung cao đúng bằng nội dung, trang tự cuộn. Modal: không vượt quá 92% chiều cao màn hình.
-      const max = inline ? Infinity : Math.floor(window.innerHeight * 0.92) - header.offsetHeight - 2;
+      const max = inline
+        ? Infinity
+        : Math.floor(window.innerHeight * 0.92) - header.offsetHeight - 2;
       setBodyHeight(Math.max(0, Math.min(inner.offsetHeight, max)));
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(inner);
     observer.observe(header);
-    window.addEventListener('resize', measure);
+    window.addEventListener("resize", measure);
     return () => {
       observer.disconnect();
-      window.removeEventListener('resize', measure);
+      window.removeEventListener("resize", measure);
     };
   }, [hasFilters, inline]);
 
@@ -636,22 +791,202 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   useEffect(() => {
     if (!open || inline) return;
     const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = "hidden";
     function onKeyDown(event) {
-      if (event.key === 'Escape') closeModal();
+      if (event.key === "Escape") {
+        // Payment Modal đang mở:
+        // để HTML dialog tự xử lý Escape
+        if (paymentOpen) return;
+
+        closeModal();
+      }
     }
-    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener("keydown", onKeyDown);
     const focusId = setTimeout(() => closeButtonRef.current?.focus(), 50);
     return () => {
       document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener("keydown", onKeyDown);
       clearTimeout(focusId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, inline, paymentOpen]);
+
+  // useEffect(() => {
+  //   if (!paymentData?.payUrl || !activeBooking?.bookingId || confirmedBooking) {
+  //     return;
+  //   }
+
+  //   let cancelled = false;
+  //   let checking = false;
+
+  //   async function checkPayment() {
+  //     if (checking) return;
+  //     checking = true;
+
+  //     try {
+  //       const ref = new URL(paymentData.payUrl).searchParams.get("vnp_TxnRef");
+  //       if (!/^P\d+$/.test(ref || "")) return;
+
+  //       const payment = await getPaymentById(Number(ref.slice(1)));
+
+  //       if (
+  //         cancelled ||
+  //         payment.paymentStatus !== "SUCCESS" ||
+  //         Number(payment.bookingId) !== Number(activeBooking.bookingId)
+  //       )
+  //         return;
+
+  //       const ticket = JSON.parse(
+  //         localStorage.getItem("mtbs-checkout") || "null",
+  //       );
+
+  //       if (Number(ticket?.bookingId) !== Number(activeBooking.bookingId)) {
+  //         return;
+  //       }
+
+  //       localStorage.setItem("mtbs-paid-booking", JSON.stringify(ticket));
+  //       setConfirmedBooking(ticket);
+  //       setPaymentOpen(false);
+  //     } catch {
+  //       // Tiếp tục kiểm tra ở lần sau
+  //     } finally {
+  //       checking = false;
+  //     }
+  //   }
+
+  //   checkPayment();
+
+  //   const interval = setInterval(checkPayment, 2000);
+
+  //   return () => {
+  //     cancelled = true;
+  //     clearInterval(interval);
+  //   };
+  // }, [paymentData?.payUrl, activeBooking?.bookingId, confirmedBooking]);
+
+  useEffect(() => {
+    if (
+      !paymentOpen ||
+      !paymentData?.payUrl ||
+      !activeBooking?.bookingId ||
+      confirmedBooking
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    let timeoutId = null;
+
+    const bookingId = Number(activeBooking.bookingId);
+    const startedAt = Date.now();
+
+    // Giới hạn Polling trong 5 phút
+    const MAX_POLLING_TIME = 5 * 60 * 1000;
+    const POLLING_INTERVAL = 3000;
+
+    let paymentId;
+
+    try {
+      const ref = new URL(paymentData.payUrl).searchParams.get("vnp_TxnRef");
+
+      if (!/^P\d+$/.test(ref || "")) {
+        return;
+      }
+
+      paymentId = Number(ref.slice(1));
+
+      if (!Number.isSafeInteger(paymentId) || paymentId <= 0) {
+        return;
+      }
+    } catch {
+      return;
+    }
+
+    async function checkPayment() {
+      try {
+        const payment = await getPaymentById(paymentId);
+
+        if (cancelled) return;
+
+        // Kiểm tra Payment thuộc đúng Booking
+        if (Number(payment.bookingId) !== bookingId) {
+          setPaymentError("Payment không khớp với Booking.");
+          return;
+        }
+
+        const status = payment.paymentStatus;
+
+        // Thanh toán thành công
+        if (status === "SUCCESS") {
+          let ticket = null;
+
+          try {
+            ticket = JSON.parse(
+              localStorage.getItem("mtbs-checkout") || "null",
+            );
+          } catch {
+            // Không đọc được dữ liệu checkout
+          }
+
+          if (Number(ticket?.bookingId) !== bookingId) {
+            setPaymentError(
+              "Thanh toán thành công nhưng không tìm thấy dữ liệu vé. Vui lòng kiểm tra lịch sử đặt vé.",
+            );
+            return;
+          }
+
+          localStorage.setItem("mtbs-paid-booking", JSON.stringify(ticket));
+
+          setConfirmedBooking(ticket);
+          setPaymentOpen(false);
+          return;
+        }
+
+        // Trạng thái thanh toán kết thúc nhưng không thành công
+        if (["FAILED", "CANCELLED", "EXPIRED"].includes(status)) {
+          setPaymentError(`Giao dịch đã kết thúc với trạng thái ${status}.`);
+          return;
+        }
+      } catch (error) {
+        if (cancelled) return;
+
+        console.error("Lỗi kiểm tra Payment:", error);
+      }
+
+      if (cancelled) return;
+
+      // Không tiếp tục Polling vô thời hạn
+      if (Date.now() - startedAt >= MAX_POLLING_TIME) {
+        setPaymentError(
+          "Đã dừng kiểm tra tự động. Vui lòng tra cứu trạng thái thanh toán.",
+        );
+        return;
+      }
+
+      // Chỉ gửi request tiếp theo sau khi request hiện tại hoàn tất
+      timeoutId = setTimeout(checkPayment, POLLING_INTERVAL);
+    }
+
+    checkPayment();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [
+    paymentOpen,
+    paymentData?.payUrl,
+    activeBooking?.bookingId,
+    confirmedBooking,
+  ]);
 
   function closeModal() {
-    releaseHeldSeats();
+    // Chỉ giải phóng khi backend chưa tiếp nhận Booking
+    if (!handedOffRef.current) {
+      releaseHeldSeats();
+    }
+
+    setPaymentOpen(false);
     setOpen(false);
   }
 
@@ -674,15 +1009,15 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   }
 
   function handleChooseCity(item) {
-    runTransition('forward', () => {
-      setCinemaQuery('');
+    runTransition("forward", () => {
+      setCinemaQuery("");
       setNotice(null);
       setCity(item.name);
     });
   }
 
   function handleChooseCinema(item) {
-    runTransition('forward', () => {
+    runTransition("forward", () => {
       setSelectedDate(null);
       setNotice(null);
       setCinema(item.name);
@@ -690,9 +1025,17 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   }
 
   function handleChooseShowtime(showtime) {
+    if (handedOffRef.current) {
+      setNotice({
+        type: "error",
+        text: "Đã tạo Booking. Vui lòng hủy đơn trước khi đổi ghế hoặc suất chiếu.",
+      });
+
+      return;
+    }
     // Suất đã qua giờ thì không cho chọn (nút cũng đã bị disabled, đây là lớp bảo vệ thứ hai)
     if (new Date(showtime.startTime).getTime() <= Date.now()) return;
-    runTransition('forward', () => {
+    runTransition("forward", () => {
       releaseHeldSeats();
       lastSeatsRef.current = [];
       lastHoldRef.current = null;
@@ -704,7 +1047,14 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
 
   // Quay lại bước n (1: thành phố, 2: rạp, 3: suất chiếu). Chỉ xóa những lựa chọn nằm sau bước đó.
   function handleBackTo(n) {
-    runTransition('back', () => {
+    if (handedOffRef.current) {
+      setNotice({
+        type: "error",
+        text: "Đơn đặt vé đã được tạo. Vui lòng hủy đơn trước khi đổi suất chiếu.",
+      });
+      return;
+    }
+    runTransition("back", () => {
       releaseHeldSeats();
       lastSeatsRef.current = [];
       lastHoldRef.current = null;
@@ -719,7 +1069,7 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
       }
       if (n <= 1) {
         setCity(null);
-        setCinemaQuery('');
+        setCinemaQuery("");
         setCinemas(EMPTY_LIST);
       }
     });
@@ -736,32 +1086,60 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
 
   async function toggleSeat(seat) {
     if (!selectedShowtime) return;
+
+    if (
+      pendingRef.current > 0 ||
+      bookingLoading ||
+      paymentOpen ||
+      paymentLoading ||
+      handedOffRef.current
+    ) {
+      return;
+    }
+
+    if (paymentOpen || paymentLoading || handedOffRef.current) {
+      return;
+    }
+
     const showtimeId = selectedShowtime.id;
     const isSelected = selectedSeats.some((s) => s.id === seat.id);
+    bookingRequestIdRef.current = null;
+    pendingRef.current += 1;
+    setSeatUpdating(true);
 
     setNotice(null);
     // Cập nhật giao diện ngay, sau đó đồng bộ lại với server
     setSelectedSeats((current) =>
-      isSelected ? current.filter((s) => s.id !== seat.id) : [...current, seat]
+      isSelected ? current.filter((s) => s.id !== seat.id) : [...current, seat],
     );
 
-    pendingRef.current += 1;
     try {
       if (isSelected) {
-        await seatAction('releaseSeats', showtimeId, { sessionId: getSessionId(), seatIds: [seat.id] });
-      } else {
-        const result = await seatAction('holdSeats', showtimeId, {
+        await seatAction("releaseSeats", showtimeId, {
           sessionId: getSessionId(),
           seatIds: [seat.id],
         });
-        setHoldUntil(result.holdUntil);
+      } else {
+        const result = await seatAction("holdSeats", showtimeId, {
+          sessionId: getSessionId(),
+          seatIds: [seat.id],
+        });
+        setHoldUntil((previous) => {
+          if (!previous) return result.holdUntil;
+
+          // Giữ mốc hết hạn sớm hơn để tránh
+          // hiển thị sai khi mỗi ghế có TTL riêng.
+          return new Date(result.holdUntil) < new Date(previous)
+            ? result.holdUntil
+            : previous;
+        });
       }
+      invalidateSeats(showtimeId);
     } catch (err) {
       needsSyncRef.current = true;
-      setNotice({ type: 'error', text: err.message });
+      setNotice({ type: "error", text: err.message });
     } finally {
       pendingRef.current -= 1;
-      // Trạng thái giữ ghế vừa đổi nên cache cũ không còn đúng cho lần mở sau
       invalidateSeats(showtimeId);
       // Giao diện đã cập nhật ngay khi bấm, nên thành công thì không cần tải lại cả sơ đồ ghế
       if (pendingRef.current === 0 && needsSyncRef.current) {
@@ -769,42 +1147,214 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
         try {
           await refreshSeats(showtimeId);
         } catch (err) {
-          console.error('Lỗi khi làm mới sơ đồ ghế:', err);
+          console.error("Lỗi khi làm mới sơ đồ ghế:", err);
         }
       }
+      setSeatUpdating(false);
     }
   }
 
   // Tên rạp thật của suất đã chọn. Khi xem 'Tất cả rạp' thì lấy từ chính suất chiếu.
   const allCinemas = cinema === ALL_CINEMAS;
-  const cinemaName = selectedShowtime?.cinemaName || (allCinemas ? '' : cinema || '');
+  const cinemaName =
+    selectedShowtime?.cinemaName || (allCinemas ? "" : cinema || "");
 
-  function handleContinue() {
-    if (!selectedShowtime || selectedSeats.length === 0) return;
-    if (typeof onContinue === 'function') {
-      handedOffRef.current = true;
-      onContinue({
+  async function handleContinue() {
+    console.log("DEBUG:", {
+      showtime: selectedShowtime,
+      seats: selectedSeats,
+      holdUntil,
+      pending: pendingRef.current,
+      onCreateBooking: typeof onCreateBooking,
+    });
+    // 1. Ngăn request trùng
+    if (creatingBookingRef.current) {
+      return;
+    }
+
+    // 2. Nếu Booking đã tồn tại, mở lại Payment Modal
+    if (activeBooking?.bookingId) {
+      setPaymentOpen(true);
+      return;
+    }
+
+    // 3. Kiểm tra suất chiếu
+    if (!selectedShowtime) {
+      setNotice({
+        type: "error",
+        text: "Vui lòng chọn suất chiếu.",
+      });
+      return;
+    }
+
+    // 4. Kiểm tra danh sách ghế
+    if (selectedSeats.length === 0) {
+      setNotice({
+        type: "error",
+        text: "Vui lòng chọn ít nhất một ghế.",
+      });
+      return;
+    }
+
+    // 5. Không tạo Booking khi đang giữ/trả ghế
+    if (pendingRef.current > 0) {
+      setNotice({
+        type: "error",
+        text: "Đang xác nhận giữ ghế, vui lòng thử lại.",
+      });
+      return;
+    }
+
+    // 6. Kiểm tra thời hạn
+    const expiresAt = new Date(holdUntil).getTime();
+
+    if (!holdUntil || Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
+      setNotice({
+        type: "error",
+        text: "Thời gian giữ ghế đã hết.",
+      });
+      return;
+    }
+
+    // 7. Kiểm tra callback
+    if (typeof onCreateBooking !== "function") {
+      setNotice({
+        type: "error",
+        text: "Chưa kết nối Booking Service.",
+      });
+      return;
+    }
+
+    // 8. Tạo requestId ổn định
+    if (!bookingRequestIdRef.current) {
+      bookingRequestIdRef.current = crypto.randomUUID();
+    }
+
+    creatingBookingRef.current = true;
+    setBookingLoading(true);
+    setNotice(null);
+
+    if (!(await ensureAuthenticated())) return;
+    console.log("Đang gọi Booking Service...");
+    try {
+      // 9. Gọi Booking Service thông qua component cha
+      const booking = await onCreateBooking({
         showtime: selectedShowtime,
         seats: selectedSeats,
-        total,
-        holdUntil,
-        city,
-        cinema: cinemaName,
+        sessionId: getSessionId(),
+        requestId: bookingRequestIdRef.current,
       });
+
+      // 10. Kiểm tra response
+      if (!booking?.bookingId) {
+        throw new Error("Booking Service không trả về bookingId.");
+      }
+
+      // 11. Lưu Booking được backend xác nhận
+      setActiveBooking(booking);
+
+      localStorage.setItem(
+        "mtbs-checkout",
+        JSON.stringify({
+          bookingId: booking.bookingId,
+          showtime: {
+            movieTitle: selectedShowtime.movieTitle,
+            startTime: selectedShowtime.startTime,
+          },
+          cinema: cinemaName,
+          seats: selectedSeats.map(seatName),
+          amount: booking.amount ?? total,
+          returnPath: window.location.pathname + window.location.search,
+        }),
+      );
+
+      // Backend đã tiếp nhận quyền giữ ghế
+      handedOffRef.current = true;
+
+      holdRef.current = {
+        showtimeId: null,
+        seatIds: [],
+      };
+
+      if (booking.holdUntil) {
+        setHoldUntil(booking.holdUntil);
+      }
+
+      // 12. Mở Payment Modal
+      setPaymentOpen(true);
+
+      await handleCreatePayment(booking.bookingId);
+    } catch (error) {
+      console.error("Lỗi tạo Booking:", error);
+      setNotice({
+        type: "error",
+        text: error.message || "Không thể tạo Booking.",
+      });
+
+      // Không tự giải phóng ghế khi lỗi không rõ trạng thái.
+      // Backend cần xác minh idempotency khi người dùng thử lại.
+    } finally {
+      creatingBookingRef.current = false;
+      setBookingLoading(false);
+    }
+  }
+
+  async function handleCreatePayment(bookingId = activeBooking?.bookingId) {
+    if (paymentLoading || !bookingId) return;
+
+    setPaymentLoading(true);
+    setPaymentError("");
+
+    try {
+      // Chờ RabbitMQ Consumer tạo Payment (Retry + Exponential Backoff)
+      await waitForPayment(bookingId);
+
+      const payment = await onCreatePayment({ bookingId });
+
+      if (!payment?.payUrl) {
+        throw new Error("VNPay không trả về payUrl.");
+      }
+
+      setPaymentData(payment);
+
+      const txnRef = new URL(payment.payUrl).searchParams.get("vnp_TxnRef");
+
+      const match = txnRef?.match(/^P(\d+)$/);
+
+      if (!match) {
+        throw new Error("Mã giao dịch VNPay không hợp lệ");
+      }
+
+      const ticket = JSON.parse(localStorage.getItem("mtbs-checkout"));
+
+      localStorage.setItem(
+        "mtbs-checkout",
+        JSON.stringify({
+          ...ticket,
+          paymentId: Number(match[1]),
+        }),
+      );
+    } catch (error) {
+      setPaymentError(error.message);
+    } finally {
+      setPaymentLoading(false);
     }
   }
 
   // Ô tìm rạp chỉ hiện khi thành phố có nhiều rạp
   const showCinemaSearch = cinemas.items.length > 6;
   const visibleCinemas = useMemo(
-    () => cinemas.items.filter((c) => matchesText(`${c.name} ${c.address}`, cinemaQuery)),
-    [cinemas.items, cinemaQuery]
+    () =>
+      cinemas.items.filter((c) =>
+        matchesText(`${c.name} ${c.address}`, cinemaQuery),
+      ),
+    [cinemas.items, cinemaQuery],
   );
 
   // Tên phim có thể do người dùng gõ tự do (Hero Section) nên lọc lại theo từ khóa trước khi gom nhóm
   const matchedShowtimes = useMemo(
     () => showtimes.items.filter((s) => matchesText(s.movieTitle, movieQuery)),
-    [showtimes.items, movieQuery]
+    [showtimes.items, movieQuery],
   );
 
   // Chỉ lấy các ngày từ hôm nay (theo máy người dùng) trở đi
@@ -818,13 +1368,19 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     return Array.from(keys).sort();
   }, [matchedShowtimes, todayKey]);
 
-  const activeDate = selectedDate && dayOptions.includes(selectedDate) ? selectedDate : null;
+  const activeDate =
+    selectedDate && dayOptions.includes(selectedDate) ? selectedDate : null;
 
   const dayShowtimes = useMemo(
-    () => (activeDate ? matchedShowtimes.filter((s) => dateKeyOf(s.startTime) === activeDate) : []),
-    [matchedShowtimes, activeDate]
+    () =>
+      activeDate
+        ? matchedShowtimes.filter((s) => dateKeyOf(s.startTime) === activeDate)
+        : [],
+    [matchedShowtimes, activeDate],
   );
-  const allPast = dayShowtimes.length > 0 && dayShowtimes.every((s) => new Date(s.startTime).getTime() <= now);
+  const allPast =
+    dayShowtimes.length > 0 &&
+    dayShowtimes.every((s) => new Date(s.startTime).getTime() <= now);
 
   const grouped = useMemo(() => groupByMovie(dayShowtimes), [dayShowtimes]);
   const seatsByRow = useMemo(() => groupSeatsByRow(seats), [seats]);
@@ -836,55 +1392,68 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   if (holdUntil) lastHoldRef.current = holdUntil;
   const shownSeats = hasSeats ? selectedSeats : lastSeatsRef.current;
   const hasPrice =
-    Number(selectedShowtime?.basePrice ?? 0) > 0 || shownSeats.some((s) => typeof s.price === 'number');
-  const roomLabel = selectedShowtime?.room ?? '';
+    Number(selectedShowtime?.basePrice ?? 0) > 0 ||
+    shownSeats.some((s) => typeof s.price === "number");
+  const roomLabel = selectedShowtime?.room ?? "";
 
-  const movieLabel = movieQuery ? `Phim "${movieQuery}"` : '';
-  const showtimeSummary = [city, movieLabel].filter(Boolean).join(', ');
+  const movieLabel = movieQuery ? `Phim "${movieQuery}"` : "";
+  const showtimeSummary = [city, movieLabel].filter(Boolean).join(", ");
 
   // Chưa có ngày nào phù hợp thì coi như không có kết quả
-  const showtimeStatus = showtimes.status === 'ready' && dayOptions.length === 0 ? 'empty' : showtimes.status;
+  const showtimeStatus =
+    showtimes.status === "ready" && dayOptions.length === 0
+      ? "empty"
+      : showtimes.status;
 
   // Lớp hiệu ứng của vùng nội dung: đang rời đi hoặc đang đi vào
   const stepClass = leaving
-    ? leaving === 'forward'
-      ? 'sf-out-left'
-      : 'sf-out-right'
-    : dirRef.current === 'back'
-      ? 'sf-in-left'
-      : 'sf-in-right';
+    ? leaving === "forward"
+      ? "sf-out-left"
+      : "sf-out-right"
+    : dirRef.current === "back"
+      ? "sf-in-left"
+      : "sf-in-right";
 
   const stepKey = step === 4 ? `seats-${selectedShowtime.id}` : `step-${step}`;
 
   const modal = (
     <div
-      className={inline ? 'relative' : 'bm-modal fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6'}
+      className={
+        inline
+          ? "relative"
+          : "bm-modal fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+      }
       style={
         inline
           ? undefined
           : {
               opacity: open ? 1 : 0,
-              visibility: open ? 'visible' : 'hidden',
-              pointerEvents: open ? 'auto' : 'none',
+              visibility: open ? "visible" : "hidden",
+              pointerEvents: open ? "auto" : "none",
             }
       }
-      data-open={open ? 'true' : 'false'}
+      data-open={open ? "true" : "false"}
       aria-hidden={inline ? undefined : !open}
     >
       <style>{`${SEAT_ANIMATIONS}${FLOW_STYLES}`}</style>
 
       {/* Nền mờ: bấm vào để đóng (chỉ có ở chế độ modal) */}
-      {!inline && <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeModal} />}
+      {!inline && (
+        <div
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={closeModal}
+        />
+      )}
 
       <div
         ref={panelRef}
-        role={inline ? undefined : 'dialog'}
-        aria-modal={inline ? undefined : 'true'}
+        role={inline ? undefined : "dialog"}
+        aria-modal={inline ? undefined : "true"}
         aria-label="Đặt vé xem phim"
         className={
           inline
-            ? 'relative flex w-full scroll-mt-24 flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-[var(--shadow-low)]'
-            : 'bm-modal-panel relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-opaque-separator)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-[var(--shadow-high)]'
+            ? "relative flex w-full scroll-mt-24 flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-[var(--shadow-low)]"
+            : "bm-modal-panel relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-opaque-separator)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] shadow-[var(--shadow-high)]"
         }
       >
         {/* Thanh các bước và nút đóng */}
@@ -899,17 +1468,21 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
               const isDone = n < step;
               // Cùng bảng màu với ghế: đang chọn, ghế đôi (đã qua, bấm được), đã bán (chưa tới)
               const cls = isActive
-                ? 'sp-pop border-[var(--color-brand-primary)] bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
+                ? "sp-pop border-[var(--color-brand-primary)] bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]"
                 : isDone
-                  ? 'cursor-pointer border-[var(--color-brand-primary)] bg-[var(--color-bg-primary)] text-[var(--color-brand-primary)] hover:scale-105 hover:bg-[var(--color-fill-tertiary)] active:scale-90'
-                  : 'cursor-not-allowed border-transparent bg-[var(--color-fill-tertiary)] text-[var(--color-text-quaternary)]';
+                  ? "cursor-pointer border-[var(--color-brand-primary)] bg-[var(--color-bg-primary)] text-[var(--color-brand-primary)] hover:scale-105 hover:bg-[var(--color-fill-tertiary)] active:scale-90"
+                  : "cursor-not-allowed border-transparent bg-[var(--color-fill-tertiary)] text-[var(--color-text-quaternary)]";
               return (
                 <li key={label}>
                   <button
                     type="button"
                     disabled={!isDone}
-                    aria-current={isActive ? 'step' : undefined}
-                    aria-label={isDone ? `Quay lại bước ${n}: ${label}` : `Bước ${n}: ${label}`}
+                    aria-current={isActive ? "step" : undefined}
+                    aria-label={
+                      isDone
+                        ? `Quay lại bước ${n}: ${label}`
+                        : `Bước ${n}: ${label}`
+                    }
                     onClick={() => handleGoToStep(n)}
                     className={`rounded-[var(--radius-sm)] border px-3.5 py-1.5 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] ${cls}`}
                   >
@@ -927,7 +1500,15 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
               onClick={closeModal}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-xs)] text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-fill-tertiary)] hover:text-[var(--color-text-primary)] active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
             >
-              <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <svg
+                viewBox="0 0 20 20"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
                 <path d="M5 5l10 10M15 5L5 15" />
               </svg>
             </button>
@@ -937,7 +1518,7 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
         {/* Khung nội dung: chiều cao chạy mượt theo nội dung bên trong */}
         <div
           ref={scrollRef}
-          className={`sf-body min-h-0 ${inline ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden'}`}
+          className={`sf-body min-h-0 ${inline ? "overflow-hidden" : "overflow-y-auto overflow-x-hidden"}`}
           style={bodyHeight != null ? { height: bodyHeight } : undefined}
           aria-live="polite"
         >
@@ -958,40 +1539,59 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
                   <StepHeading title="Chọn thành phố" subtitle={movieLabel} />
 
                   <div className="mt-6">
-                    <Reveal loading={cities.status === 'loading' || cities.status === 'idle'} shimmer={false} lazy={false}>
-                    {(cities.status === 'loading' || cities.status === 'idle') && (
-                      <CardSkeleton count={8} className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4" label="Đang tải thành phố" />
-                    )}
+                    <Reveal
+                      loading={
+                        cities.status === "loading" || cities.status === "idle"
+                      }
+                      shimmer={false}
+                      lazy={false}
+                    >
+                      {(cities.status === "loading" ||
+                        cities.status === "idle") && (
+                        <CardSkeleton
+                          count={8}
+                          className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
+                          label="Đang tải thành phố"
+                        />
+                      )}
 
-                    {cities.status === 'error' && (
-                      <ListMessage tone="error" onRetry={() => retry('cities')}>
-                        Không tải được danh sách thành phố. Kiểm tra backend rồi thử lại.
-                      </ListMessage>
-                    )}
+                      {cities.status === "error" && (
+                        <ListMessage
+                          tone="error"
+                          onRetry={() => retry("cities")}
+                        >
+                          Không tải được danh sách thành phố. Kiểm tra backend
+                          rồi thử lại.
+                        </ListMessage>
+                      )}
 
-                    {cities.status === 'empty' && (
-                      <ListMessage>Hiện chưa có thành phố nào đang chiếu phim này.</ListMessage>
-                    )}
+                      {cities.status === "empty" && (
+                        <ListMessage>
+                          Hiện chưa có thành phố nào đang chiếu phim này.
+                        </ListMessage>
+                      )}
 
-                    {cities.status === 'ready' && (
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                        {cities.items.map((item, i) => (
-                          <button
-                            key={item.name}
-                            type="button"
-                            onClick={() => handleChooseCity(item)}
-                            style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}
-                            className="bm-rise group flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] px-4 py-4 text-left text-[14px] font-semibold text-[var(--color-text-primary)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--color-brand-primary)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
-                          >
-                            <span className="flex min-w-0 items-center gap-2.5">
-                              <PinIcon />
-                              <span className="truncate">{item.name}</span>
-                            </span>
-                            <ChevronIcon />
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                      {cities.status === "ready" && (
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                          {cities.items.map((item, i) => (
+                            <button
+                              key={item.name}
+                              type="button"
+                              onClick={() => handleChooseCity(item)}
+                              style={{
+                                animationDelay: `${Math.min(i * 40, 320)}ms`,
+                              }}
+                              className="bm-rise group flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] px-4 py-4 text-left text-[14px] font-semibold text-[var(--color-text-primary)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--color-brand-primary)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
+                            >
+                              <span className="flex min-w-0 items-center gap-2.5">
+                                <PinIcon />
+                                <span className="truncate">{item.name}</span>
+                              </span>
+                              <ChevronIcon />
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </Reveal>
                   </div>
                 </div>
@@ -1008,68 +1608,89 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
                   />
 
                   <div className="mt-6">
-                    <Reveal loading={cinemas.status === 'loading' || cinemas.status === 'idle'} shimmer={false} lazy={false}>
-                    {(cinemas.status === 'loading' || cinemas.status === 'idle') && (
-                      <CardSkeleton count={6} className="sm:grid-cols-2" label="Đang tải rạp chiếu" />
-                    )}
+                    <Reveal
+                      loading={
+                        cinemas.status === "loading" ||
+                        cinemas.status === "idle"
+                      }
+                      shimmer={false}
+                      lazy={false}
+                    >
+                      {(cinemas.status === "loading" ||
+                        cinemas.status === "idle") && (
+                        <CardSkeleton
+                          count={6}
+                          className="sm:grid-cols-2"
+                          label="Đang tải rạp chiếu"
+                        />
+                      )}
 
-                    {cinemas.status === 'error' && (
-                      <ListMessage tone="error" onRetry={() => retry('cinemas')}>
-                        Không tải được danh sách rạp. Kiểm tra backend rồi thử lại.
-                      </ListMessage>
-                    )}
+                      {cinemas.status === "error" && (
+                        <ListMessage
+                          tone="error"
+                          onRetry={() => retry("cinemas")}
+                        >
+                          Không tải được danh sách rạp. Kiểm tra backend rồi thử
+                          lại.
+                        </ListMessage>
+                      )}
 
-                    {cinemas.status === 'empty' && (
-                      <ListMessage>
-                        Chưa có rạp nào chiếu phim này tại {city}. Hãy thử chọn thành phố khác.
-                      </ListMessage>
-                    )}
+                      {cinemas.status === "empty" && (
+                        <ListMessage>
+                          Chưa có rạp nào chiếu phim này tại {city}. Hãy thử
+                          chọn thành phố khác.
+                        </ListMessage>
+                      )}
 
-                    {cinemas.status === 'ready' && (
-                      <div>
-                        {showCinemaSearch && (
-                          <input
-                            type="search"
-                            value={cinemaQuery}
-                            onChange={(e) => setCinemaQuery(e.target.value)}
-                            placeholder="Tìm rạp theo tên hoặc địa chỉ"
-                            aria-label="Tìm rạp chiếu"
-                            className="bm-rise mb-4 h-10 w-full rounded-[var(--radius-sm)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] px-3 text-[13px] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] transition-colors focus-visible:border-[var(--color-brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
-                          />
-                        )}
+                      {cinemas.status === "ready" && (
+                        <div>
+                          {showCinemaSearch && (
+                            <input
+                              type="search"
+                              value={cinemaQuery}
+                              onChange={(e) => setCinemaQuery(e.target.value)}
+                              placeholder="Tìm rạp theo tên hoặc địa chỉ"
+                              aria-label="Tìm rạp chiếu"
+                              className="bm-rise mb-4 h-10 w-full rounded-[var(--radius-sm)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] px-3 text-[13px] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] transition-colors focus-visible:border-[var(--color-brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
+                            />
+                          )}
 
-                        {visibleCinemas.length === 0 ? (
-                          <ListMessage>Không có rạp nào khớp với từ khóa.</ListMessage>
-                        ) : (
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            {visibleCinemas.map((item, i) => (
-                              <button
-                                key={item.name}
-                                type="button"
-                                onClick={() => handleChooseCinema(item)}
-                                style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}
-                                className="bm-rise group flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] px-4 py-4 text-left transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--color-brand-primary)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
-                              >
-                                <span className="flex min-w-0 items-center gap-2.5">
-                                  <PinIcon />
-                                  <span className="min-w-0">
-                                    <span className="block truncate text-[14px] font-semibold text-[var(--color-text-primary)]">
-                                      {item.name}
-                                    </span>
-                                    {item.address && (
-                                      <span className="mt-0.5 block truncate text-[12px] text-[var(--color-text-secondary)]">
-                                        {item.address}
+                          {visibleCinemas.length === 0 ? (
+                            <ListMessage>
+                              Không có rạp nào khớp với từ khóa.
+                            </ListMessage>
+                          ) : (
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              {visibleCinemas.map((item, i) => (
+                                <button
+                                  key={item.name}
+                                  type="button"
+                                  onClick={() => handleChooseCinema(item)}
+                                  style={{
+                                    animationDelay: `${Math.min(i * 40, 320)}ms`,
+                                  }}
+                                  className="bm-rise group flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] px-4 py-4 text-left transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--color-brand-primary)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
+                                >
+                                  <span className="flex min-w-0 items-center gap-2.5">
+                                    <PinIcon />
+                                    <span className="min-w-0">
+                                      <span className="block truncate text-[14px] font-semibold text-[var(--color-text-primary)]">
+                                        {item.name}
                                       </span>
-                                    )}
+                                      {item.address && (
+                                        <span className="mt-0.5 block truncate text-[12px] text-[var(--color-text-secondary)]">
+                                          {item.address}
+                                        </span>
+                                      )}
+                                    </span>
                                   </span>
-                                </span>
-                                <ChevronIcon />
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                                  <ChevronIcon />
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </Reveal>
                   </div>
                 </div>
@@ -1079,124 +1700,170 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
               {step === 3 && (
                 <div>
                   <StepHeading
-                    title={allCinemas ? `Suất chiếu tại ${city}` : `Suất chiếu tại ${cinema}`}
+                    title={
+                      allCinemas
+                        ? `Suất chiếu tại ${city}`
+                        : `Suất chiếu tại ${cinema}`
+                    }
                     subtitle={showtimeSummary}
                     backLabel="Đổi rạp"
                     onBack={() => handleBackTo(2)}
                   />
 
                   <div className="mt-6">
-                    <Reveal loading={showtimeStatus === 'loading' || showtimeStatus === 'idle'} shimmer={false} lazy={false}>
-                    {(showtimeStatus === 'loading' || showtimeStatus === 'idle') && <ShowtimeSkeleton />}
+                    <Reveal
+                      loading={
+                        showtimeStatus === "loading" ||
+                        showtimeStatus === "idle"
+                      }
+                      shimmer={false}
+                      lazy={false}
+                    >
+                      {(showtimeStatus === "loading" ||
+                        showtimeStatus === "idle") && <ShowtimeSkeleton />}
 
-                    {showtimeStatus === 'error' && (
-                      <ListMessage tone="error" onRetry={() => retry('showtimes')}>
-                        Không tải được suất chiếu. Kiểm tra backend rồi thử lại.
-                      </ListMessage>
-                    )}
-
-                    {showtimeStatus === 'empty' && (
-                      <ListMessage>
-                        {allCinemas
-                          ? 'Chưa có suất chiếu phù hợp. Hãy thử chọn thành phố hoặc tên phim khác.'
-                          : 'Rạp này chưa có suất chiếu phù hợp. Hãy thử chọn rạp khác.'}
-                      </ListMessage>
-                    )}
-
-                    {showtimeStatus === 'ready' && (
-                      <div>
-                        {/* Chọn ngày: chỉ hiện các ngày từ hôm nay có suất chiếu của phim đã tìm */}
-                        <p className="mb-2 text-[13px] font-semibold">Chọn ngày xem</p>
-                        <div
-                          ref={dayStripRef}
-                          role="radiogroup"
-                          aria-label="Chọn ngày xem"
-                          className="-mx-2 -mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-2 pb-3 pt-2"
+                      {showtimeStatus === "error" && (
+                        <ListMessage
+                          tone="error"
+                          onRetry={() => retry("showtimes")}
                         >
-                          {dayOptions.map((key, i) => {
-                            const [y, m, d] = key.split('-').map(Number);
-                            const weekday = WEEKDAYS[new Date(y, m - 1, d).getDay()];
-                            const isToday = key === todayKey;
-                            const isActive = key === activeDate;
-                            return (
-                              <button
-                                key={key}
-                                type="button"
-                                role="radio"
-                                aria-checked={isActive}
-                                onClick={() => setSelectedDate(key)}
-                                style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}
-                                className={`bm-rise flex min-w-[68px] shrink-0 flex-col items-center rounded-[var(--radius-sm)] border px-3 py-2 transition-all duration-200 ease-out active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] ${
-                                  isActive
-                                    ? 'border-[var(--color-brand-primary)] bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
-                                    : 'border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] hover:-translate-y-0.5 hover:border-[var(--color-brand-primary)]'
-                                }`}
-                              >
-                                <span className={`text-[11px] ${isActive ? '' : 'text-[var(--color-text-secondary)]'}`}>
-                                  {isToday ? 'Hôm nay' : weekday}
-                                </span>
-                                <span className="text-[20px] font-semibold leading-tight">{d}</span>
-                                <span className={`text-[11px] ${isActive ? '' : 'text-[var(--color-text-secondary)]'}`}>
-                                  Th{m}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
+                          Không tải được suất chiếu. Kiểm tra backend rồi thử
+                          lại.
+                        </ListMessage>
+                      )}
 
-                        {/* Suất chiếu của ngày đang chọn. key theo ngày để đổi ngày thì danh sách chạy lại hiệu ứng */}
-                        {!activeDate ? (
-                          <p className="bm-rise mt-4 rounded-[var(--radius-md)] border border-dashed border-[var(--color-border-separator)] p-5 text-center text-[13px] text-[var(--color-text-secondary)]">
-                            Chọn một ngày để xem các suất chiếu.
+                      {showtimeStatus === "empty" && (
+                        <ListMessage>
+                          {allCinemas
+                            ? "Chưa có suất chiếu phù hợp. Hãy thử chọn thành phố hoặc tên phim khác."
+                            : "Rạp này chưa có suất chiếu phù hợp. Hãy thử chọn rạp khác."}
+                        </ListMessage>
+                      )}
+
+                      {showtimeStatus === "ready" && (
+                        <div>
+                          {/* Chọn ngày: chỉ hiện các ngày từ hôm nay có suất chiếu của phim đã tìm */}
+                          <p className="mb-2 text-[13px] font-semibold">
+                            Chọn ngày xem
                           </p>
-                        ) : (
-                          <div key={activeDate} className="mt-4 flex flex-col gap-4">
-                            {allPast && (
-                              <p className="bm-rise text-[12px] text-[var(--color-text-secondary)]">
-                                Các suất chiếu của ngày này đã qua giờ. Hãy chọn ngày khác.
-                              </p>
-                            )}
-                            {grouped.map(([title, items], groupIndex) => (
-                              <div
-                                key={title}
-                                className="bm-rise rounded-[var(--radius-md)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-4"
-                                style={{ animationDelay: `${groupIndex * 90}ms` }}
-                              >
-                                <h3 className="mb-3 text-[15px] font-semibold">{title}</h3>
-                                <div className="flex flex-wrap gap-2">
-                                  {items.map((s) => {
-                                    const isPast = new Date(s.startTime).getTime() <= now;
-                                    // Một rạp cụ thể thì chỉ cần phòng chiếu, xem tất cả rạp thì phải hiện thêm tên rạp
-                                    const subLabel = allCinemas
-                                      ? [s.cinemaName, s.room].filter(Boolean).join(', ')
-                                      : s.room || s.cinemaName;
-                                    return (
-                                      <button
-                                        key={s.id}
-                                        type="button"
-                                        disabled={isPast}
-                                        title={isPast ? 'Suất chiếu đã qua giờ' : undefined}
-                                        onClick={() => handleChooseShowtime(s)}
-                                        className="flex min-w-[88px] flex-col items-center rounded-[var(--radius-sm)] border border-[var(--color-border-separator)] bg-[var(--color-bg-primary)] px-3 py-2 text-[13px] text-[var(--color-text-primary)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--color-brand-primary)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0 disabled:hover:border-[var(--color-border-separator)] disabled:active:scale-100"
-                                      >
-                                        <span className={`font-semibold ${isPast ? 'line-through' : ''}`}>
-                                          {formatTime(s.startTime)}
-                                        </span>
-                                        {subLabel && (
-                                          <span className="text-[11px] text-[var(--color-text-secondary)]">
-                                            {subLabel}
-                                          </span>
-                                        )}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            ))}
+                          <div
+                            ref={dayStripRef}
+                            role="radiogroup"
+                            aria-label="Chọn ngày xem"
+                            className="-mx-2 -mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-2 pb-3 pt-2"
+                          >
+                            {dayOptions.map((key, i) => {
+                              const [y, m, d] = key.split("-").map(Number);
+                              const weekday =
+                                WEEKDAYS[new Date(y, m - 1, d).getDay()];
+                              const isToday = key === todayKey;
+                              const isActive = key === activeDate;
+                              return (
+                                <button
+                                  key={key}
+                                  type="button"
+                                  role="radio"
+                                  aria-checked={isActive}
+                                  onClick={() => setSelectedDate(key)}
+                                  style={{
+                                    animationDelay: `${Math.min(i * 40, 320)}ms`,
+                                  }}
+                                  className={`bm-rise flex min-w-[68px] shrink-0 flex-col items-center rounded-[var(--radius-sm)] border px-3 py-2 transition-all duration-200 ease-out active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] ${
+                                    isActive
+                                      ? "border-[var(--color-brand-primary)] bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]"
+                                      : "border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] hover:-translate-y-0.5 hover:border-[var(--color-brand-primary)]"
+                                  }`}
+                                >
+                                  <span
+                                    className={`text-[11px] ${isActive ? "" : "text-[var(--color-text-secondary)]"}`}
+                                  >
+                                    {isToday ? "Hôm nay" : weekday}
+                                  </span>
+                                  <span className="text-[20px] font-semibold leading-tight">
+                                    {d}
+                                  </span>
+                                  <span
+                                    className={`text-[11px] ${isActive ? "" : "text-[var(--color-text-secondary)]"}`}
+                                  >
+                                    Th{m}
+                                  </span>
+                                </button>
+                              );
+                            })}
                           </div>
-                        )}
-                      </div>
-                    )}
+
+                          {/* Suất chiếu của ngày đang chọn. key theo ngày để đổi ngày thì danh sách chạy lại hiệu ứng */}
+                          {!activeDate ? (
+                            <p className="bm-rise mt-4 rounded-[var(--radius-md)] border border-dashed border-[var(--color-border-separator)] p-5 text-center text-[13px] text-[var(--color-text-secondary)]">
+                              Chọn một ngày để xem các suất chiếu.
+                            </p>
+                          ) : (
+                            <div
+                              key={activeDate}
+                              className="mt-4 flex flex-col gap-4"
+                            >
+                              {allPast && (
+                                <p className="bm-rise text-[12px] text-[var(--color-text-secondary)]">
+                                  Các suất chiếu của ngày này đã qua giờ. Hãy
+                                  chọn ngày khác.
+                                </p>
+                              )}
+                              {grouped.map(([title, items], groupIndex) => (
+                                <div
+                                  key={title}
+                                  className="bm-rise rounded-[var(--radius-md)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-4"
+                                  style={{
+                                    animationDelay: `${groupIndex * 90}ms`,
+                                  }}
+                                >
+                                  <h3 className="mb-3 text-[15px] font-semibold">
+                                    {title}
+                                  </h3>
+                                  <div className="flex flex-wrap gap-2">
+                                    {items.map((s) => {
+                                      const isPast =
+                                        new Date(s.startTime).getTime() <= now;
+                                      // Một rạp cụ thể thì chỉ cần phòng chiếu, xem tất cả rạp thì phải hiện thêm tên rạp
+                                      const subLabel = allCinemas
+                                        ? [s.cinemaName, s.room]
+                                            .filter(Boolean)
+                                            .join(", ")
+                                        : s.room || s.cinemaName;
+                                      return (
+                                        <button
+                                          key={s.id}
+                                          type="button"
+                                          disabled={isPast}
+                                          title={
+                                            isPast
+                                              ? "Suất chiếu đã qua giờ"
+                                              : undefined
+                                          }
+                                          onClick={() =>
+                                            handleChooseShowtime(s)
+                                          }
+                                          className="flex min-w-[88px] flex-col items-center rounded-[var(--radius-sm)] border border-[var(--color-border-separator)] bg-[var(--color-bg-primary)] px-3 py-2 text-[13px] text-[var(--color-text-primary)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[var(--color-brand-primary)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0 disabled:hover:border-[var(--color-border-separator)] disabled:active:scale-100"
+                                        >
+                                          <span
+                                            className={`font-semibold ${isPast ? "line-through" : ""}`}
+                                          >
+                                            {formatTime(s.startTime)}
+                                          </span>
+                                          {subLabel && (
+                                            <span className="text-[11px] text-[var(--color-text-secondary)]">
+                                              {subLabel}
+                                            </span>
+                                          )}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </Reveal>
                   </div>
                 </div>
@@ -1215,24 +1882,38 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
                   {/* Thẻ thông tin phim */}
                   <div className="mt-5 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] px-5 py-4">
                     <div className="min-w-0">
-                      <p className="text-[15px] font-semibold">{selectedShowtime.movieTitle}</p>
-                      <p className="mt-0.5 text-[13px] text-[var(--color-text-secondary)]">{cinemaName}</p>
+                      <p className="text-[15px] font-semibold">
+                        {selectedShowtime.movieTitle}
+                      </p>
+                      <p className="mt-0.5 text-[13px] text-[var(--color-text-secondary)]">
+                        {cinemaName}
+                      </p>
                     </div>
                     <p className="text-[13px] text-[var(--color-text-secondary)]">
-                      {formatLongDate(selectedShowtime.startTime)} · {formatTime(selectedShowtime.startTime)}
-                      {roomLabel ? ` · ${roomLabel}` : ''}
+                      {formatLongDate(selectedShowtime.startTime)} ·{" "}
+                      {formatTime(selectedShowtime.startTime)}
+                      {roomLabel ? ` · ${roomLabel}` : ""}
                     </p>
                   </div>
 
                   <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
                     {/* Cột trái: sơ đồ ghế */}
                     <div className="rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-primary)] p-5 sm:p-8">
-                      <Reveal loading={loadingSeats} shimmer={false} lazy={false}>
+                      <Reveal
+                        loading={loadingSeats}
+                        shimmer={false}
+                        lazy={false}
+                      >
                         <SeatPicker
                           loadingSeats={loadingSeats}
                           seatsByRow={seatsByRow}
                           selectedSeats={selectedSeats}
                           onToggleSeat={toggleSeat}
+                          disabled={
+                            seatUpdating ||
+                            paymentLoading ||
+                            !!paymentData?.bookingId
+                          }
                         />
                       </Reveal>
                     </div>
@@ -1242,17 +1923,24 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
                       <h3 className="text-[17px] font-semibold">Vé của bạn</h3>
 
                       <div className="mt-4 border-t border-[var(--color-border-separator)] pt-4">
-                        <p className="text-[14px] font-semibold">{selectedShowtime.movieTitle}</p>
-                        <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">{cinemaName}</p>
+                        <p className="text-[14px] font-semibold">
+                          {selectedShowtime.movieTitle}
+                        </p>
+                        <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">
+                          {cinemaName}
+                        </p>
                         <p className="mt-1 text-[12px] text-[var(--color-text-tertiary)]">
-                          {formatDate(dateKeyOf(selectedShowtime.startTime))} · {formatTime(selectedShowtime.startTime)}
-                          {roomLabel ? ` · ${roomLabel}` : ''}
+                          {formatDate(dateKeyOf(selectedShowtime.startTime))} ·{" "}
+                          {formatTime(selectedShowtime.startTime)}
+                          {roomLabel ? ` · ${roomLabel}` : ""}
                         </p>
                       </div>
 
                       {/* Ghế đã chọn: mỗi ghế bật lên (sp-pop) như khi chọn trên sơ đồ, vùng giãn ra, co lại mượt bằng bm-reveal */}
                       <div className="mt-4 border-t border-[var(--color-border-separator)] pt-4">
-                        <p className="text-[12px] text-[var(--color-text-secondary)]">Ghế đã chọn</p>
+                        <p className="text-[12px] text-[var(--color-text-secondary)]">
+                          Ghế đã chọn
+                        </p>
 
                         <div className="bm-reveal" data-open={!hasSeats}>
                           <div className="bm-reveal-inner">
@@ -1277,12 +1965,21 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
                             {hasPrice && (
                               <ul className="mt-2 space-y-1 text-[12px] text-[var(--color-text-secondary)]">
                                 {shownSeats.map((s) => (
-                                  <li key={s.id} className="sp-fade flex justify-between">
+                                  <li
+                                    key={s.id}
+                                    className="sp-fade flex justify-between"
+                                  >
                                     <span>
                                       {seatName(s)}
-                                      {s.type && s.type !== 'STANDARD' ? ` (${s.type})` : ''}
+                                      {s.type && s.type !== "STANDARD"
+                                        ? ` (${s.type})`
+                                        : ""}
                                     </span>
-                                    <span>{formatVND(getSeatPrice(s, selectedShowtime))}</span>
+                                    <span>
+                                      {formatVND(
+                                        getSeatPrice(s, selectedShowtime),
+                                      )}
+                                    </span>
                                   </li>
                                 ))}
                               </ul>
@@ -1292,34 +1989,64 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
                       </div>
 
                       <div className="mt-4 border-t border-[var(--color-border-separator)] pt-4">
-                        <p className="text-[12px] text-[var(--color-text-secondary)]">Tổng cộng</p>
+                        <p className="text-[12px] text-[var(--color-text-secondary)]">
+                          Tổng cộng
+                        </p>
                         <p className="mt-1 text-[28px] font-semibold text-[var(--color-brand-primary)]">
                           <AnimatedPrice value={total} />
                         </p>
                         <p className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">
                           {hasPrice
-                            ? 'Giá vé được hiển thị minh bạch trước khi xác nhận.'
-                            : 'Chưa có giá vé cho suất chiếu này.'}
+                            ? "Giá vé được hiển thị minh bạch trước khi xác nhận."
+                            : "Chưa có giá vé cho suất chiếu này."}
                         </p>
-                        <div className="bm-reveal" data-open={hasSeats && Boolean(holdUntil)}>
+                        <div
+                          className="bm-reveal"
+                          data-open={hasSeats && Boolean(holdUntil)}
+                        >
                           <div className="bm-reveal-inner">
                             <p className="mt-2 text-[12px] text-[var(--color-text-tertiary)]">
                               {lastHoldRef.current
                                 ? `Giữ ghế đến ${formatTime(lastHoldRef.current)}. Quá giờ này ghế sẽ tự động được trả lại.`
-                                : ''}
+                                : ""}
                             </p>
                           </div>
                         </div>
                       </div>
 
-                      <button
+                      {/* <button
                         type="button"
-                        onClick={handleContinue}
-                        disabled={!hasSeats}
+                        onClick={() => {
+                          console.log("Button clicked!");
+                          handleContinue();
+                        }}
+                        disabled={
+                          !hasSeats ||
+                          bookingLoading ||
+                          seatUpdating ||
+                          paymentLoading
+                        }
                         className="mt-5 flex h-11 w-full items-center justify-center gap-1.5 rounded-full bg-[var(--color-brand-fill)] text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-fill-hover)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2"
                       >
                         Tiếp tục
                         <span aria-hidden="true">→</span>
+                      </button> */}
+                      <button
+                        type="button"
+                        onClick={handleContinue}
+                        disabled={
+                          !hasSeats ||
+                          bookingLoading ||
+                          seatUpdating ||
+                          paymentLoading
+                        }
+                        className="mt-5 flex h-11 w-full items-center justify-center gap-1.5 rounded-full bg-[var(--color-brand-fill)] text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-fill-hover)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {bookingLoading
+                          ? "Đang tạo đơn đặt vé..."
+                          : activeBooking
+                            ? "Tiếp tục thanh toán"
+                            : "Tiếp tục"}
                       </button>
                       <p className="mt-3 text-center text-[12px] text-[var(--color-text-tertiary)]">
                         Bạn có thể quay lại để đổi ghế trước khi thanh toán.
@@ -1327,6 +2054,49 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
                     </aside>
                   </div>
                 </div>
+              )}
+              {/* BƯỚC 5: XÁC NHẬN */}
+              {step === 5 && confirmedBooking && (
+                <section className="mx-auto max-w-xl rounded-xl border p-8">
+                  <h2 className="mb-5 text-2xl font-semibold text-green-600">
+                    ✓ Đặt vé thành công!
+                  </h2>
+
+                  <div className="space-y-3 text-sm">
+                    <p>
+                      <strong>Mã đặt vé:</strong> #{confirmedBooking.bookingId}
+                    </p>
+
+                    <p>
+                      <strong>Phim:</strong>{" "}
+                      {confirmedBooking.showtime.movieTitle}
+                    </p>
+
+                    <p>
+                      <strong>Suất chiếu:</strong>{" "}
+                      {new Date(
+                        confirmedBooking.showtime.startTime,
+                      ).toLocaleString("vi-VN")}
+                    </p>
+
+                    <p>
+                      <strong>Rạp:</strong> {confirmedBooking.cinema}
+                    </p>
+
+                    <p>
+                      <strong>Ghế:</strong> {confirmedBooking.seats.join(", ")}
+                    </p>
+
+                    <p>
+                      <strong>Tổng tiền:</strong>{" "}
+                      {formatVND(confirmedBooking.amount)}
+                    </p>
+
+                    <p className="font-semibold text-green-600">
+                      Trạng thái thanh toán: SUCCESS
+                    </p>
+                  </div>
+                </section>
               )}
             </div>
           </div>
@@ -1337,9 +2107,59 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
 
   // Nội tuyến: render ngay tại vị trí đặt component.
   // Modal: render qua portal để lớp nền mờ luôn phủ kín toàn màn hình, không bị ảnh hưởng bởi thẻ cha.
-  if (inline) return modal;
-  // Modal chỉ mở sau tương tác trên trình duyệt nên document luôn tồn tại ở đây.
-  return typeof document === 'undefined' ? null : createPortal(modal, document.body);
+  // if (inline) return modal;
+  // // Modal chỉ mở sau tương tác trên trình duyệt nên document luôn tồn tại ở đây.
+  // return typeof document === "undefined"
+  //   ? null
+  //   : createPortal(modal, document.body);
+  function handleClosePayment() {
+    setPaymentOpen(false);
+    setPaymentError("");
+
+    // Chưa có Booking được tạo:
+    // xóa dữ liệu giao dịch cũ
+    if (!handedOffRef.current) {
+      setPaymentData(null);
+    }
+  }
+
+  const paymentModal = (
+    <PaymentQrModal
+      open={paymentOpen}
+      onClose={handleClosePayment}
+      bookingId={activeBooking?.bookingId}
+      showtime={selectedShowtime}
+      cinema={cinemaName}
+      seats={selectedSeats}
+      total={activeBooking?.amount ?? total}
+      holdUntil={holdUntil}
+      payment={paymentData}
+      loading={paymentLoading}
+      error={paymentError}
+      onCreateQr={
+        // typeof onCreatePayment === "function" ? handleCreatePayment : undefined
+        () => handleCreatePayment()
+      }
+    />
+  );
+
+  // Chế độ hiển thị trực tiếp trong trang
+  if (inline) {
+    return (
+      <>
+        {modal}
+        {paymentModal}
+      </>
+    );
+  }
+
+  // Chế độ modal
+  return typeof document === "undefined" ? null : (
+    <>
+      {createPortal(modal, document.body)}
+      {paymentModal}
+    </>
+  );
 }
 
 // Tiêu đề của mỗi bước, kèm nút quay lại bước trước (nếu có)
@@ -1348,7 +2168,11 @@ function StepHeading({ title, subtitle, backLabel, onBack }) {
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
         <h2 className="text-[24px] font-semibold">{title}</h2>
-        {subtitle && <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">{subtitle}</p>}
+        {subtitle && (
+          <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">
+            {subtitle}
+          </p>
+        )}
       </div>
       {onBack && (
         <button
@@ -1364,12 +2188,14 @@ function StepHeading({ title, subtitle, backLabel, onBack }) {
 }
 
 // Thông báo trống hoặc lỗi của một danh sách, có thể kèm nút Thử lại
-function ListMessage({ tone = 'muted', onRetry, children }) {
+function ListMessage({ tone = "muted", onRetry, children }) {
   return (
     <div className="bm-rise rounded-[var(--radius-md)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-5 text-center">
       <p
         className={`text-[13px] ${
-          tone === 'error' ? 'text-[var(--color-system-error)]' : 'text-[var(--color-text-secondary)]'
+          tone === "error"
+            ? "text-[var(--color-system-error)]"
+            : "text-[var(--color-text-secondary)]"
         }`}
       >
         {children}
@@ -1389,7 +2215,16 @@ function ListMessage({ tone = 'muted', onRetry, children }) {
 
 function PinIcon() {
   return (
-    <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-[var(--color-brand-primary)]" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      viewBox="0 0 20 20"
+      className="h-4 w-4 shrink-0 text-[var(--color-brand-primary)]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M10 18s6-5.2 6-10a6 6 0 10-12 0c0 4.8 6 10 6 10z" />
       <circle cx="10" cy="8" r="2.2" />
     </svg>
@@ -1398,18 +2233,31 @@ function PinIcon() {
 
 function ChevronIcon() {
   return (
-    <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[var(--color-brand-primary)]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      viewBox="0 0 20 20"
+      className="h-4 w-4 shrink-0 text-[var(--color-text-tertiary)] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[var(--color-brand-primary)]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M7.5 4.5L13 10l-5.5 5.5" />
     </svg>
   );
 }
 
 // Khung chờ cho danh sách thẻ (thành phố, rạp)
-function CardSkeleton({ count, className = '', label }) {
+function CardSkeleton({ count, className = "", label }) {
   return (
     <div className={`grid gap-3 ${className}`} role="status" aria-label={label}>
       {Array.from({ length: count }).map((_, i) => (
-        <Skeleton key={i} rows={3} className="h-[58px] w-full rounded-[var(--radius-md)]" />
+        <Skeleton
+          key={i}
+          rows={3}
+          className="h-[58px] w-full rounded-[var(--radius-md)]"
+        />
       ))}
     </div>
   );
@@ -1417,13 +2265,22 @@ function CardSkeleton({ count, className = '', label }) {
 
 function ShowtimeSkeleton() {
   return (
-    <div className="flex flex-col gap-4" role="status" aria-label="Đang tải suất chiếu">
+    <div
+      className="flex flex-col gap-4"
+      role="status"
+      aria-label="Đang tải suất chiếu"
+    >
       {Array.from({ length: 2 }).map((_, i) => (
         <div
           key={i}
           className="rounded-[var(--radius-md)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-4"
         >
-          <Skeleton rows={1} width={192} height={16} className="mb-4 rounded-[var(--radius-xs)]" />
+          <Skeleton
+            rows={1}
+            width={192}
+            height={16}
+            className="mb-4 rounded-[var(--radius-xs)]"
+          />
           <div className="flex gap-2">
             {Array.from({ length: 4 }).map((__, j) => (
               <Skeleton

@@ -1,23 +1,24 @@
 "use client";
 
-import { useState, useRef, useEffect, useLayoutEffect } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { BRAND_NAME } from '@/styles/tokens';
-import AccountMenu from '@/components/account/AccountMenu';
-import { Reveal, Skeleton } from '@/components/common/Ascii';
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { BRAND_NAME } from "@/styles/tokens";
+import AccountMenu from "@/components/account/AccountMenu";
+import { Reveal, Skeleton } from "@/components/common/Ascii";
+import { getSession, logoutUser } from "@/services/authApi";
 
 const NAV_LINKS = [
-  { label: 'Trang chủ', href: '/' },
-  { label: 'Rạp chiếu', href: '/rap-chieu' },
-  { label: 'Ưu đãi', href: '/uu-dai' },
+  { label: "Trang chủ", href: "/" },
+  { label: "Rạp chiếu", href: "/rap-chieu" },
+  { label: "Ưu đãi", href: "/uu-dai" },
 ];
 
 // Chỉ hiện khi đang xem chi tiết phim, chèn giữa "Trang chủ" và "Rạp chiếu".
-const MOVIE_TAB = { label: 'Phim', href: '/#phim', detailOnly: true };
+const MOVIE_TAB = { label: "Phim", href: "/#phim", detailOnly: true };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8083';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8083";
 const SEARCH_LIMIT = 6;
 const SEARCH_DEBOUNCE_MS = 250;
 const PANEL_BORDER = 2; // 1px viền trên + 1px viền dưới
@@ -57,15 +58,15 @@ const SEARCH_ANIMATIONS = `
 
 function normalize(text) {
   return text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
     .toLowerCase();
 }
 
 function Highlight({ text, query }) {
-  const source = (text ?? '').normalize('NFC');
+  const source = (text ?? "").normalize("NFC");
   const keyword = query.trim();
   const index = keyword ? normalize(source).indexOf(normalize(keyword)) : -1;
   if (index < 0) return <>{source}</>;
@@ -83,17 +84,18 @@ function Highlight({ text, query }) {
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [mobileQuery, setMobileQuery] = useState('');
-  const [searchValue, setSearchValue] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const [mobileQuery, setMobileQuery] = useState("");
+  const [searchValue, setSearchValue] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeResult, setActiveResult] = useState(-1);
   const [results, setResults] = useState([]);
-  const [status, setStatus] = useState('idle'); // idle | loading | done | error
+  const [status, setStatus] = useState("idle"); // idle | loading | done | error
   const pathname = usePathname();
   const router = useRouter();
 
   // Trang chi tiết phim có thêm tab "Phim" trên thanh điều hướng nổi.
-  const isMovieDetail = pathname?.startsWith('/phim/') ?? false;
+  const isMovieDetail = pathname?.startsWith("/phim/") ?? false;
   const navLinks = isMovieDetail
     ? [NAV_LINKS[0], MOVIE_TAB, ...NAV_LINKS.slice(1)]
     : NAV_LINKS;
@@ -105,14 +107,18 @@ export default function Header() {
   const activeIndex = navLinks.findIndex((link) =>
     link.detailOnly
       ? isMovieDetail
-      : link.href === '/'
-        ? pathname === '/'
-        : pathname?.startsWith(link.href)
+      : link.href === "/"
+        ? pathname === "/"
+        : pathname?.startsWith(link.href),
   );
 
   // Thanh có 3 hoặc 4 mục nên phải đo mục đang chọn thay vì chia đều.
   const itemRefs = useRef([]);
-  const [indicator, setIndicator] = useState({ left: 0, width: 0, ready: false });
+  const [indicator, setIndicator] = useState({
+    left: 0,
+    width: 0,
+    ready: false,
+  });
 
   const targetIndex = hoverIndex !== null ? hoverIndex : activeIndex;
   const indicatorIndex = Math.max(targetIndex, 0);
@@ -141,26 +147,26 @@ export default function Header() {
   useEffect(() => {
     if (!keyword) {
       setResults([]);
-      setStatus('idle');
+      setStatus("idle");
       return;
     }
 
-    setStatus('loading');
+    setStatus("loading");
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
         const res = await fetch(
           `${API_BASE}/api/searchMovies?keyword=${encodeURIComponent(keyword)}&limit=${SEARCH_LIMIT}`,
-          { signal: controller.signal }
+          { signal: controller.signal },
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         setResults(await res.json());
-        setStatus('done');
+        setStatus("done");
       } catch (error) {
-        if (error.name !== 'AbortError') {
-          console.error('searchMovies lỗi:', error);
+        if (error.name !== "AbortError") {
+          console.error("searchMovies lỗi:", error);
           setResults([]);
-          setStatus('error');
+          setStatus("error");
         }
       }
     }, SEARCH_DEBOUNCE_MS);
@@ -209,17 +215,46 @@ export default function Header() {
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (searchBoxRef.current && !searchBoxRef.current.contains(event.target)) {
+      if (
+        searchBoxRef.current &&
+        !searchBoxRef.current.contains(event.target)
+      ) {
         setSearchFocused(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const syncAuth = async () => {
+      try {
+        const hasSession = await getSession();
+        if (mounted) {
+          setIsAuthenticated(hasSession);
+        }
+      } catch (error) {
+        console.error("Session check failed:", error);
+        if (mounted) {
+          setIsAuthenticated(null);
+        }
+      }
+    };
+
+    syncAuth();
+    window.addEventListener("mtbs-auth-changed", syncAuth);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener("mtbs-auth-changed", syncAuth);
+    };
   }, []);
 
   function closeSearch() {
     setSearchFocused(false);
-    setSearchValue('');
+    setSearchValue("");
   }
 
   function openMovie(movie) {
@@ -240,56 +275,90 @@ export default function Header() {
     if (!query) return;
     try {
       const res = await fetch(
-        `${API_BASE}/api/searchMovies?keyword=${encodeURIComponent(query)}&limit=1`
+        `${API_BASE}/api/searchMovies?keyword=${encodeURIComponent(query)}&limit=1`,
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const [movie] = await res.json();
       if (movie) {
         setMenuOpen(false);
-        setMobileQuery('');
+        setMobileQuery("");
         router.push(`/phim/${movie.movieId}`);
       }
     } catch (error) {
-      console.error('searchMovies lỗi:', error);
+      console.error("searchMovies lỗi:", error);
     }
   }
 
   function handleSearchKeyDown(event) {
-    if (event.key === 'ArrowDown') {
+    if (event.key === "ArrowDown") {
       event.preventDefault();
       setActiveResult((i) => (results.length ? (i + 1) % results.length : -1));
-    } else if (event.key === 'ArrowUp') {
+    } else if (event.key === "ArrowUp") {
       event.preventDefault();
-      setActiveResult((i) => (results.length ? (i <= 0 ? results.length - 1 : i - 1) : -1));
-    } else if (event.key === 'Escape') {
+      setActiveResult((i) =>
+        results.length ? (i <= 0 ? results.length - 1 : i - 1) : -1,
+      );
+    } else if (event.key === "Escape") {
       setSearchFocused(false);
       event.currentTarget.blur();
     }
   }
 
-  const isLoading = status === 'loading';
+  async function handleLogout() {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error("Logout failed:", error);
+      const hasSession = await getSession().catch(() => true);
+
+      if (hasSession) {
+        window.alert("Không thể đăng xuất. Vui lòng thử lại.");
+        return;
+      }
+
+      window.alert(
+        "Cookie đã được xóa nhưng chưa xác nhận thu hồi phiên tại Auth Service.",
+      );
+    }
+
+    sessionStorage.removeItem("mtbs_access_token");
+    sessionStorage.removeItem("mtbs_user_id");
+
+    window.dispatchEvent(new Event("mtbs-auth-changed"));
+
+    router.replace("/dang-nhap");
+  }
+
+  const isLoading = status === "loading";
   const showSkeleton = isLoading && results.length === 0;
-  const showEmpty = status === 'done' && results.length === 0;
-  const showError = status === 'error';
+  const showEmpty = status === "done" && results.length === 0;
+  const showError = status === "error";
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--color-border-separator)] bg-[var(--color-bg-translucent-header)] backdrop-blur-xl backdrop-saturate-180 transition-colors duration-200">
       <style>{SEARCH_ANIMATIONS}</style>
 
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-
         {/* Brand Logo */}
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2.5 text-[var(--color-text-primary)] transition-opacity hover:opacity-80">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 text-[var(--color-text-primary)] transition-opacity hover:opacity-80"
+          >
             <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-brand-primary)]">
               <span className="h-3 w-3 rounded-full bg-[var(--color-brand-fill)]" />
             </span>
-            <span className="text-base font-semibold tracking-tight">{BRAND_NAME}</span>
+            <span className="text-base font-semibold tracking-tight">
+              {BRAND_NAME}
+            </span>
           </Link>
         </div>
 
         {/* Floating Navigation Bar Center */}
-        <nav className="hidden md:flex items-center" aria-label="Điều hướng chính">
+        <nav
+          className="hidden md:flex items-center"
+          aria-label="Điều hướng chính"
+        >
           <div
             onMouseLeave={() => setHoverIndex(null)}
             className="relative flex items-center rounded-full border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-1 backdrop-blur-md"
@@ -297,7 +366,7 @@ export default function Header() {
             <div
               aria-hidden="true"
               className={`pointer-events-none absolute bottom-1 left-0 top-1 rounded-full bg-[var(--color-fill-secondary)] ${
-                indicator.ready ? 'hdr-indicator' : ''
+                indicator.ready ? "hdr-indicator" : ""
               }`}
               style={{
                 width: indicator.width,
@@ -317,13 +386,13 @@ export default function Header() {
                     itemRefs.current[idx] = el;
                   }}
                   onMouseEnter={() => setHoverIndex(idx)}
-                  aria-current={isActive ? 'page' : undefined}
+                  aria-current={isActive ? "page" : undefined}
                   className={`relative z-10 flex h-8 items-center justify-center rounded-full px-4 text-[13px] font-medium transition-colors duration-200 ${
-                    link.detailOnly ? 'hdr-nav-in' : ''
+                    link.detailOnly ? "hdr-nav-in" : ""
                   } ${
                     isActive
-                      ? 'text-[var(--color-brand-primary)]'
-                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                      ? "text-[var(--color-brand-primary)]"
+                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
                   }`}
                 >
                   {link.label}
@@ -341,8 +410,8 @@ export default function Header() {
               role="search"
               className={`flex items-center gap-2 rounded-full border bg-[var(--color-fill-tertiary)] px-3.5 py-1.5 transition-[border-color,background-color,box-shadow] duration-300 ${
                 searchFocused
-                  ? 'border-[var(--color-brand-primary)] bg-[var(--color-bg-tertiary)] shadow-[0_0_0_3px_var(--color-focus-ring)]'
-                  : 'border-[var(--color-border-separator)]'
+                  ? "border-[var(--color-brand-primary)] bg-[var(--color-bg-tertiary)] shadow-[0_0_0_3px_var(--color-focus-ring)]"
+                  : "border-[var(--color-border-separator)]"
               }`}
             >
               <SearchIcon />
@@ -369,18 +438,18 @@ export default function Header() {
               <div
                 id="search-results"
                 role="listbox"
-                style={{ height: panelHeight ?? 'auto' }}
+                style={{ height: panelHeight ?? "auto" }}
                 className={`absolute right-0 top-full z-50 mt-2 w-[max(100%,19rem)] max-w-[calc(100vw-2rem)] origin-top overflow-hidden rounded-2xl border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] shadow-[var(--shadow-high)] backdrop-blur-xl transition-[height,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                   panelVisible
-                    ? 'translate-y-0 scale-100 opacity-100'
-                    : '-translate-y-2 scale-[0.97] opacity-0'
+                    ? "translate-y-0 scale-100 opacity-100"
+                    : "-translate-y-2 scale-[0.97] opacity-0"
                 }`}
               >
                 {/* Thanh tiến trình khi đang tìm */}
                 <div
                   aria-hidden="true"
                   className={`pointer-events-none absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden transition-opacity duration-300 ${
-                    isLoading ? 'opacity-100' : 'opacity-0'
+                    isLoading ? "opacity-100" : "opacity-0"
                   }`}
                 >
                   <div className="hdr-bar h-full w-2/5 rounded-full bg-[var(--color-brand-fill)]" />
@@ -388,104 +457,126 @@ export default function Header() {
 
                 <div ref={panelInnerRef} className="p-2">
                   <Reveal loading={showSkeleton} shimmer={false} lazy={false}>
-                  {results.length > 0 && (
-                    <>
-                      <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
-                        Phim phù hợp
-                      </p>
-                      <ul
-                        className={`transition-opacity duration-200 ${
-                          isLoading ? 'opacity-60' : 'opacity-100'
-                        }`}
-                      >
-                        {results.map((movie, i) => (
-                          <li
-                            key={movie.movieId}
-                            className="hdr-item"
-                            style={{ animationDelay: `${i * 40}ms` }}
-                          >
-                            <button
-                              type="button"
-                              role="option"
-                              aria-selected={activeResult === i}
-                              onMouseEnter={() => setActiveResult(i)}
-                              onClick={() => openMovie(movie)}
-                              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors duration-150 ${
-                                activeResult === i ? 'bg-[var(--color-fill-tertiary)]' : ''
-                              }`}
+                    {results.length > 0 && (
+                      <>
+                        <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-tertiary)]">
+                          Phim phù hợp
+                        </p>
+                        <ul
+                          className={`transition-opacity duration-200 ${
+                            isLoading ? "opacity-60" : "opacity-100"
+                          }`}
+                        >
+                          {results.map((movie, i) => (
+                            <li
+                              key={movie.movieId}
+                              className="hdr-item"
+                              style={{ animationDelay: `${i * 40}ms` }}
                             >
-                              <MoviePoster movie={movie} />
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate text-sm font-semibold leading-5 text-[var(--color-text-primary)]">
-                                  <Highlight text={movie.title} query={searchValue} />
-                                </span>
-                                <span className="block truncate text-xs leading-5 text-[var(--color-text-secondary)]">
-                                  {movie.director ? (
-                                    <Highlight text={movie.director} query={searchValue} />
-                                  ) : (
-                                    'Chưa có đạo diễn'
-                                  )}
-                                  {movie.releaseDate ? ` · ${movie.releaseDate.slice(0, 4)}` : ''}
-                                </span>
-                                {movie.genres?.length > 0 && (
-                                  <span className="block truncate text-[11px] leading-4 text-[var(--color-text-tertiary)]">
-                                    {movie.genres.map((g) => g.name).join(', ')}
-                                  </span>
-                                )}
-                              </span>
-                              <ArrowIcon
-                                className={`shrink-0 text-[var(--color-text-tertiary)] transition-all duration-200 ${
-                                  activeResult === i ? 'translate-x-0 opacity-100' : '-translate-x-1 opacity-0'
+                              <button
+                                type="button"
+                                role="option"
+                                aria-selected={activeResult === i}
+                                onMouseEnter={() => setActiveResult(i)}
+                                onClick={() => openMovie(movie)}
+                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors duration-150 ${
+                                  activeResult === i
+                                    ? "bg-[var(--color-fill-tertiary)]"
+                                    : ""
                                 }`}
-                              />
-                            </button>
+                              >
+                                <MoviePoster movie={movie} />
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-sm font-semibold leading-5 text-[var(--color-text-primary)]">
+                                    <Highlight
+                                      text={movie.title}
+                                      query={searchValue}
+                                    />
+                                  </span>
+                                  <span className="block truncate text-xs leading-5 text-[var(--color-text-secondary)]">
+                                    {movie.director ? (
+                                      <Highlight
+                                        text={movie.director}
+                                        query={searchValue}
+                                      />
+                                    ) : (
+                                      "Chưa có đạo diễn"
+                                    )}
+                                    {movie.releaseDate
+                                      ? ` · ${movie.releaseDate.slice(0, 4)}`
+                                      : ""}
+                                  </span>
+                                  {movie.genres?.length > 0 && (
+                                    <span className="block truncate text-[11px] leading-4 text-[var(--color-text-tertiary)]">
+                                      {movie.genres
+                                        .map((g) => g.name)
+                                        .join(", ")}
+                                    </span>
+                                  )}
+                                </span>
+                                <ArrowIcon
+                                  className={`shrink-0 text-[var(--color-text-tertiary)] transition-all duration-200 ${
+                                    activeResult === i
+                                      ? "translate-x-0 opacity-100"
+                                      : "-translate-x-1 opacity-0"
+                                  }`}
+                                />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+
+                    {showSkeleton && (
+                      <ul className="hdr-fade" aria-label="Đang tìm kiếm">
+                        {[0, 1, 2].map((n) => (
+                          <li
+                            key={n}
+                            className="flex items-center gap-3 rounded-xl px-3 py-2"
+                          >
+                            <Skeleton
+                              rows={4}
+                              width={40}
+                              height={56}
+                              className="shrink-0 rounded-md"
+                            />
+                            <span className="flex-1">
+                              <Skeleton lines={2} widths={["76%", "48%"]} />
+                            </span>
                           </li>
                         ))}
                       </ul>
-                    </>
-                  )}
+                    )}
 
-                  {showSkeleton && (
-                    <ul className="hdr-fade" aria-label="Đang tìm kiếm">
-                      {[0, 1, 2].map((n) => (
-                        <li key={n} className="flex items-center gap-3 rounded-xl px-3 py-2">
-                          <Skeleton rows={4} width={40} height={56} className="shrink-0 rounded-md" />
-                          <span className="flex-1">
-                            <Skeleton lines={2} widths={['76%', '48%']} />
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                    {showEmpty && (
+                      <div className="hdr-fade px-3 py-6 text-center">
+                        <p className="text-sm font-medium text-[var(--color-text-primary)]">
+                          Không tìm thấy kết quả
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
+                          Thử tên phim hoặc tên đạo diễn khác
+                        </p>
+                      </div>
+                    )}
 
-                  {showEmpty && (
-                    <div className="hdr-fade px-3 py-6 text-center">
-                      <p className="text-sm font-medium text-[var(--color-text-primary)]">
-                        Không tìm thấy kết quả
-                      </p>
-                      <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
-                        Thử tên phim hoặc tên đạo diễn khác
-                      </p>
-                    </div>
-                  )}
-
-                  {showError && (
-                    <div className="hdr-fade px-3 py-6 text-center">
-                      <p className="text-sm font-medium text-[var(--color-text-primary)]">
-                        Không kết nối được máy chủ
-                      </p>
-                      <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
-                        Kiểm tra movie-service và thử lại
-                      </p>
-                    </div>
-                  )}
+                    {showError && (
+                      <div className="hdr-fade px-3 py-6 text-center">
+                        <p className="text-sm font-medium text-[var(--color-text-primary)]">
+                          Không kết nối được máy chủ
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
+                          Kiểm tra movie-service và thử lại
+                        </p>
+                      </div>
+                    )}
                   </Reveal>
                 </div>
               </div>
             )}
           </div>
 
-          {pathname !== '/dang-nhap' && (
+          {isAuthenticated === false && pathname !== "/dang-nhap" && (
             <Link
               href="/dang-nhap"
               className="hidden h-9 items-center justify-center rounded-full bg-[var(--color-brand-fill)] px-4 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-fill-hover)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] sm:inline-flex"
@@ -495,12 +586,15 @@ export default function Header() {
           )}
 
           <div className="hidden sm:block">
-            <AccountMenu />
+            <AccountMenu
+              isAuthenticated={isAuthenticated === true}
+              onLogout={handleLogout}
+            />
           </div>
 
           <button
             type="button"
-            aria-label={menuOpen ? 'Đóng menu' : 'Mở menu'}
+            aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((open) => !open)}
             className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-text-primary)] hover:bg-[var(--color-fill-tertiary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] md:hidden"
@@ -547,7 +641,7 @@ export default function Header() {
             ))}
           </nav>
 
-          {pathname !== '/dang-nhap' && (
+          {isAuthenticated === false && pathname !== "/dang-nhap" && (
             <Link
               href="/dang-nhap"
               onClick={() => setMenuOpen(false)}
@@ -558,8 +652,13 @@ export default function Header() {
           )}
 
           <div className="mt-3 flex items-center justify-between border-t border-[var(--color-border-separator)] pt-3">
-            <span className="text-sm font-medium text-[var(--color-text-secondary)]">Giao diện & Tài khoản</span>
-            <AccountMenu />
+            <span className="text-sm font-medium text-[var(--color-text-secondary)]">
+              Giao diện & Tài khoản
+            </span>
+            <AccountMenu
+              isAuthenticated={isAuthenticated === true}
+              onLogout={handleLogout}
+            />
           </div>
         </div>
       )}
@@ -595,29 +694,83 @@ function MoviePoster({ movie }) {
 
 function SearchIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.5" className="text-[var(--color-text-tertiary)]" />
-      <path d="M11 11L14.5 14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-[var(--color-text-tertiary)]" />
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle
+        cx="7"
+        cy="7"
+        r="5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        className="text-[var(--color-text-tertiary)]"
+      />
+      <path
+        d="M11 11L14.5 14.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        className="text-[var(--color-text-tertiary)]"
+      />
     </svg>
   );
 }
 
-function ArrowIcon({ className = '' }) {
+function ArrowIcon({ className = "" }) {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className={className}>
-      <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+      className={className}
+    >
+      <path
+        d="M6 3.5L10.5 8L6 12.5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
 function MenuIcon({ open }) {
   return open ? (
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M5 5L15 15M15 5L5 15"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
     </svg>
   ) : (
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <path d="M3 5.5H17M3 10H17M3 14.5H17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M3 5.5H17M3 10H17M3 14.5H17"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

@@ -30,6 +30,9 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "auth_user_id", unique = true)
+    private Long authUserId;
+
     /** Ho ten */
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;

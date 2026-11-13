@@ -3,9 +3,16 @@ package com.mtbs.booking_service.domain.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
-@Table(name = "booking_details")
+@Table(name = "booking_details", uniqueConstraints = @UniqueConstraint(columnNames = { "booking_id",
+        "showtime_seat_id" }))
+@Getter
+@Setter
+@NoArgsConstructor
 public class BookingSeat {
 
     @Id
@@ -13,8 +20,9 @@ public class BookingSeat {
     @Column(name = "booking_detail_id")
     private Long bookingDetailId;
 
-    @Column(name = "booking_id", nullable = false)
-    private Long bookingId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "booking_id", nullable = false)
+    private Booking booking;
 
     @Column(name = "showtime_seat_id", nullable = false)
     private Long showtimeSeatId;
@@ -25,23 +33,12 @@ public class BookingSeat {
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    public BookingSeat() {
-    }
-
     public Long getBookingDetailId() {
         return bookingDetailId;
     }
 
     public void setBookingDetailId(Long bookingDetailId) {
         this.bookingDetailId = bookingDetailId;
-    }
-
-    public Long getBookingId() {
-        return bookingId;
-    }
-
-    public void setBookingId(Long bookingId) {
-        this.bookingId = bookingId;
     }
 
     public Long getShowtimeSeatId() {

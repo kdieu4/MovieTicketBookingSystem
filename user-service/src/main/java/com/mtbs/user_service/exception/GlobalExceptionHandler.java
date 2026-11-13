@@ -2,7 +2,7 @@ package com.mtbs.user_service.exception;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.mapping.PropertyReferenceException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
@@ -159,5 +160,21 @@ public class GlobalExceptionHandler {
         body.put("message", message);
         body.put("timestamp", LocalDateTime.now());
         return body;
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleResponseStatusException(
+            ResponseStatusException ex) {
+
+        Map<String, Object> body = new LinkedHashMap<>();
+
+        body.put("status", ex.getStatusCode().value());
+        body.put("error", "HTTP Error");
+        body.put("message", ex.getReason());
+        body.put("timestamp", LocalDateTime.now());
+
+        return ResponseEntity
+                .status(ex.getStatusCode())
+                .body(body);
     }
 }

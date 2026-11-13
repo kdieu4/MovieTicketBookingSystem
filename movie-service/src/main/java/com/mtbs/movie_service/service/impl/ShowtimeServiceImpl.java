@@ -5,8 +5,10 @@
 package com.mtbs.movie_service.service.impl;
 
 import com.mtbs.movie_service.domain.dto.request.SeatActionRequest;
+import com.mtbs.movie_service.domain.dto.request.SeatClaimRequest;
 import com.mtbs.movie_service.domain.dto.request.ShowtimeRequest;
 import com.mtbs.movie_service.domain.dto.response.SeatActionResponse;
+import com.mtbs.movie_service.domain.dto.response.SeatClaimResponse;
 import com.mtbs.movie_service.domain.dto.response.ShowtimeResponse;
 import com.mtbs.movie_service.domain.dto.response.ShowtimeSearchResponse;
 import com.mtbs.movie_service.domain.dto.response.ShowtimeSeatResponse;
@@ -36,12 +38,14 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+
 /**
  *
  * @author quanghieu
@@ -110,7 +114,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ShowtimeSearchResponse> searchShowtimes(String city, String cinemaName, LocalDate date, String movieTitle) {
+    public List<ShowtimeSearchResponse> searchShowtimes(String city, String cinemaName, LocalDate date,
+            String movieTitle) {
         if (city == null || city.isBlank() || movieTitle == null || movieTitle.isBlank()) {
             return List.of();
         }
@@ -216,7 +221,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
     }
 
     private Specification<Showtime> searchSpec(String city, String cinemaName, LocalDate date,
-                                               String movieTitle) {
+            String movieTitle) {
         LocalDate today = LocalDate.now(CINEMA_ZONE);
         OffsetDateTime startOfToday = today.atStartOfDay(CINEMA_ZONE).toOffsetDateTime();
         OffsetDateTime windowEnd = today.plusDays(SEARCH_WINDOW_DAYS).atStartOfDay(CINEMA_ZONE).toOffsetDateTime();
@@ -284,8 +289,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 request.roomId(),
                 request.startTime(),
                 request.endTime(),
-                currentShowtimeId
-        );
+                currentShowtimeId);
         if (isOverlapped) {
             throw new IllegalArgumentException("Phòng chiếu đã có suất chiếu khác trong khoảng thời gian này");
         }
@@ -320,8 +324,7 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 showtime.getStartTime(),
                 showtime.getEndTime(),
                 showtime.getBasePrice(),
-                showtime.getStatus()
-        );
+                showtime.getStatus());
     }
 
     private ShowtimeResponse toResponse(Showtime showtime) {
@@ -341,7 +344,103 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 showtime.getStartTime(),
                 showtime.getEndTime(),
                 showtime.getBasePrice(),
-                showtime.getStatus()
-        );
+                showtime.getStatus());
+    }
+
+    @Transactional
+    public SeatClaimResponse claimSeatsForBooking(
+            Long showtimeId,
+            SeatClaimRequest request) {
+        Showtime showtime = findShowtimeOrThrow(showtimeId);
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        if (!showtime.getStartTime().isAfter(now)) {
+            throw new IllegalArgumentException(
+                    "Suất chiếu đã bắt đầu");
+        }
+
+        List<Long> seatIds = normalizeSeatIds(request.seatIds());
+
+        if (seatIds.isEmpty()
+                || seatIds.size() != request.seatIds().size()) {
+            throw new IllegalArgumentException(
+                    "Danh sách ghế không hợp lệ hoặc bị trùng");
+        }
+
+        String bookingOwner = "booking:" + request.bookingId();
+
+        OffsetDateTime newHoldUntil = now.plusMinutes(SEAT_HOLD_MINUTES);
+
+        int updated = showtimeSeatRepository.claimSeatsForBooking(
+                showtimeId,
+                seatIds,
+                request.sessionId(),
+                bookingOwner,
+                now,
+                newHoldUntil,
+                SeatStatus.HOLDING);
+
+        if (updated != seatIds.size()) {
+            throw new SeatUnavailableException(
+                    "Một hoặc nhiều ghế không còn được giữ hợp lệ");
+        }
+
+        // Đọc lại danh sách ghế thuộc suất chiếu
+        List<ShowtimeSeat> claimedSeats = showtimeSeatRepository
+                .findByShowtime_ShowtimeId(showtimeId)
+                .stream()
+                .filter(ss -> seatIds.contains(
+                        ss.getShowtimeSeatId()))
+                .toList();
+
+        if (claimedSeats.size() != seatIds.size()) {
+            throw new SeatUnavailableException(
+                    "Không thể xác minh danh sách ghế");
+        }
+
+        // MVP: áp dụng quy tắc giá hiện đang dùng ở frontend.
+        // Về lâu dài nên đưa vào chính sách giá của Movie Service.
+        BigDecimal total = BigDecimal.ZERO;
+
+        for (ShowtimeSeat ss : claimedSeats) {
+            String type = ss.getSeat()
+                    .getSeatType()
+                    .name();
+
+            BigDecimal multiplier = switch (type) {
+                case "VIP" -> new BigDecimal("1.25");
+                case "DOUBLE", "SWEETBOX", "COUPLE" ->
+                    new BigDecimal("2");
+                default -> BigDecimal.ONE;
+            };
+
+            BigDecimal price = showtime.getBasePrice()
+                    .multiply(multiplier);
+
+            total = total.add(price);
+        }
+
+        return new SeatClaimResponse(
+                seatIds,
+                newHoldUntil,
+                total);
+    }
+
+    @Transactional
+    public void releaseBookingClaim(
+            Long showtimeId,
+            Long bookingId,
+            List<Long> seatIds) {
+        if (seatIds == null || seatIds.isEmpty()) {
+            return;
+        }
+
+        showtimeSeatRepository.releaseBookingClaim(
+                showtimeId,
+                seatIds,
+                "booking:" + bookingId,
+                SeatStatus.HOLDING,
+                SeatStatus.AVAILABLE);
     }
 }

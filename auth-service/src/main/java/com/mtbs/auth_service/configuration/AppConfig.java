@@ -34,7 +34,8 @@ public class AppConfig {
     private final UserService userService;
     private final PreFilter preFilter;
 
-    private String[] WHITE_LIST = {"/auth/**", "/actuator/**", "/v3/**", "/webjars/**", "/swagger-ui*/*swagger-initializer.js", "/swagger-ui*/**", "/error"};
+    private String[] WHITE_LIST = { "/auth/**", "/actuator/**", "/v3/**", "/webjars/**",
+            "/swagger-ui*/*swagger-initializer.js", "/swagger-ui*/**", "/error" };
 
     @Bean
     public WebMvcConfigurer corsConfigurer() {
@@ -42,8 +43,8 @@ public class AppConfig {
             @Override
             public void addCorsMappings(@NonNull CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:8085")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE") // Allowed HTTP methods
+                        .allowedOrigins("http://localhost:8085", "http://localhost:3001", "http://localhost:3000")
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS") // Allowed HTTP methods
                         .allowedHeaders("*") // Allowed request headers
                         .allowCredentials(false)
                         .maxAge(3600);
@@ -58,25 +59,28 @@ public class AppConfig {
 
     @Bean
     public SecurityFilterChain configure(@NonNull HttpSecurity http,
-                                         RestAuthenticationEntryPoint authEntryPoint,
-                                         RestAccessDeniedHandler accessDeniedHandler) throws Exception {
+            RestAuthenticationEntryPoint authEntryPoint,
+            RestAccessDeniedHandler accessDeniedHandler) throws Exception {
         http.cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(authorizeRequests -> authorizeRequests.requestMatchers(WHITE_LIST).permitAll().anyRequest().authenticated())
+                .authorizeHttpRequests(authorizeRequests -> authorizeRequests.requestMatchers(WHITE_LIST).permitAll()
+                        .anyRequest().authenticated())
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .authenticationEntryPoint(authEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler)) // ủy quyền xử lý ngoại lệ
                 .sessionManagement(manager -> manager.sessionCreationPolicy(STATELESS))
-                .authenticationProvider(provider()).addFilterBefore(preFilter, UsernamePasswordAuthenticationFilter.class);
+                .authenticationProvider(provider())
+                .addFilterBefore(preFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
-//    @Bean
-//    public WebSecurityCustomizer webSecurityCustomizer() {
-//        return webSecurity ->
-//                webSecurity.ignoring()
-//                        .requestMatchers("/actuator/**", "/v3/**", "/webjars/**", "/swagger-ui*/*swagger-initializer.js", "/swagger-ui*/**");
-//    }
+    // @Bean
+    // public WebSecurityCustomizer webSecurityCustomizer() {
+    // return webSecurity ->
+    // webSecurity.ignoring()
+    // .requestMatchers("/actuator/**", "/v3/**", "/webjars/**",
+    // "/swagger-ui*/*swagger-initializer.js", "/swagger-ui*/**");
+    // }
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {

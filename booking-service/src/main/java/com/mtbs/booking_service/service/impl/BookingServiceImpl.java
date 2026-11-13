@@ -2,6 +2,7 @@
 package com.mtbs.booking_service.service.impl;
 
 import com.mtbs.booking_service.client.MovieServiceClient;
+import com.mtbs.booking_service.client.MovieSeatClaimClient;
 import com.mtbs.booking_service.client.UserServiceClient;
 import com.mtbs.booking_service.domain.dto.request.CreateBookingRequest;
 import com.mtbs.booking_service.domain.dto.response.BookingResponse;
@@ -17,8 +18,12 @@ import com.mtbs.booking_service.repository.BookingRepository;
 import com.mtbs.booking_service.repository.BookingSeatRepository;
 import com.mtbs.booking_service.service.BookingService;
 
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -29,345 +34,295 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
 
-    private final UserServiceClient userServiceClient;
-    private final MovieServiceClient movieServiceClient;
-    private final BookingRepository bookingRepository;
-    private final BookingSeatRepository bookingSeatRepository;
-    private final BookingEventProducer bookingEventProducer;
+        private final UserServiceClient userServiceClient;
+        private final MovieServiceClient movieServiceClient;
+        private final BookingRepository bookingRepository;
+        private final BookingSeatRepository bookingSeatRepository;
+        private final BookingEventProducer bookingEventProducer;
+        private final MovieSeatClaimClient seatClaimClient;
 
-    public BookingServiceImpl(
-            UserServiceClient userServiceClient,
-            MovieServiceClient movieServiceClient,
-            BookingRepository bookingRepository,
-            BookingSeatRepository bookingSeatRepository,
-            BookingEventProducer bookingEventProducer) {
+        @Override
+        @Transactional
+        public BookingResponse createBooking(CreateBookingRequest request) {
 
-        this.userServiceClient = userServiceClient;
-        this.movieServiceClient = movieServiceClient;
-        this.bookingRepository = bookingRepository;
-        this.bookingSeatRepository = bookingSeatRepository;
-        this.bookingEventProducer = bookingEventProducer;
-    }
+                var userProfile = userServiceClient.getUserByAuthUserId(request.getUserId());
 
-    // =====================================================
-    // POST: TẠO BOOKING
-    // =====================================================
+                Long profileUserId = userProfile.getId();
 
-    @Override
-    @Transactional
-    public BookingResponse createBooking(CreateBookingRequest request) {
+                var existing = bookingRepository.findByClientRequestId(request.getRequestId());
 
-        userServiceClient.getUserById(request.getUserId());
+                if (existing.isPresent()) {
+                        if (!profileUserId.equals(existing.get().getUserId())) {
+                                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                                                "requestId đã được sử dụng bởi người dùng khác");
+                        }
+                        return convertToResponse(existing.get());
+                }
 
-        ShowtimeResponse showtime =
-                movieServiceClient.getShowtimeById(
-                        request.getShowtimeId()
-                );
+                List<Long> seatIds = request.getSeatIds();
 
-        List<SeatResponse> selectedSeats =
-                validateSeats(request, showtime, null);
+                if (seatIds == null || seatIds.isEmpty() || seatIds.stream().distinct().count() != seatIds.size()) {
+                        throw new InvalidSeatException("Danh sách ghế không hợp lệ");
+                }
 
-        BigDecimal totalAmount = showtime.getBasePrice()
-                .multiply(BigDecimal.valueOf(selectedSeats.size()));
+                var showtime = movieServiceClient.getShowtimeById(request.getShowtimeId());
 
-        Booking booking = new Booking();
+                if (showtime == null || showtime.getRoomId() == null) {
+                        throw new InvalidSeatException("Suất chiếu không hợp lệ");
+                }
 
-        booking.setBookingCode(
-                "BK-" + UUID.randomUUID()
-                        .toString()
-                        .substring(0, 8)
-                        .toUpperCase()
-        );
+                Booking booking = new Booking();
 
-        booking.setUserId(request.getUserId());
-        booking.setShowtimeId(request.getShowtimeId());
-        booking.setAmount(totalAmount.doubleValue());
-        booking.setStatus(BookingStatus.PENDING);
+                booking.setBookingCode(
+                                "BK-" + UUID.randomUUID()
+                                                .toString()
+                                                .substring(0, 8)
+                                                .toUpperCase());
 
-        Booking savedBooking = bookingRepository.save(booking);
+                booking.setClientRequestId(request.getRequestId());
+                booking.setUserId(profileUserId);
+                booking.setShowtimeId(request.getShowtimeId());
 
-        saveBookingSeats(savedBooking, selectedSeats, showtime);
+                BigDecimal provisionalAmount = showtime.getBasePrice().multiply(BigDecimal.valueOf(seatIds.size()));
 
-        // Gửi sự kiện RabbitMQ
-        BookingCreatedEvent event = new BookingCreatedEvent();
+                booking.setAmount(provisionalAmount.doubleValue());
+                booking.setStatus(BookingStatus.PENDING);
 
-        event.setBookingId(savedBooking.getBookingId());
-        event.setUserId(savedBooking.getUserId());
-        event.setShowtimeId(savedBooking.getShowtimeId());
-        event.setSeatIds(request.getSeatIds());
-        event.setAmount(savedBooking.getAmount());
-        event.setStatus(savedBooking.getStatus().name());
+                Booking savedBooking = bookingRepository.saveAndFlush(booking);
 
-        bookingEventProducer.publishBookingCreated(event);
+                boolean claimed = false;
 
-        return convertToResponse(savedBooking);
-    }
+                try {
+                        var claim = seatClaimClient.claimSeats(
+                                        request.getShowtimeId(),
+                                        savedBooking.getBookingId(),
+                                        request.getSessionId(),
+                                        seatIds);
 
-    // =====================================================
-    // GET: LẤY DANH SÁCH BOOKING
-    // =====================================================
+                        if (claim == null
+                                        || claim.amount() == null
+                                        || claim.seatIds() == null
+                                        || claim.seatIds().size() != seatIds.size()) {
+                                throw new InvalidSeatException(
+                                                "Movie Service không xác nhận đủ ghế");
+                        }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<BookingResponse> getAllBookings() {
+                        claimed = true;
 
-        List<Booking> bookings = bookingRepository.findAll();
+                        savedBooking.setAmount(claim.amount().doubleValue());
+                        savedBooking.setPaymentExpiresAt(claim.holdUntil());
 
-        List<BookingResponse> responses = new ArrayList<>();
+                        List<BookingSeat> bookingSeats = seatIds.stream()
+                                        .map(seatId -> {
+                                                BookingSeat item = new BookingSeat();
+                                                item.setBooking(savedBooking);
+                                                item.setShowtimeSeatId(seatId);
+                                                return item;
+                                        })
+                                        .toList();
 
-        for (Booking booking : bookings) {
-            responses.add(convertToResponse(booking));
+                        bookingSeatRepository.saveAll(bookingSeats);
+                        bookingRepository.saveAndFlush(savedBooking);
+
+                        BookingCreatedEvent event = new BookingCreatedEvent();
+
+                        event.setBookingId(savedBooking.getBookingId());
+                        event.setUserId(savedBooking.getUserId());
+                        event.setShowtimeId(savedBooking.getShowtimeId());
+                        event.setSeatIds(seatIds);
+                        event.setAmount(savedBooking.getAmount());
+                        event.setStatus(savedBooking.getStatus().name());
+
+                        bookingEventProducer.publishBookingCreated(event);
+
+                        return convertToResponse(savedBooking);
+
+                } catch (RuntimeException exception) {
+
+                        if (claimed) {
+                                try {
+                                        seatClaimClient.releaseClaim(
+                                                        request.getShowtimeId(),
+                                                        savedBooking.getBookingId(),
+                                                        seatIds);
+                                } catch (Exception compensationError) {
+                                        exception.addSuppressed(compensationError);
+                                }
+                        }
+
+                        throw exception;
+                }
+
         }
 
-        return responses;
-    }
+        @Override
+        @Transactional(readOnly = true)
+        public List<BookingResponse> getAllBookings() {
 
-    // =====================================================
-    // GET: LẤY BOOKING THEO ID
-    // =====================================================
+                List<Booking> bookings = bookingRepository.findAll();
 
-    @Override
-    @Transactional(readOnly = true)
-    public BookingResponse getBookingById(Long id) {
+                List<BookingResponse> responses = new ArrayList<>();
 
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Không tìm thấy booking có ID: " + id
-                        )
-                );
+                for (Booking booking : bookings) {
+                        responses.add(convertToResponse(booking));
+                }
 
-        return convertToResponse(booking);
-    }
-
-    // =====================================================
-    // PUT: CẬP NHẬT BOOKING
-    // =====================================================
-
-    @Override
-    @Transactional
-    public BookingResponse updateBooking(
-            Long id,
-            CreateBookingRequest request) {
-
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Không tìm thấy booking có ID: " + id
-                        )
-                );
-
-        // Kiểm tra User
-        userServiceClient.getUserById(request.getUserId());
-
-        // Lấy Showtime mới
-        ShowtimeResponse showtime =
-                movieServiceClient.getShowtimeById(
-                        request.getShowtimeId()
-                );
-
-        // Lấy danh sách ghế cũ của booking
-        List<BookingSeat> oldBookingSeats =
-                getBookingSeats(id);
-
-        Set<Long> oldSeatIds = oldBookingSeats.stream()
-                .map(BookingSeat::getShowtimeSeatId)
-                .collect(Collectors.toSet());
-
-        // Kiểm tra danh sách ghế mới
-        List<SeatResponse> selectedSeats =
-                validateSeats(request, showtime, oldSeatIds);
-
-        // Xóa chi tiết ghế cũ
-        bookingSeatRepository.deleteAll(oldBookingSeats);
-
-        // Cập nhật thông tin booking
-        BigDecimal totalAmount = showtime.getBasePrice()
-                .multiply(BigDecimal.valueOf(selectedSeats.size()));
-
-        booking.setUserId(request.getUserId());
-        booking.setShowtimeId(request.getShowtimeId());
-        booking.setAmount(totalAmount.doubleValue());
-
-        Booking updatedBooking = bookingRepository.save(booking);
-
-        // Lưu lại các ghế mới
-        saveBookingSeats(updatedBooking, selectedSeats, showtime);
-
-        return convertToResponse(updatedBooking);
-    }
-
-    // =====================================================
-    // DELETE: XÓA BOOKING
-    // =====================================================
-
-    @Override
-    @Transactional
-    public void deleteBooking(Long id) {
-
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Không tìm thấy booking có ID: " + id
-                        )
-                );
-
-        // Xóa các ghế thuộc booking trước
-        List<BookingSeat> bookingSeats = getBookingSeats(id);
-
-        bookingSeatRepository.deleteAll(bookingSeats);
-
-        // Sau đó xóa booking
-        bookingRepository.delete(booking);
-    }
-
-    // =====================================================
-    // HÀM HỖ TRỢ: KIỂM TRA GHẾ
-    // =====================================================
-
-    private List<SeatResponse> validateSeats(
-            CreateBookingRequest request,
-            ShowtimeResponse showtime,
-            Set<Long> currentBookingSeatIds) {
-
-        if (showtime == null || showtime.getRoomId() == null) {
-            throw new InvalidSeatException(
-                    "Không tìm thấy phòng chiếu của Showtime"
-            );
+                return responses;
         }
 
-        if (request.getSeatIds() == null
-                || request.getSeatIds().isEmpty()) {
-            throw new InvalidSeatException(
-                    "Vui lòng chọn ít nhất một ghế"
-            );
+        @Override
+        @Transactional(readOnly = true)
+        public BookingResponse getBookingById(Long id) {
+
+                Booking booking = bookingRepository.findById(id)
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                                "Không tìm thấy booking có ID: " + id));
+
+                return convertToResponse(booking);
         }
 
-        Set<Long> uniqueSeatIds = new HashSet<>(
-                request.getSeatIds()
-        );
+        @Override
+        @Transactional
+        public BookingResponse updateBooking(
+                        Long id,
+                        CreateBookingRequest request) {
 
-        if (uniqueSeatIds.size() != request.getSeatIds().size()) {
-            throw new InvalidSeatException(
-                    "Danh sách ghế có ghế bị trùng"
-            );
+                Booking booking = bookingRepository.findById(id)
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                                "Không tìm thấy booking có ID: " + id));
+
+                // Kiểm tra User
+                userServiceClient.getUserById(request.getUserId());
+
+                // Lấy Showtime mới
+                ShowtimeResponse showtime = movieServiceClient.getShowtimeById(
+                                request.getShowtimeId());
+
+                // Lấy danh sách ghế cũ của booking
+                List<BookingSeat> oldBookingSeats = getBookingSeats(id);
+
+                Set<Long> oldSeatIds = oldBookingSeats.stream()
+                                .map(BookingSeat::getShowtimeSeatId)
+                                .collect(Collectors.toSet());
+
+                // Kiểm tra danh sách ghế mới
+                List<SeatResponse> selectedSeats = validateSeats(request, showtime, oldSeatIds);
+
+                // Xóa chi tiết ghế cũ
+                bookingSeatRepository.deleteAll(oldBookingSeats);
+
+                // Cập nhật thông tin booking
+                BigDecimal totalAmount = showtime.getBasePrice()
+                                .multiply(BigDecimal.valueOf(selectedSeats.size()));
+
+                booking.setUserId(request.getUserId());
+                booking.setShowtimeId(request.getShowtimeId());
+                booking.setAmount(totalAmount.doubleValue());
+
+                Booking updatedBooking = bookingRepository.save(booking);
+
+                // Lưu lại các ghế mới
+                saveBookingSeats(updatedBooking, selectedSeats, showtime);
+
+                return convertToResponse(updatedBooking);
         }
 
-        List<SeatResponse> seats =
-                movieServiceClient.getSeatsByShowtime(
-                        request.getShowtimeId()
-                );
+        @Override
+        @Transactional
+        public void deleteBooking(Long id) {
 
-        if (seats == null || seats.isEmpty()) {
-            throw new InvalidSeatException(
-                    "Phòng chiếu không có ghế"
-            );
+                Booking booking = bookingRepository.findById(id)
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                                "Không tìm thấy booking có ID: " + id));
+
+                // Xóa các ghế thuộc booking trước
+                List<BookingSeat> bookingSeats = getBookingSeats(id);
+
+                bookingSeatRepository.deleteAll(bookingSeats);
+
+                // Sau đó xóa booking
+                bookingRepository.delete(booking);
         }
 
-        List<SeatResponse> selectedSeats = new ArrayList<>();
+        private List<SeatResponse> validateSeats(
+                        CreateBookingRequest request,
+                        ShowtimeResponse showtime,
+                        Set<Long> currentBookingSeatIds) {
 
-        for (Long seatId : request.getSeatIds()) {
+                List<Long> seatIds = request.getSeatIds();
 
-            SeatResponse selectedSeat = seats.stream()
-                    .filter(seat ->
-                            seat.getId() != null
-                                    && seatId.equals(seat.getId())
-                    )
-                    .findFirst()
-                    .orElseThrow(() ->
-                            new InvalidSeatException(
-                                    "Ghế " + seatId
-                                            + " không thuộc phòng chiếu "
-                                            + showtime.getRoomId()
-                            )
-                    );
+                if (showtime == null || showtime.getRoomId() == null) {
+                        throw new InvalidSeatException("Suất chiếu không hợp lệ");
+                }
 
-            boolean alreadyBooked =
-                    bookingSeatRepository
-                            .existsByShowtimeIdAndShowtimeSeatId(
-                                    request.getShowtimeId(),
-                                    seatId
-                            );
+                if (seatIds == null || seatIds.isEmpty()
+                                || seatIds.stream().anyMatch(id -> id == null || id <= 0)) {
+                        throw new InvalidSeatException("Danh sách ghế không hợp lệ");
+                }
 
-            // Nếu ghế thuộc booking đang cập nhật thì cho phép giữ lại
-            boolean belongsToCurrentBooking =
-                    currentBookingSeatIds != null
-                            && currentBookingSeatIds.contains(seatId);
+                if (new HashSet<>(seatIds).size() != seatIds.size()) {
+                        throw new InvalidSeatException("Danh sách ghế bị trùng");
+                }
 
-            if (alreadyBooked && !belongsToCurrentBooking) {
-                throw new InvalidSeatException(
-                        "Ghế " + seatId + " đã được đặt trước đó"
-                );
-            }
+                List<SeatResponse> availableSeats = movieServiceClient.getSeatsByShowtime(request.getShowtimeId());
 
-            selectedSeats.add(selectedSeat);
+                if (availableSeats == null) {
+                        throw new InvalidSeatException("Không thể lấy danh sách ghế");
+                }
+
+                return seatIds.stream()
+                                .map(id -> availableSeats.stream()
+                                                .filter(seat -> id.equals(seat.getId()))
+                                                .findFirst()
+                                                .orElseThrow(() -> new InvalidSeatException("Ghế không hợp lệ: " + id)))
+                                .toList();
         }
 
-        return selectedSeats;
-    }
+        private void saveBookingSeats(
+                        Booking booking,
+                        List<SeatResponse> selectedSeats,
+                        ShowtimeResponse showtime) {
 
-    // =====================================================
-    // HÀM HỖ TRỢ: LƯU BOOKING SEATS
-    // =====================================================
+                List<BookingSeat> bookingSeats = new ArrayList<>();
 
-    private void saveBookingSeats(
-            Booking booking,
-            List<SeatResponse> selectedSeats,
-            ShowtimeResponse showtime) {
+                for (SeatResponse selectedSeat : selectedSeats) {
 
-        List<BookingSeat> bookingSeats = new ArrayList<>();
+                        BookingSeat bookingSeat = new BookingSeat();
 
-        for (SeatResponse selectedSeat : selectedSeats) {
+                        bookingSeat.setBooking(booking);
+                        bookingSeat.setShowtimeSeatId(selectedSeat.getId());
+                        bookingSeat.setPrice(showtime.getBasePrice());
 
-            BookingSeat bookingSeat = new BookingSeat();
+                        bookingSeats.add(bookingSeat);
+                }
 
-            bookingSeat.setBookingId(booking.getBookingId());
-            bookingSeat.setShowtimeSeatId(selectedSeat.getId());
-            bookingSeat.setPrice(showtime.getBasePrice());
-
-            bookingSeats.add(bookingSeat);
+                bookingSeatRepository.saveAll(bookingSeats);
         }
 
-        bookingSeatRepository.saveAll(bookingSeats);
-    }
+        private List<BookingSeat> getBookingSeats(Long bookingId) {
+                return bookingSeatRepository.findByBooking_BookingId(bookingId);
+        }
 
-    // =====================================================
-    // HÀM HỖ TRỢ: LẤY GHẾ THEO BOOKING ID
-    // =====================================================
+        private BookingResponse convertToResponse(Booking booking) {
 
-    private List<BookingSeat> getBookingSeats(Long bookingId) {
+                BookingResponse response = new BookingResponse();
 
-        return bookingSeatRepository.findAll()
-                .stream()
-                .filter(seat ->
-                        bookingId.equals(seat.getBookingId())
-                )
-                .collect(Collectors.toList());
-    }
+                response.setBookingId(booking.getBookingId());
+                response.setUserId(booking.getUserId());
+                response.setShowtimeId(booking.getShowtimeId());
+                response.setAmount(booking.getAmount());
+                response.setStatus(booking.getStatus());
 
-    // =====================================================
-    // HÀM HỖ TRỢ: CHUYỂN BOOKING THÀNH RESPONSE
-    // =====================================================
+                List<Long> seatIds = getBookingSeats(booking.getBookingId())
+                                .stream()
+                                .map(BookingSeat::getShowtimeSeatId)
+                                .collect(Collectors.toList());
 
-    private BookingResponse convertToResponse(Booking booking) {
+                response.setSeatIds(seatIds);
 
-        BookingResponse response = new BookingResponse();
-
-        response.setBookingId(booking.getBookingId());
-        response.setUserId(booking.getUserId());
-        response.setShowtimeId(booking.getShowtimeId());
-        response.setAmount(booking.getAmount());
-        response.setStatus(booking.getStatus());
-
-        List<Long> seatIds = getBookingSeats(booking.getBookingId())
-                .stream()
-                .map(BookingSeat::getShowtimeSeatId)
-                .collect(Collectors.toList());
-
-        response.setSeatIds(seatIds);
-
-        return response;
-    }
+                return response;
+        }
 }

@@ -1,0 +1,13 @@
+package com.mtbs.movie_service.domain.dto.request;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+
+import java.util.List;
+
+public record SeatClaimRequest(
+        @NotNull Long bookingId,
+        @NotBlank String sessionId,
+        @NotEmpty List<@NotNull Long> seatIds) {
+}

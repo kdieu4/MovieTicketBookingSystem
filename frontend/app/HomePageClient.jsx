@@ -1,14 +1,15 @@
 "use client";
 
-import { useCallback, useState } from 'react';
-import Header from '@/components/layout/Header';
-import FeaturedSection from '@/components/home/FeaturedSection';
-import MoviesSection from '@/components/home/MoviesSection';
-import BookingFlow from '@/components/booking/BookingFlow';
-import Footer from '@/components/layout/Footer';
-import '@/styles/booking-motion.css';
+import { useCallback, useState } from "react";
+import Header from "@/components/layout/Header";
+import FeaturedSection from "@/components/home/FeaturedSection";
+import MoviesSection from "@/components/home/MoviesSection";
+import BookingFlow from "@/components/booking/BookingFlow";
+import Footer from "@/components/layout/Footer";
+import { createBooking } from "@/services/bookingApi";
+import "@/styles/booking-motion.css";
 
-import SearchBooking from '@/components/home/SearchBooking';
+import SearchBooking from "@/components/home/SearchBooking";
 
 export default function HomePageClient({
   initialNowShowing = [],
@@ -34,12 +35,12 @@ export default function HomePageClient({
     (movie) => {
       openBooking(movie?.title || movie?.name);
     },
-    [openBooking]
+    [openBooking],
   );
 
   // Khi người dùng bấm Tiếp tục ở bước ghế, phần thanh toán sẽ nối vào đây
   const handleContinue = useCallback((payload) => {
-    console.log('Chuyển sang thanh toán:', payload);
+    console.log("Chuyển sang thanh toán:", payload);
   }, []);
 
   return (
@@ -77,7 +78,11 @@ export default function HomePageClient({
       </main>
 
       {/* BookingFlow dùng chung cho MoviesSection và FeaturedSection */}
-      <BookingFlow filters={filters} searchId={searchId} onContinue={handleContinue} />
+      <BookingFlow
+        filters={filters}
+        searchId={searchId}
+        onContinue={handleContinue}
+      />
 
       <Footer />
     </div>

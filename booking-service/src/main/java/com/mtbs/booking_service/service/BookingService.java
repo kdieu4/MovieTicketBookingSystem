@@ -1,4 +1,3 @@
-
 package com.mtbs.booking_service.service;
 
 import com.mtbs.booking_service.domain.dto.request.CreateBookingRequest;
@@ -20,8 +19,7 @@ public interface BookingService {
     // Cập nhật booking
     BookingResponse updateBooking(
             Long id,
-            CreateBookingRequest request
-    );
+            CreateBookingRequest request);
 
     // Xóa booking
     void deleteBooking(Long id);

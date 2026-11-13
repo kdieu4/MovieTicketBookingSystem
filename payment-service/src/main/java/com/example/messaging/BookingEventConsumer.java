@@ -1,5 +1,6 @@
 package com.example.messaging;
 
+import com.example.config.RabbitMQConfig;
 import com.example.domain.dto.request.BookingCreatedEvent;
 import com.example.domain.entity.Payment;
 import com.example.service.PaymentService;
@@ -26,8 +27,8 @@ public class BookingEventConsumer {
                 payment.getId(),
                 payment.getStatus());
 
-        Payment processedPayment = paymentService.processPayment(payment.getId());
+        // Payment processedPayment = paymentService.processPayment(payment.getId());
 
-        paymentEventProducer.sendPaymentCompleted(processedPayment);
+        // paymentEventProducer.sendPaymentCompleted(processedPayment);
     }
 }
