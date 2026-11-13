@@ -10,5 +10,6 @@ booking-service/bin/
 *.iml
 
 **/.next/
+/frontend/.next/
 
 **/node_modules/
