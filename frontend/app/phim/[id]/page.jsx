@@ -1,11 +1,14 @@
 import MovieDetailClient from './MovieDetailClient';
-import { getMovieById } from '@/services/movieApi.server';
+import { getMovieById, getMovieReviews } from '@/services/movieApi.server';
 
 export const revalidate = 60;
 
 export default async function Page({ params }) {
   const { id } = await params;
-  const movie = await getMovieById(id).catch(() => null);
+  const [movie, reviews] = await Promise.all([
+    getMovieById(id).catch(() => null),
+    getMovieReviews(id),
+  ]);
 
-  return <MovieDetailClient movie={movie} />;
+  return <MovieDetailClient movie={movie} reviews={reviews} />;
 }

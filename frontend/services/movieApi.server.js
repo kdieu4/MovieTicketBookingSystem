@@ -24,6 +24,15 @@ export const getGenres = cache(async () => (await fetchJson('/getGenres')).map(m
 
 export const getCinemas = cache(async () => (await fetchJson('/getCinemas')).map(mapCinema));
 
+export const getMovieReviews = cache(async (movieId) => {
+  try {
+    return await fetchJson(`/getMovieReviews?movieId=${movieId}`);
+  } catch {
+    // TMDB lỗi không được làm hỏng trang chi tiết phim
+    return [];
+  }
+});
+
 export const getMovieById = cache(async (id) => mapMovie(await fetchJson(`/getMovieById?id=${id}`)));
 
 // Trang chủ và trang thư viện dùng chung một lần tải, lỗi ở mục nào chỉ ảnh hưởng mục đó.

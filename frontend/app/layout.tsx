@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
 import { ThemeProvider } from "@/context/ThemeContext";
+import ClickSpark from "@/components/common/ClickSpark";
 import "./globals.css";
 
 // Một typeface cho cả site: hỗ trợ đầy đủ dấu tiếng Việt và giữ được độ đậm ở cỡ nhỏ.
@@ -47,7 +48,11 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-full flex flex-col overflow-x-clip">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          {/* Hiệu ứng tia sáng tại điểm click, phủ toàn site. */}
+          <ClickSpark />
+        </ThemeProvider>
       </body>
     </html>
   );

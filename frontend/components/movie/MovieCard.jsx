@@ -2,10 +2,14 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { IconStar } from '@/components/common/Icons';
+import { formatRating, formatVoteCount } from '@/utils/movieHelpers';
 
 export default function MovieCard({ movie, onSelectShowtime, index = 0 }) {
   const genreLine = movie.genres?.slice(0, 2).join(', ');
   const isUpcoming = movie.status === 'UPCOMING';
+  const rating = formatRating(movie.tmdbRating);
+  const votes = formatVoteCount(movie.tmdbVoteCount);
 
   // "Đặt vé" luôn là CTA chính (nền xanh) ở mọi trang; "Chi tiết" của phim sắp chiếu mới dùng nút viền.
   const actionBase = 'inline-flex h-8 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-semibold transition-[background-color,transform] duration-200 ease-[var(--ease-out)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]';
@@ -41,6 +45,17 @@ export default function MovieCard({ movie, onSelectShowtime, index = 0 }) {
         {movie.ageRestriction && (
           <span className="absolute left-2.5 top-2.5 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold leading-none text-white backdrop-blur-md">
             {movie.ageRestriction}
+          </span>
+        )}
+
+        {rating && (
+          <span
+            className="absolute right-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[10px] font-semibold leading-none text-white backdrop-blur-md"
+            aria-label={`Điểm TMDB ${rating}${votes ? ` trên ${votes} lượt đánh giá` : ''}`}
+          >
+            <IconStar className="h-3 w-3 text-[var(--color-brand-primary)]" />
+            {rating}
+            {votes && <span className="font-normal text-white/70">· {votes}</span>}
           </span>
         )}
 

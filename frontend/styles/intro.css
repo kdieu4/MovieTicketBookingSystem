@@ -1,40 +1,228 @@
-/* Màn mở đầu: chữ Seenema hiện dần như đang được viết, trang phía sau vẫn tải bình thường. */
 html[data-intro-seen] .intro-curtain {
   display: none;
 }
 
 .intro-curtain {
-  --intro-ink: #f5f5f7;
-  --intro-muted: #86868b;
+  --intro-total: 4500ms;
+
+  --intro-ink: #ffffff;
+  --intro-muted: #d9d1d1;
   --intro-blue: #2997ff;
+  --intro-focus: #0071e3;
+
+  /* Vải nhung: tối ở lòng nếp, sáng ở sống nếp. --intro-fold là bề rộng một nếp gấp chính. */
+  --intro-velvet-abyss: #1a0104;
+  --intro-velvet-deep: #3a050d;
+  --intro-velvet: #7a0f1f;
+  --intro-velvet-light: #a8192f;
+  --intro-velvet-sheen: #cf3850;
+  --intro-gold: 222, 186, 106;
+  --intro-fold: clamp(84px, 11vw, 170px);
+
+  /* Đèn: màu hổ phách ấm, cường độ chùm sáng, độ rộng chùm (nửa góc mở, tính bằng độ). */
+  --intro-lamp: 255, 204, 148;
+  --intro-beam: 0.55;
+
+  --intro-font: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, "Segoe UI", sans-serif;
+
   --intro-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --intro-draw-ease: cubic-bezier(0.45, 0.05, 0.55, 0.95);
-  --intro-draw: 1100ms;
+  --intro-open-ease: cubic-bezier(0.62, 0, 0.18, 1);
+
+  --intro-lamp-at: calc(var(--intro-total) * 0.12);
+  --intro-lamp-dur: calc(var(--intro-total) * 0.2);
+  --intro-lamp-right-at: calc(var(--intro-total) * 0.135);
+  --intro-aim-dur: calc(var(--intro-total) * 0.3);
+  --intro-flare-at: calc(var(--intro-total) * 0.25);
+  --intro-flare-dur: calc(var(--intro-total) * 0.16);
+  --intro-mark-at: calc(var(--intro-total) * 0.2);
+  --intro-ring-dur: calc(var(--intro-total) * 0.22);
+  --intro-dot-at: calc(var(--intro-total) * 0.36);
+  --intro-dot-dur: calc(var(--intro-total) * 0.1);
+  --intro-progress-at: calc(var(--intro-total) * 0.22);
+  --intro-progress-dur: calc(var(--intro-total) * 0.22);
+  --intro-status-at: calc(var(--intro-total) * 0.3);
+  --intro-ui-out-at: calc(var(--intro-total) * 0.42);
+  --intro-ui-out-dur: calc(var(--intro-total) * 0.07);
+  --intro-dim-at: calc(var(--intro-total) * 0.48);
+  --intro-dim-dur: calc(var(--intro-total) * 0.12);
+  --intro-open-at: calc(var(--intro-total) * 0.48);
+  --intro-open-dur: calc(var(--intro-total) * 0.4);
+  --intro-zoom-at: calc(var(--intro-total) * 0.52);
+  --intro-zoom-dur: calc(var(--intro-total) * 0.44);
+  --intro-end-at: calc(var(--intro-total) * 0.97);
+  --intro-end-dur: calc(var(--intro-total) * 0.03);
+
+  /* Hình chùm sáng: một mặt cắt mềm dạng chuông, dùng chung cho cả hai đèn. */
+  --intro-cone:
+    rgba(var(--intro-lamp), 0) 0deg,
+    rgba(var(--intro-lamp), calc(var(--intro-beam) * 0.08)) 6deg,
+    rgba(var(--intro-lamp), calc(var(--intro-beam) * 0.3)) 13deg,
+    rgba(var(--intro-lamp), calc(var(--intro-beam) * 0.7)) 20deg,
+    rgba(var(--intro-lamp), var(--intro-beam)) 26deg,
+    rgba(var(--intro-lamp), calc(var(--intro-beam) * 0.7)) 32deg,
+    rgba(var(--intro-lamp), calc(var(--intro-beam) * 0.3)) 39deg,
+    rgba(var(--intro-lamp), calc(var(--intro-beam) * 0.08)) 46deg,
+    rgba(var(--intro-lamp), 0) 52deg;
+  --intro-glow-stops:
+    rgba(var(--intro-lamp), var(--intro-beam)) 0,
+    rgba(var(--intro-lamp), calc(var(--intro-beam) * 0.5)) 5vmax,
+    rgba(var(--intro-lamp), 0) 26vmax;
+  --intro-falloff-stops: #000 0, rgba(0, 0, 0, 0.78) 30vmax, transparent 92vmax;
 
   position: fixed;
   inset: 0;
   z-index: 200;
+  box-sizing: border-box;
   display: grid;
   place-items: center;
   overflow: hidden;
   padding: 80px 24px;
-  background:
-    radial-gradient(circle at 50% 42%, rgba(41, 151, 255, 0.1), transparent 55%),
-    #000000;
   color: var(--intro-ink);
-  animation: intro-curtain-out 500ms var(--intro-ease) 2100ms forwards;
+  contain: layout style paint;
+  -webkit-font-smoothing: antialiased;
+  animation: intro-curtain-end var(--intro-end-dur) linear var(--intro-end-at) forwards;
 }
 
-.intro-curtain.is-skipping {
-  animation: intro-curtain-out 280ms ease-out 0ms forwards;
+/* ===== RÈM =====
+   Mỗi cánh nhô ra ngoài mép màn hình 32px để lúc nghiêng không hở góc. Các lớp nền, từ trên xuống:
+   viền vàng ở gấu rèm, bóng đổ dọc (tối ở đầu rèm và sát đất), hạt vải nhung (nhiễu mịn), hai lớp
+   bóng nếp lệch nhịp nhau để vải rủ tự nhiên, nếp gấp chính. */
+.intro-curtain::before,
+.intro-curtain::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: calc(50% + 34px);
+  content: "";
+  will-change: transform, filter;
+  backface-visibility: hidden;
+  background-image:
+    linear-gradient(0deg, rgba(var(--intro-gold), 0.9) 0, rgba(var(--intro-gold), 0.9) 3px, rgba(var(--intro-gold), 0) 3px),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.16) 11%, rgba(0, 0, 0, 0) 28%, rgba(0, 0, 0, 0) 80%, rgba(0, 0, 0, 0.5) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='.33 .33 .33 0 0 .33 .33 .33 0 0 .33 .33 .33 0 0 0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0) 0, rgba(0, 0, 0, 0.34) calc(var(--intro-fold) * 0.9), rgba(0, 0, 0, 0) calc(var(--intro-fold) * 1.9)),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.22) 0, rgba(0, 0, 0, 0) calc(var(--intro-fold) * 0.6), rgba(0, 0, 0, 0.22) calc(var(--intro-fold) * 1.37)),
+    repeating-linear-gradient(
+      90deg,
+      var(--intro-velvet-abyss) 0,
+      var(--intro-velvet-deep) calc(var(--intro-fold) * 0.14),
+      var(--intro-velvet) calc(var(--intro-fold) * 0.3),
+      var(--intro-velvet-light) calc(var(--intro-fold) * 0.46),
+      var(--intro-velvet-sheen) calc(var(--intro-fold) * 0.54),
+      var(--intro-velvet-light) calc(var(--intro-fold) * 0.62),
+      var(--intro-velvet) calc(var(--intro-fold) * 0.78),
+      var(--intro-velvet-deep) calc(var(--intro-fold) * 0.92),
+      var(--intro-velvet-abyss) var(--intro-fold)
+    );
+  background-size: 100% 3px, 100% 100%, 200px 200px, 100% 100%, 100% 100%, 100% 100%;
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat, no-repeat, no-repeat;
+  background-position: left bottom, 0 0, 0 0, 0 0, 0 0, 0 0;
+  background-blend-mode: normal, normal, soft-light, normal, normal, normal;
+}
+
+.intro-curtain::before {
+  left: -32px;
+  transform-origin: left center;
+  box-shadow:
+    inset -1px 0 0 rgba(255, 255, 255, 0.1),
+    inset -5px 0 12px rgba(0, 0, 0, 0.6),
+    inset 110px 0 100px -70px rgba(0, 0, 0, 0.6);
+  animation:
+    intro-panel-light var(--intro-total) linear forwards,
+    intro-panel-left var(--intro-open-dur) var(--intro-open-ease) var(--intro-open-at) forwards,
+    intro-panel-gather var(--intro-open-dur) var(--intro-open-ease) var(--intro-open-at) forwards,
+    intro-panel-skew-left var(--intro-open-dur) ease-in-out var(--intro-open-at) forwards,
+    intro-fade-out calc(var(--intro-total) * 0.1) ease-in-out calc(var(--intro-total) * 0.86) forwards;
+}
+
+.intro-curtain::after {
+  right: -32px;
+  transform-origin: right center;
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.1),
+    inset 5px 0 12px rgba(0, 0, 0, 0.6),
+    inset -110px 0 100px -70px rgba(0, 0, 0, 0.6);
+  animation:
+    intro-panel-light var(--intro-total) linear forwards,
+    intro-panel-right var(--intro-open-dur) var(--intro-open-ease) var(--intro-open-at) forwards,
+    intro-panel-gather var(--intro-open-dur) var(--intro-open-ease) var(--intro-open-at) forwards,
+    intro-panel-skew-right var(--intro-open-dur) ease-in-out var(--intro-open-at) forwards,
+    intro-fade-out calc(var(--intro-total) * 0.1) ease-in-out calc(var(--intro-total) * 0.86) forwards;
 }
 
 .intro-stage {
+  position: relative;
+  top: 2vh;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  width: 100%;
   text-align: center;
-  transform: translateY(2vh);
+  pointer-events: none;
+}
+
+/* Nội dung nằm trên hai chùm đèn (z-index 2) và hai cánh rèm (z-index 1). */
+.intro-mark,
+.intro-wordmark-wrap,
+.intro-progress,
+.intro-status {
+  position: relative;
+  z-index: 3;
+}
+
+/* ===== HAI ĐÈN Ở GÓC DƯỚI =====
+   Mỗi chùm là một hình nón mềm (conic-gradient) toả từ góc màn hình, hướng vào giữa chữ. Hộp của chùm rộng
+   hơn màn hình 50vmax về ba phía để lúc đèn xoay không lộ mép hộp. Góc nghiêng
+   tính bằng atan2 theo khung nhìn nên màn hình ngang hay dọc đều chiếu đúng vào giữa. Quầng sáng
+   sáng nhất ở bóng đèn rồi tắt dần theo khoảng cách (mask). Hoà trộn kiểu hard-light để ánh sáng
+   ăn theo nếp vải: sống nếp sáng lên, lòng nếp vẫn tối. */
+.intro-stage::before,
+.intro-stage::after {
+  position: fixed;
+  inset: -50vmax -50vmax 0;
+  z-index: 2;
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: hard-light;
+  --aim: 55deg;
+  -webkit-mask-image: radial-gradient(circle at var(--lamp-x) 100%, var(--intro-falloff-stops));
+  mask-image: radial-gradient(circle at var(--lamp-x) 100%, var(--intro-falloff-stops));
+  will-change: opacity, transform;
+}
+
+.intro-stage::before {
+  --lamp-x: 50vmax;
+  transform-origin: 50vmax 100%;
+  background:
+    radial-gradient(circle at 50vmax 100%, var(--intro-glow-stops)),
+    conic-gradient(from calc(var(--aim) - 26deg) at 50vmax 100%, var(--intro-cone));
+  animation:
+    intro-lamp-on var(--intro-lamp-dur) ease-in-out var(--intro-lamp-at) forwards,
+    intro-aim-left var(--intro-aim-dur) var(--intro-ease) var(--intro-lamp-at) both,
+    intro-fade-out var(--intro-dim-dur) ease var(--intro-dim-at) forwards;
+}
+
+.intro-stage::after {
+  --lamp-x: calc(100% - 50vmax);
+  transform-origin: calc(100% - 50vmax) 100%;
+  background:
+    radial-gradient(circle at calc(100% - 50vmax) 100%, var(--intro-glow-stops)),
+    conic-gradient(from calc(360deg - var(--aim) - 26deg) at calc(100% - 50vmax) 100%, var(--intro-cone));
+  animation:
+    intro-lamp-on-alt var(--intro-lamp-dur) ease-in-out var(--intro-lamp-right-at) forwards,
+    intro-aim-right var(--intro-aim-dur) var(--intro-ease) var(--intro-lamp-right-at) both,
+    intro-fade-out var(--intro-dim-dur) ease var(--intro-dim-at) forwards;
+}
+
+/* Trình duyệt có atan2 thì đèn tự nhắm đúng giữa chữ theo tỉ lệ màn hình; không có thì dùng góc cố định 55 độ. */
+@supports (rotate: atan2(1px, 1px)) {
+  .intro-stage::before,
+  .intro-stage::after {
+    --aim: atan2(50vw, 52vh);
+  }
 }
 
 .intro-mark {
@@ -42,131 +230,311 @@ html[data-intro-seen] .intro-curtain {
   height: 48px;
   margin-bottom: 22px;
   opacity: 0;
-  filter: drop-shadow(0 0 14px rgba(41, 151, 255, 0.35));
-  animation: intro-fade-in 300ms ease 100ms forwards;
+  animation:
+    intro-ui-rise calc(var(--intro-total) * 0.12) var(--intro-ease) var(--intro-mark-at) forwards,
+    intro-fade-out var(--intro-ui-out-dur) ease var(--intro-ui-out-at) forwards;
 }
 
 .intro-mark-ring {
   fill: none;
-  stroke: rgba(245, 245, 247, 0.88);
-  stroke-width: 1.2;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 1.25;
+  stroke-linecap: round;
   stroke-dasharray: 132;
   stroke-dashoffset: 132;
-  animation: intro-ring-draw 900ms var(--intro-ease) 150ms forwards;
+  animation: intro-ring-draw var(--intro-ring-dur) var(--intro-ease) var(--intro-mark-at) forwards;
 }
 
 .intro-mark-dot {
   fill: var(--intro-blue);
   transform-origin: 24px 24px;
   transform: scale(0);
-  animation: intro-dot-in 400ms var(--intro-ease) 700ms forwards;
+  animation: intro-dot-in var(--intro-dot-dur) cubic-bezier(0.34, 1.56, 0.64, 1) var(--intro-dot-at) forwards;
 }
 
+/* ===== CHỮ SEENEMA =====
+   Hiện ra theo nhịp bật đèn, rồi zoom về phía người xem quanh chữ n ở giữa từ. */
 .intro-wordmark-wrap {
-  position: relative;
+  display: inline-block;
   font-size: clamp(3.5rem, 11vw, 8rem);
+  transform-origin: 47% 70%;
+  animation:
+    intro-wordmark-zoom var(--intro-zoom-dur) linear var(--intro-zoom-at) forwards,
+    intro-fade-out calc(var(--intro-zoom-dur) * 0.26) ease-in calc(var(--intro-zoom-at) + var(--intro-zoom-dur) * 0.74) forwards;
 }
 
 .intro-wordmark {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, "Segoe UI", sans-serif;
+  color: var(--intro-ink);
+  font-family: var(--intro-font);
   font-size: inherit;
   font-weight: 600;
   line-height: 1;
-  letter-spacing: -0.045em;
-  clip-path: inset(-10% 100% -10% 0);
-  animation: intro-wordmark-draw var(--intro-draw) var(--intro-draw-ease) 300ms forwards;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  opacity: 0;
+  animation: intro-lamp-on var(--intro-lamp-dur) ease-in-out var(--intro-lamp-at) forwards;
 }
 
-/* Con trỏ chạy theo mép chữ đang được "viết"; dịch cả track để không animate left. */
+/* Quầng sáng đọng lại sau lưng chữ (nơi hai chùm đèn giao nhau) và vệt sáng ngang như ống kính
+   anamorphic loé lên đúng lúc hai đèn khoá vào chữ. */
 .intro-caret {
   position: absolute;
   inset: 0;
-  opacity: 0;
   pointer-events: none;
-  animation: intro-caret-sweep var(--intro-draw) var(--intro-draw-ease) 300ms forwards;
+  opacity: 0;
+  animation:
+    intro-lamp-on var(--intro-lamp-dur) ease-in-out var(--intro-lamp-at) forwards,
+    intro-fade-out var(--intro-dim-dur) ease var(--intro-dim-at) forwards;
 }
 
 .intro-caret::before {
   position: absolute;
-  top: 52%;
-  left: 0;
-  width: 2px;
-  height: 0.78em;
+  top: 50%;
+  left: -25%;
+  width: 150%;
+  height: 2.6em;
+  margin-top: -1.3em;
   content: "";
-  background: var(--intro-blue);
-  transform: translateY(-50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(var(--intro-lamp), 0.26), rgba(var(--intro-lamp), 0.08) 55%, rgba(var(--intro-lamp), 0));
+}
+
+.intro-caret::after {
+  position: absolute;
+  top: 58%;
+  left: -45%;
+  width: 190%;
+  height: 2px;
+  margin-top: -1px;
+  content: "";
+  opacity: 0;
+  background: linear-gradient(90deg, rgba(120, 190, 255, 0) 0%, rgba(150, 205, 255, 0.7) 50%, rgba(120, 190, 255, 0) 100%);
+  animation: intro-flare var(--intro-flare-dur) var(--intro-ease) var(--intro-flare-at) forwards;
 }
 
 .intro-progress {
   width: min(220px, 60vw);
-  height: 1px;
+  height: 2px;
   margin-top: 30px;
   overflow: hidden;
-  background: rgba(245, 245, 247, 0.14);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.18);
   opacity: 0;
-  animation: intro-fade-in 300ms ease 300ms forwards;
+  animation:
+    intro-ui-rise calc(var(--intro-total) * 0.1) var(--intro-ease) var(--intro-progress-at) forwards,
+    intro-fade-out var(--intro-ui-out-dur) ease var(--intro-ui-out-at) forwards;
 }
 
 .intro-progress-fill {
   display: block;
   width: 100%;
   height: 100%;
-  background: var(--intro-blue);
-  box-shadow: 0 0 10px var(--intro-blue);
+  border-radius: inherit;
+  background: var(--intro-ink);
   transform: scaleX(0);
   transform-origin: left center;
-  animation: intro-progress-fill 1700ms var(--intro-draw-ease) 300ms forwards;
+  animation: intro-progress-fill var(--intro-progress-dur) cubic-bezier(0.4, 0, 0.2, 1) var(--intro-progress-at) forwards;
 }
 
 .intro-status {
   margin: 20px 0 0;
   color: var(--intro-muted);
-  font-size: 11px;
+  font-family: var(--intro-font);
+  font-size: 14px;
   font-weight: 400;
-  letter-spacing: 0.24em;
-  line-height: 1.4;
-  text-transform: uppercase;
+  letter-spacing: -0.224px;
+  line-height: 1.43;
   opacity: 0;
-  animation: intro-fade-in 400ms ease 1200ms forwards;
+  animation:
+    intro-ui-rise calc(var(--intro-total) * 0.1) var(--intro-ease) var(--intro-status-at) forwards,
+    intro-fade-out var(--intro-ui-out-dur) ease var(--intro-ui-out-at) forwards;
 }
 
 .intro-skip {
   position: absolute;
   top: max(16px, env(safe-area-inset-top));
   right: max(16px, env(safe-area-inset-right));
+  z-index: 4;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 44px;
   min-height: 44px;
-  padding: 0 16px;
-  border: 1px solid rgba(245, 245, 247, 0.2);
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 9999px;
-  background: transparent;
+  background: rgba(12, 4, 6, 0.42);
   color: var(--intro-muted);
-  font-size: 12px;
+  font-family: var(--intro-font);
+  font-size: 14px;
   font-weight: 400;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.224px;
   cursor: pointer;
   opacity: 0;
-  transition: color 180ms ease, border-color 180ms ease;
-  animation: intro-fade-in 400ms ease 900ms forwards;
+  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 140ms var(--intro-ease);
+  animation:
+    intro-fade-in calc(var(--intro-total) * 0.1) ease var(--intro-mark-at) forwards,
+    intro-fade-out var(--intro-ui-out-dur) ease var(--intro-ui-out-at) forwards;
 }
 
 .intro-skip:hover {
   color: var(--intro-ink);
-  border-color: rgba(245, 245, 247, 0.5);
+  background: rgba(24, 8, 12, 0.62);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.intro-skip:active {
+  transform: scale(0.95);
 }
 
 .intro-skip:focus-visible {
-  outline: 2px solid var(--intro-blue);
+  outline: 2px solid var(--intro-focus);
   outline-offset: 3px;
 }
 
+/* Bấm "Bỏ qua": rèm kéo ra ngay trong khoảng 0,4 giây. Dùng keyframes riêng để animation chạy lại từ đầu. */
+.intro-curtain.is-skipping {
+  pointer-events: none;
+  animation: intro-curtain-end-quick 80ms linear 380ms forwards;
+}
+
+.intro-curtain.is-skipping::before {
+  filter: brightness(0.34);
+  animation:
+    intro-panel-left-quick 380ms var(--intro-open-ease) 0ms forwards,
+    intro-panel-gather-quick 380ms var(--intro-open-ease) 0ms forwards,
+    intro-fade-out-quick 120ms ease-in 340ms forwards;
+}
+
+.intro-curtain.is-skipping::after {
+  filter: brightness(0.34);
+  animation:
+    intro-panel-right-quick 380ms var(--intro-open-ease) 0ms forwards,
+    intro-panel-gather-quick 380ms var(--intro-open-ease) 0ms forwards,
+    intro-fade-out-quick 120ms ease-in 340ms forwards;
+}
+
+.intro-curtain.is-skipping .intro-stage::before,
+.intro-curtain.is-skipping .intro-stage::after,
+.intro-curtain.is-skipping .intro-mark,
+.intro-curtain.is-skipping .intro-wordmark-wrap,
+.intro-curtain.is-skipping .intro-progress,
+.intro-curtain.is-skipping .intro-status,
+.intro-curtain.is-skipping .intro-skip {
+  animation: intro-fade-out-quick 180ms ease-out 0ms forwards;
+}
+
+/* ===== KEYFRAMES ===== */
 @keyframes intro-fade-in {
   to {
     opacity: 1;
+  }
+}
+
+@keyframes intro-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes intro-fade-out-quick {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes intro-ui-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Đèn bật: bóng đèn nóng dần, nhấp nháy hai nhịp rồi sáng hẳn. Đèn phải lệch nhịp một chút. */
+@keyframes intro-lamp-on {
+  0% {
+    opacity: 0;
+  }
+  7% {
+    opacity: 0.6;
+  }
+  12% {
+    opacity: 0.05;
+  }
+  20% {
+    opacity: 0.92;
+  }
+  27% {
+    opacity: 0.25;
+  }
+  38% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes intro-lamp-on-alt {
+  0% {
+    opacity: 0;
+  }
+  9% {
+    opacity: 0.5;
+  }
+  15% {
+    opacity: 0.1;
+  }
+  24% {
+    opacity: 0.85;
+  }
+  31% {
+    opacity: 0.4;
+  }
+  42% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Đèn quét từ thấp lên rồi khoá vào chữ. */
+@keyframes intro-aim-left {
+  from {
+    rotate: 12deg;
+  }
+  to {
+    rotate: 0deg;
+  }
+}
+
+@keyframes intro-aim-right {
+  from {
+    rotate: -12deg;
+  }
+  to {
+    rotate: 0deg;
+  }
+}
+
+@keyframes intro-flare {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.15);
+  }
+  35% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1.2);
   }
 }
 
@@ -177,37 +545,11 @@ html[data-intro-seen] .intro-curtain {
 }
 
 @keyframes intro-dot-in {
-  0% {
+  from {
     transform: scale(0);
   }
-  70% {
-    transform: scale(1.15);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes intro-wordmark-draw {
   to {
-    clip-path: inset(-10% 0 -10% 0);
-  }
-}
-
-@keyframes intro-caret-sweep {
-  0% {
-    opacity: 0;
-    transform: translateX(0);
-  }
-  8% {
-    opacity: 1;
-  }
-  92% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(calc(100% - 2px));
+    transform: scale(1);
   }
 }
 
@@ -217,7 +559,141 @@ html[data-intro-seen] .intro-curtain {
   }
 }
 
-@keyframes intro-curtain-out {
+/* Zoom: các mốc scale tăng theo cấp số nhân (ln scale ~ t^1.4) nên mắt thấy tốc độ zoom đều;
+   đầu chậm để chữ nằm yên lúc rèm bắt đầu mở, cuối nhanh để các nét chữ lao qua màn hình. */
+@keyframes intro-wordmark-zoom {
+  0% {
+    transform: scale(1);
+  }
+  10% {
+    transform: scale(1.19);
+  }
+  20% {
+    transform: scale(1.58);
+  }
+  30% {
+    transform: scale(2.25);
+  }
+  40% {
+    transform: scale(3.37);
+  }
+  50% {
+    transform: scale(5.26);
+  }
+  60% {
+    transform: scale(8.5);
+  }
+  70% {
+    transform: scale(14.3);
+  }
+  80% {
+    transform: scale(24.7);
+  }
+  90% {
+    transform: scale(43.8);
+  }
+  100% {
+    transform: scale(80);
+  }
+}
+
+/* Độ sáng nền của rèm theo cả timeline: gần như đen lúc đầu, sáng lên khi đèn bật, tối dần khi rèm dồn lại. */
+@keyframes intro-panel-light {
+  0% {
+    filter: brightness(0.16);
+  }
+  12% {
+    filter: brightness(0.16);
+  }
+  34% {
+    filter: brightness(0.44);
+  }
+  48% {
+    filter: brightness(0.44);
+  }
+  86% {
+    filter: brightness(0.34);
+  }
+  100% {
+    filter: brightness(0.34);
+  }
+}
+
+/* Mở rèm: mỗi cánh co ngang về phía mép màn hình còn 34% bề rộng (nếp vải dồn lại thành búi rèm ở hai bên
+   như rèm sân khấu thật), dịch nhẹ ra ngoài và nghiêng chút ít (mép trên đi trước mép dưới) như bị kéo từ
+   thanh ray. Hai búi rèm mờ đi cùng lúc với chữ ở cuối. */
+@keyframes intro-panel-left {
+  to {
+    translate: -4.6% 0;
+  }
+}
+
+@keyframes intro-panel-right {
+  to {
+    translate: 4.6% 0;
+  }
+}
+
+@keyframes intro-panel-gather {
+  0%,
+  4% {
+    scale: 1 1;
+  }
+  100% {
+    scale: 0.34 1;
+  }
+}
+
+@keyframes intro-panel-skew-left {
+  0% {
+    transform: skewX(0deg);
+  }
+  40% {
+    transform: skewX(1.4deg);
+  }
+  100% {
+    transform: skewX(0deg);
+  }
+}
+
+@keyframes intro-panel-skew-right {
+  0% {
+    transform: skewX(0deg);
+  }
+  40% {
+    transform: skewX(-1.4deg);
+  }
+  100% {
+    transform: skewX(0deg);
+  }
+}
+
+@keyframes intro-panel-left-quick {
+  to {
+    translate: -4.6% 0;
+  }
+}
+
+@keyframes intro-panel-right-quick {
+  to {
+    translate: 4.6% 0;
+  }
+}
+
+@keyframes intro-panel-gather-quick {
+  to {
+    scale: 0.34 1;
+  }
+}
+
+@keyframes intro-curtain-end {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@keyframes intro-curtain-end-quick {
   to {
     opacity: 0;
     visibility: hidden;

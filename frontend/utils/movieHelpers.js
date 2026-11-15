@@ -34,6 +34,18 @@ export function formatCurrency(amount) {
   return new Intl.NumberFormat('vi-VN').format(amount || 0) + 'đ';
 }
 
+export function formatRating(rating) {
+  const value = Number(rating);
+  return rating == null || Number.isNaN(value) ? null : value.toFixed(1);
+}
+
+export function formatVoteCount(count) {
+  const value = Number(count);
+  if (count == null || Number.isNaN(value)) return null;
+  if (value < 1000) return new Intl.NumberFormat('vi-VN').format(value);
+  return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1).replace('.', ',')}k`;
+}
+
 export function formatDuration(minutes) {
   if (!minutes) return null;
   const h = Math.floor(minutes / 60);

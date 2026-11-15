@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { DiscoverButton } from '@/components/block/discover-button';
 
 export const metadata = {
   title: 'Ưu đãi thành viên | Seenema',
@@ -61,13 +62,8 @@ export default function OffersPage() {
               Xem lịch chiếu và đặt vé tại rạp gần bạn.
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/#phim"
-              className="inline-flex h-10 items-center rounded-full bg-[var(--color-brand-fill)] px-5 text-sm font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-fill-hover)] active:scale-95"
-            >
-              Xem phim
-            </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <DiscoverButton label="Khám phá ngay" href="/#phim" />
             <Link
               href="/ho-tro"
               className="inline-flex h-10 items-center rounded-full border border-[var(--color-border-separator)] bg-[var(--color-bg-primary)] px-5 text-sm font-semibold text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-fill-tertiary)] active:scale-95"

@@ -1,8 +1,5 @@
-import { apiRequest } from "./apiClient";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api";
-const SESSION_KEY = "mtbs-booking-session-id";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api';
+const SESSION_KEY = 'mtbs-booking-session-id';
 
 // Sơ đồ ghế được làm mới mỗi 15 giây khi đang mở, nên cache 10 giây không làm dữ liệu cũ hơn hiện tại.
 // shortcut: trạng thái ghế có thể trễ tối đa 10 giây, đổi sang kiểm tra realtime nếu cần chính xác tuyệt đối.
@@ -38,7 +35,7 @@ async function requestSeats(showtimeId, signal) {
   });
   const res = await fetch(`${API_BASE_URL}/getSeatsByShowtime?${params}`, {
     signal,
-    cache: "no-store",
+    cache: 'no-store',
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
@@ -60,29 +57,4 @@ export function loadSeats(showtimeId, signal) {
 
   inflight.set(key, promise);
   return promise;
-}
-
-// Khóa ghế tạm thời
-export async function lockSeats(showtimeId, seatIds, token) {
-  return apiRequest(
-    `/showtimes/${showtimeId}/seat-locks`,
-    {
-      method: "POST",
-      token,
-      body: {
-        seatIds,
-      },
-    },
-  );
-}
-
-// Giải phóng ghế
-export async function unlockSeats(showtimeId, lockId, token) {
-  return apiRequest(
-    `/showtimes/${showtimeId}/seat-locks/${lockId}`,
-    {
-      method: "DELETE",
-      token,
-    },
-  );
 }
