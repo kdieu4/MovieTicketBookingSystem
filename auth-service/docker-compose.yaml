@@ -1,16 +1,6 @@
 services:
-  auth-db:
-    image: mysql:8.0.35
-    container_name: auth_service_mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: auth_db
-      MYSQL_USER: auth_user
-      MYSQL_PASSWORD: auth_password
-    ports:
-      - "3306:3306"
-    volumes:
-      - auth_data:/var/lib/mysql
+  # auth-service dùng chung Postgres trên Supabase (schema mtbs_auth) với user-service,
+  # nên không còn database MySQL cục bộ ở đây.
   redis:
     image: redis:6.2-alpine
     container_name: redis
@@ -21,6 +11,4 @@ services:
       - REDIS_DISABLE_COMMANDS=FLUSHDB;FLUSHALL
 
 volumes:
-  auth_data:
   redis_data:
-

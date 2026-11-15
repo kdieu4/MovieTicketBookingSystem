@@ -2,13 +2,41 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { Button, Glass, SegmentedControl } from 'glisse';
 
 export default function AccountMenu() {
   const [open, setOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
   const containerRef = useRef(null);
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
+
+  // Đăng xuất: xoá cookie phía server (route BFF), rồi dọn dữ liệu phiên ở client
+  async function handleLogout() {
+    setLoggingOut(true);
+    setLogoutError('');
+
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      setLogoutError('Không kết nối được máy chủ, nhưng đã xoá phiên trên máy.');
+    } finally {
+      try {
+        window.sessionStorage.removeItem('mtbs_user_id');
+        window.sessionStorage.removeItem('mtbs_user_name');
+      } catch {
+        // Trình duyệt chặn storage thì bỏ qua
+      }
+
+      setLoggingOut(false);
+      setOpen(false);
+      router.push('/');
+      router.refresh();
+    }
+  }
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -58,6 +86,13 @@ export default function AccountMenu() {
             Thông tin cá nhân
           </Link>
           <Link
+            href="/ve-cua-toi"
+            onClick={() => setOpen(false)}
+            className="block w-full rounded-[var(--radius-xs)] px-3 py-2 text-left text-xs font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-fill-tertiary)]"
+          >
+            Vé của tôi
+          </Link>
+          <Link
             href="/cai-dat"
             onClick={() => setOpen(false)}
             className="block w-full rounded-[var(--radius-xs)] px-3 py-2 text-left text-xs font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-fill-tertiary)]"
@@ -80,9 +115,41 @@ export default function AccountMenu() {
               />
             </div>
           </div>
+
+          <div className="mt-1 border-t border-[var(--color-border-separator)] px-1.5 pt-1.5">
+            {logoutError && (
+              <p className="px-2 pb-1 text-[11px] text-[var(--color-system-warning)]">
+                {logoutError}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="flex w-full items-center gap-2 rounded-[var(--radius-xs)] px-3 py-2 text-left text-xs font-semibold text-[var(--color-system-error)] transition-colors hover:bg-[var(--color-system-error)]/10 disabled:opacity-60"
+            >
+              <LogoutIcon />
+              {loggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}
+            </button>
+          </div>
         </Glass>
       )}
     </div>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path
+        d="M11.5 5.5V4a1.5 1.5 0 0 0-1.5-1.5H4.5A1.5 1.5 0 0 0 3 4v10a1.5 1.5 0 0 0 1.5 1.5H10a1.5 1.5 0 0 0 1.5-1.5v-1.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path d="M8 9h7m0 0-2.2-2.2M15 9l-2.2 2.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 

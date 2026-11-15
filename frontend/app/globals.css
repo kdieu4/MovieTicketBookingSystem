@@ -54,8 +54,21 @@
     100% { opacity: 0; }
   }
 
+  /* Rung ô nhập khi dữ liệu sai */
+  @keyframes field-shake {
+    0%, 100% { transform: translateX(0); }
+    15% { transform: translateX(-6px); }
+    30% { transform: translateX(6px); }
+    45% { transform: translateX(-4px); }
+    60% { transform: translateX(4px); }
+    75% { transform: translateX(-2px); }
+    90% { transform: translateX(2px); }
+  }
+
   /* Đăng ký class animate-fade-in cho Tailwind v4 */
   --animate-fade-in: fade-in 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  --animate-field-shake: field-shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 
   --animate-backdrop-in: backdrop-fade-in 0.2s ease-out forwards;
   --animate-backdrop-out: backdrop-fade-out 0.2s ease-in forwards;
@@ -653,4 +666,120 @@
   box-shadow:
     inset 0 0 0 0.5px var(--lg-surface-edge),
     0 12px 40px var(--lg-shadow);
+}
+
+/* ---------------------------------------------------------------------------
+   Vé của tôi: hiệu ứng chuyển đổi
+   Dùng chung token nhịp (--motion-*) và đường cong (--ease-*) ở trên.
+   --------------------------------------------------------------------------- */
+
+@keyframes ticket-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* Mỗi vé hiện lên lần lượt; --i do trang truyền vào để tạo độ trễ so le. */
+.ticket-item {
+  animation: ticket-rise var(--motion-reveal) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+/* Thẻ vé nhấc nhẹ khi trỏ vào, đổi cả viền để thấy rõ là bấm được. */
+.ticket-card {
+  transition:
+    transform var(--motion-base) var(--ease-out),
+    box-shadow var(--motion-base) var(--ease-out),
+    border-color var(--motion-base) var(--ease-out);
+}
+
+.ticket-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-border-opaque-separator);
+  box-shadow: var(--shadow-medium);
+}
+
+/* Nút "Thanh toán ngay" nhấc lên khi hover để khớp chuyển động của thẻ. */
+.ticket-pay-button {
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out);
+}
+
+.ticket-pay-button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-low);
+}
+
+.ticket-pay-button:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/* Modal thanh toán dùng thẻ <dialog> gốc của trình duyệt nên cần animation riêng.
+   Chỉ đổi `opacity` và `scale` — KHÔNG đụng `transform`/`translate`, vì dialog đã
+   được căn giữa bằng translate của Tailwind; ghi đè transform sẽ cộng dồn và làm
+   modal lệch lên trên, sang trái đúng một nửa kích thước. */
+@keyframes payment-dialog-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes payment-dialog-out {
+  from {
+    opacity: 1;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 0.97;
+  }
+}
+
+.seenema-payment-dialog[open] {
+  animation: payment-dialog-in var(--motion-base) var(--ease-out) both;
+}
+
+/* Lớp phủ phía sau modal: tối nhẹ + làm mờ nội dung trang để modal nổi hẳn lên.
+   --color-bg-primary đổi theo theme nên lớp phủ hợp cả nền sáng và tối. */
+.seenema-payment-dialog::backdrop {
+  background-color: color-mix(in srgb, var(--color-bg-primary) 62%, transparent);
+  -webkit-backdrop-filter: blur(10px) saturate(1.15);
+  backdrop-filter: blur(10px) saturate(1.15);
+}
+
+.seenema-payment-dialog[open]::backdrop {
+  animation: backdrop-fade-in var(--motion-base) var(--ease-out) both;
+}
+
+.seenema-payment-dialog[closing] {
+  animation: payment-dialog-out var(--motion-fast) var(--ease-in-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket-item,
+  .seenema-payment-dialog[open],
+  .seenema-payment-dialog[open]::backdrop,
+  .seenema-payment-dialog[closing] {
+    animation: none;
+  }
+
+  .ticket-card:hover,
+  .ticket-pay-button:hover,
+  .ticket-pay-button:active {
+    transform: none;
+  }
 }

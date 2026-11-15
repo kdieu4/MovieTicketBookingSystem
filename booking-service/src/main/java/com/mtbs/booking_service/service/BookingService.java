@@ -16,6 +16,9 @@ public interface BookingService {
     // Lấy booking theo ID
     BookingResponse getBookingById(Long id);
 
+    // Lấy danh sách booking của một người dùng (mới nhất trước)
+    List<BookingResponse> getBookingsByUser(Long userId);
+
     // Cập nhật booking
     BookingResponse updateBooking(
             Long id,

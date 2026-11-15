@@ -6,8 +6,10 @@ package com.mtbs.movie_service.controller;
 
 import com.mtbs.movie_service.domain.dto.request.MovieRequest;
 import com.mtbs.movie_service.domain.dto.response.MovieResponse;
+import com.mtbs.movie_service.domain.dto.response.TmdbReviewResponse;
 import com.mtbs.movie_service.domain.entity.enums.MovieStatus;
 import com.mtbs.movie_service.service.MovieService;
+import com.mtbs.movie_service.service.TmdbService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ import java.util.List;
 public class MovieController {
 
     private final MovieService movieService;
+    private final TmdbService tmdbService;
 
     @GetMapping("/getMovies")
     public ResponseEntity<List<MovieResponse>> getMovies(
@@ -46,6 +49,12 @@ public class MovieController {
     @GetMapping("/getMovieById")
     public ResponseEntity<MovieResponse> getMovieById(@RequestParam Long id) {
         return ResponseEntity.ok(movieService.getMovieById(id));
+    }
+
+    /** Review lay tu TMDB cho trang chi tiet phim. */
+    @GetMapping("/getMovieReviews")
+    public ResponseEntity<List<TmdbReviewResponse>> getMovieReviews(@RequestParam Long movieId) {
+        return ResponseEntity.ok(tmdbService.getReviews(movieId));
     }
 
     @PostMapping("/createMovie")

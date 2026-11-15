@@ -66,5 +66,7 @@ export async function POST(request) {
 
   response.cookies.set("mtbs_refresh_token", "", cookieOptions);
 
+  response.cookies.set("mtbs_user_id", "", { ...cookieOptions, httpOnly: false });
+
   return response;
 }

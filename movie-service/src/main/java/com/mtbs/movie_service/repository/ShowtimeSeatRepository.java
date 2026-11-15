@@ -146,4 +146,21 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
             @Param("bookingOwner") String bookingOwner,
             @Param("holding") SeatStatus holding,
             @Param("available") SeatStatus available);
+
+    /** Mở lại mọi ghế đang giữ nhưng đã quá hạn (dùng cho job dọn dẹp). */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            UPDATE ShowtimeSeat ss
+            SET ss.status = :available,
+                ss.holdBy = null,
+                ss.holdUntil = null,
+                ss.updatedAt = :now
+            WHERE ss.status = :holding
+              AND ss.holdUntil IS NOT NULL
+              AND ss.holdUntil < :now
+            """)
+    int releaseExpiredHolds(
+            @Param("now") OffsetDateTime now,
+            @Param("holding") SeatStatus holding,
+            @Param("available") SeatStatus available);
 }

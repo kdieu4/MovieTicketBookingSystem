@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
@@ -45,6 +45,8 @@ function validateRegister(v) {
   else if (!PHONE_RE.test(v.phone.trim())) e.phone = 'Số điện thoại gồm 10 số, bắt đầu bằng 0 hoặc +84.';
   if (!v.password) e.password = 'Vui lòng nhập mật khẩu.';
   else if (v.password.length < 8) e.password = 'Mật khẩu cần ít nhất 8 ký tự.';
+  else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(v.password))
+    e.password = 'Mật khẩu cần ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số.';
   if (!v.confirm) e.confirm = 'Vui lòng nhập lại mật khẩu.';
   else if (v.confirm !== v.password) e.confirm = 'Mật khẩu nhập lại chưa khớp.';
   if (!v.agree) e.agree = 'Bạn cần đồng ý với điều khoản để tiếp tục.';
@@ -90,6 +92,11 @@ async function postJson(url, body) {
 export default function AuthPage() {
   const router = useRouter();
 
+  // Trình quản lý mật khẩu của trình duyệt chèn thêm DOM/attr vào ô mật khẩu trước khi
+  // React hydrate, gây lỗi hydration. Chỉ render form sau khi đã mount ở client.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const [tab, setTab] = useState('login'); // login | register
   const [login, setLogin] = useState(INITIAL_LOGIN);
   const [register, setRegister] = useState(INITIAL_REGISTER);
@@ -98,6 +105,8 @@ export default function AuthPage() {
   const [loginBanner, setLoginBanner] = useState({ tone: 'error', message: '' });
   const [registerBanner, setRegisterBanner] = useState({ tone: 'error', message: '' });
   const [loading, setLoading] = useState(false);
+  // Tăng sau mỗi lần bấm Đăng nhập/Đăng ký để các ô sai rung lại
+  const [submitTick, setSubmitTick] = useState(0);
   const [termsOpen, setTermsOpen] = useState(false);
 
   const isLogin = tab === 'login';
@@ -123,6 +132,7 @@ export default function AuthPage() {
     event.preventDefault();
     if (loading) return;
 
+    setSubmitTick((t) => t + 1);
     const errors = validateLogin(login);
     setLoginErrors(errors);
     if (Object.keys(errors).length > 0) return;
@@ -130,11 +140,15 @@ export default function AuthPage() {
     setLoading(true);
     setLoginBanner({ tone: 'error', message: '' });
     try {
-      await postJson('/api/auth/login', {
+      const result = await postJson('/api/auth/login', {
         email: login.email.trim(),
         password: login.password,
         rememberMe: login.remember,
       });
+      // Booking Service lấy userId từ sessionStorage khi tạo booking
+      if (result?.data?.userId) {
+        sessionStorage.setItem('mtbs_user_id', String(result.data.userId));
+      }
       router.push('/');
     } catch (err) {
       setLoginBanner({ tone: 'error', message: err.message });
@@ -147,6 +161,7 @@ export default function AuthPage() {
     event.preventDefault();
     if (loading) return;
 
+    setSubmitTick((t) => t + 1);
     const errors = validateRegister(register);
     setRegisterErrors(errors);
     if (Object.keys(errors).length > 0) return;
@@ -157,8 +172,9 @@ export default function AuthPage() {
       await postJson(`${API_BASE_URL}/auth/register`, {
         fullName: register.fullName.trim(),
         email: register.email.trim(),
-        phone: register.phone.trim(),
+        phoneNumber: register.phone.trim(),
         password: register.password,
+        confirmPassword: register.confirm,
       });
       // Đăng ký xong: chuyển sang tab đăng nhập, điền sẵn email
       setLogin({ ...INITIAL_LOGIN, email: register.email.trim() });
@@ -179,6 +195,24 @@ export default function AuthPage() {
       <Header />
 
       <main className="animate-fade-in mx-auto w-full max-w-lg flex-1 px-4 py-10 sm:py-14">
+        {!mounted && (
+          <div
+            aria-hidden="true"
+            className="rounded-[var(--radius-xl)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] px-5 pb-6 pt-12 shadow-[var(--shadow-medium)] sm:px-8 sm:pb-8"
+          >
+            <div className="mx-auto h-8 w-52 animate-pulse rounded-full bg-[var(--color-fill-tertiary)]" />
+            <div className="mt-8 space-y-4">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-3 w-16 animate-pulse rounded-full bg-[var(--color-fill-tertiary)]" />
+                  <div className="h-11 w-full animate-pulse rounded-[var(--radius-sm)] bg-[var(--color-fill-tertiary)]" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {mounted && (
         <div className="relative">
           {/* Thanh chuyển floating: nổi phía trên thẻ, đè lên mép trên của thẻ */}
           <div className="sticky top-20 z-20 mx-auto -mb-5 flex w-fit">
@@ -199,11 +233,6 @@ export default function AuthPage() {
               <h1 className="text-2xl font-semibold tracking-tight">
                 {isLogin ? 'Chào mừng trở lại' : 'Tạo tài khoản mới'}
               </h1>
-              <p className="mt-1.5 text-sm text-[var(--color-text-secondary)]">
-                {isLogin
-                  ? 'Đăng nhập để đặt vé và xem lịch sử giao dịch.'
-                  : 'Đăng ký để đặt vé nhanh hơn và tích điểm thành viên.'}
-              </p>
             </div>
 
             <div className="mt-6">
@@ -213,7 +242,7 @@ export default function AuthPage() {
                   <Banner tone={loginBanner.tone} message={loginBanner.message} />
 
                   <div className="space-y-4">
-                    <Field id="login-email" label="Email" error={loginErrors.email}>
+                    <Field id="login-email" label="Email" error={loginErrors.email} shakeSignal={submitTick}>
                       <input
                         id="login-email"
                         type="email"
@@ -227,7 +256,7 @@ export default function AuthPage() {
                       />
                     </Field>
 
-                    <Field id="login-password" label="Mật khẩu" error={loginErrors.password}>
+                    <Field id="login-password" label="Mật khẩu" error={loginErrors.password} shakeSignal={submitTick}>
                       <PasswordInput
                         id="login-password"
                         autoComplete="current-password"
@@ -282,7 +311,7 @@ export default function AuthPage() {
 
                   <div className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <Field id="register-name" label="Họ và tên" error={registerErrors.fullName}>
+                      <Field id="register-name" label="Họ và tên" error={registerErrors.fullName} shakeSignal={submitTick}>
                         <input
                           id="register-name"
                           type="text"
@@ -297,7 +326,7 @@ export default function AuthPage() {
                         />
                       </Field>
 
-                      <Field id="register-phone" label="Số điện thoại" error={registerErrors.phone}>
+                      <Field id="register-phone" label="Số điện thoại" error={registerErrors.phone} shakeSignal={submitTick}>
                         <input
                           id="register-phone"
                           type="tel"
@@ -314,7 +343,7 @@ export default function AuthPage() {
                       </Field>
                     </div>
 
-                    <Field id="register-email" label="Email" error={registerErrors.email}>
+                    <Field id="register-email" label="Email" error={registerErrors.email} shakeSignal={submitTick}>
                       <input
                         id="register-email"
                         type="email"
@@ -330,7 +359,7 @@ export default function AuthPage() {
                     </Field>
 
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <Field id="register-password" label="Mật khẩu" error={registerErrors.password}>
+                      <Field id="register-password" label="Mật khẩu" error={registerErrors.password} shakeSignal={submitTick}>
                         <PasswordInput
                           id="register-password"
                           autoComplete="new-password"
@@ -342,7 +371,7 @@ export default function AuthPage() {
                         />
                       </Field>
 
-                      <Field id="register-confirm" label="Nhập lại mật khẩu" error={registerErrors.confirm}>
+                      <Field id="register-confirm" label="Nhập lại mật khẩu" error={registerErrors.confirm} shakeSignal={submitTick}>
                         <PasswordInput
                           id="register-confirm"
                           autoComplete="new-password"
@@ -400,6 +429,7 @@ export default function AuthPage() {
             </div>
           </div>
         </div>
+        )}
       </main>
 
       <Footer />
@@ -431,13 +461,32 @@ function Panel({ active, side, children }) {
   );
 }
 
-function Field({ id, label, error, children }) {
+function Field({ id, label, error, shakeSignal = 0, children }) {
+  // Rung phần nhập khi bấm gửi mà trường này sai; rung lại mỗi lần bấm
+  const [shaking, setShaking] = useState(false);
+
+  useEffect(() => {
+    if (!error) {
+      setShaking(false);
+      return undefined;
+    }
+    // Bỏ lớp rung ở khung hình hiện tại rồi gắn lại ở khung hình sau để animation chạy lại
+    setShaking(false);
+    const frame = requestAnimationFrame(() => setShaking(true));
+    return () => cancelAnimationFrame(frame);
+  }, [error, shakeSignal]);
+
   return (
     <div>
       <label htmlFor={id} className="block text-xs font-semibold text-[var(--color-text-secondary)]">
         {label}
       </label>
-      {children}
+      <div
+        className={shaking ? 'animate-field-shake motion-reduce:animate-none' : undefined}
+        onAnimationEnd={() => setShaking(false)}
+      >
+        {children}
+      </div>
       <FieldError id={`${id}-error`} message={error} />
     </div>
   );

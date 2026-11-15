@@ -71,6 +71,15 @@ public class Movie {
  
     @Column(name = "actors")
     private String actors;
+
+    @Column(name = "tmdb_id")
+    private Long tmdbId;
+
+    @Column(name = "tmdb_rating")
+    private Double tmdbRating;
+
+    @Column(name = "tmdb_vote_count")
+    private Integer tmdbVoteCount;
  
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;

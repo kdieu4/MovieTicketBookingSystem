@@ -38,6 +38,46 @@ export async function POST(request) {
     );
   }
 
+  const bookingServiceUrl = process.env.BOOKING_SERVICE_URL || "http://localhost:8080";
+
+  try {
+    // Chặn thanh toán cho vé đã quá hạn giữ chỗ: hạn này tính từ lúc tạo booking
+    // (10 phút), không được gia hạn khi người dùng quay lại sau.
+    const bookingResponse = await fetch(
+      `${bookingServiceUrl}/api/bookings/${bookingId}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+
+    const booking = await bookingResponse.json().catch(() => null);
+
+    if (bookingResponse.ok && booking) {
+      if (booking.status && booking.status !== "PENDING") {
+        return NextResponse.json(
+          { message: "Vé này không còn ở trạng thái chờ thanh toán." },
+          { status: 409 },
+        );
+      }
+
+      const holdUntil = booking.holdUntil ? new Date(booking.holdUntil).getTime() : null;
+
+      if (holdUntil && holdUntil <= Date.now()) {
+        return NextResponse.json(
+          {
+            message:
+              "Đã hết thời gian giữ chỗ. Vui lòng đặt lại vé để giữ ghế mới.",
+          },
+          { status: 409 },
+        );
+      }
+    }
+  } catch {
+    // Không kiểm tra được hạn giữ chỗ thì để Payment Service quyết định
+  }
+
   try {
     const response = await fetch(`${PAYMENT_SERVICE_URL}/api/v1/vnpay`, {
       method: "POST",

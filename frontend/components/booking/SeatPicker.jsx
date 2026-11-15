@@ -172,10 +172,6 @@ export default function SeatPicker({ loadingSeats, seatsByRow, selectedSeats, on
           <span>Đã bán</span>
         </div>
       </div>
-
-      <p className="mt-5 text-center text-[12px] text-[var(--color-text-tertiary)]">
-        Chọn ghế trống để tiếp tục. Ghế được chọn sẽ hiển thị màu nhấn thương hiệu.
-      </p>
     </div>
   );
 }

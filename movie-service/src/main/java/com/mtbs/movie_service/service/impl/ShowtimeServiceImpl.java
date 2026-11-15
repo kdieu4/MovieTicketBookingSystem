@@ -273,7 +273,8 @@ public class ShowtimeServiceImpl implements ShowtimeService {
                 seat.getSeatNumber(),
                 seat.getSeatType(),
                 sold,
-                heldByMe);
+                heldByMe,
+                holdActive ? ss.getHoldUntil() : null);
     }
 
     private List<Long> normalizeSeatIds(List<Long> seatIds) {

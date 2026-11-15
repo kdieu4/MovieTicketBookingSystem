@@ -43,6 +43,16 @@ public class BookingController {
         );
     }
 
+    // GET: Lấy booking của một người dùng
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<BookingResponse>> getBookingsByUser(
+            @PathVariable Long userId) {
+
+        return ResponseEntity.ok(
+                bookingService.getBookingsByUser(userId)
+        );
+    }
+
     // GET: Lấy booking theo ID
     @GetMapping("/{id}")
     public ResponseEntity<BookingResponse> getBookingById(

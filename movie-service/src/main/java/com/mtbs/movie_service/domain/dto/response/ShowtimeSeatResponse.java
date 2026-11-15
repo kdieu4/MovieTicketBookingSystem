@@ -16,6 +16,8 @@ public record ShowtimeSeatResponse(
         Short number,
         SeatType type,
         @JsonProperty("isSold") boolean isSold,
-        boolean heldByMe
+        boolean heldByMe,
+        // Hạn giữ ghế (null khi ghế không được giữ); cần cho đếm ngược ở giao diện
+        @JsonProperty("holdUntil") java.time.OffsetDateTime holdUntil
 ) {
 }

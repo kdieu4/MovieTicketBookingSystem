@@ -6,7 +6,7 @@ import Link from 'next/link';
 import MovieCard from '@/components/movie/MovieCard';
 import { CheckIcon, IconFilter } from '@/components/common/Icons';
 import Skeleton from '@/components/common/Skeleton';
-import { SegmentedControl } from 'glisse';
+import { Button, SegmentedControl } from 'glisse';
 
 const PAGE_SIZE = 10;
 

@@ -12,7 +12,7 @@ public record RegisterRequest(
 //        @PhoneNumber(message = "Phone number invalid format")
         @Pattern(regexp = "^\\d{10}", message = "Phone number invalid format")
         String phoneNumber,
-        @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{6,}$", message = "Password invalid format")
+        @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$", message = "Password invalid format")
         String password,
         @NotBlank(message = "Confirm password must not blank")
         String confirmPassword

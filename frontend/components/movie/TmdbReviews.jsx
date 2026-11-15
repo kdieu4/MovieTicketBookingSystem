@@ -32,7 +32,7 @@ export default function TmdbReviews({ reviews = [] }) {
 
       {reviews.length === 0 ? (
         <p className="mt-4 rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border-separator)] px-6 py-10 text-center text-sm text-[var(--color-text-secondary)]">
-          Chưa có review nào trên TMDB cho phim này.
+          Hiện chưa có review nào cho phim này.
         </p>
       ) : (
         <ul className="mt-4 grid gap-3 md:grid-cols-2">

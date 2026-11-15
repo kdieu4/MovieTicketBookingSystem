@@ -1019,7 +1019,6 @@ export default function HeroBookingFlow({ filters, searchId, onSearchSettled, on
                 <div>
                   <StepHeading
                     title="Chọn ghế"
-                    subtitle="Chọn chỗ ngồi của bạn. Tổng tiền được cập nhật ngay khi chọn ghế."
                     backLabel="Đổi suất chiếu"
                     onBack={() => handleBackTo(2)}
                   />
@@ -1110,11 +1109,11 @@ export default function HeroBookingFlow({ filters, searchId, onSearchSettled, on
                         <p className="mt-1 text-[28px] font-semibold text-[var(--color-brand-primary)]">
                           <AnimatedPrice value={total} />
                         </p>
-                        <p className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">
-                          {hasPrice
-                            ? 'Giá vé được hiển thị minh bạch trước khi xác nhận.'
-                            : 'Chưa có giá vé cho suất chiếu này.'}
-                        </p>
+                        {!hasPrice && (
+                          <p className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">
+                            Chưa có giá vé cho suất chiếu này.
+                          </p>
+                        )}
                         <div className="bm-reveal" data-open={hasSeats && Boolean(holdUntil)}>
                           <div className="bm-reveal-inner">
                             <p className="mt-2 text-[12px] text-[var(--color-text-tertiary)]">
@@ -1135,9 +1134,6 @@ export default function HeroBookingFlow({ filters, searchId, onSearchSettled, on
                         Tiếp tục
                         <span aria-hidden="true">→</span>
                       </button>
-                      <p className="mt-3 text-center text-[12px] text-[var(--color-text-tertiary)]">
-                        Bạn có thể quay lại để đổi ghế trước khi thanh toán.
-                      </p>
                     </aside>
                   </div>
                 </div>

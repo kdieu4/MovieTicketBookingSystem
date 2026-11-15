@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import SeatPicker, { SEAT_ANIMATIONS } from './SeatPicker';
+import PaymentQrModal from './PaymentQrModal';
 import { Reveal, Skeleton } from '@/components/common/Ascii';
 import { getCachedSeats, getSessionId, invalidateSeats, loadSeats } from '@/services/seatApi';
+import { createBooking } from '@/services/bookingApi';
+import { createVNPayPayment, waitForPayment } from '@/services/paymentApi';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 const TIME_ZONE = 'Asia/Ho_Chi_Minh';
@@ -290,6 +293,15 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [holdUntil, setHoldUntil] = useState(null);
   const [notice, setNotice] = useState(null); // { type: 'error', text }
+
+  // Thanh toán: booking do backend tạo, sau đó mở modal QR VNPay
+  const [booking, setBooking] = useState(null);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [payment, setPayment] = useState(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
+  // Giữ nguyên requestId để backend chống tạo trùng khi người dùng bấm lại
+  const bookingRequestIdRef = useRef(null);
 
   // Chuyển bước: 'forward' | 'back' | null (đang đứng yên)
   const [leaving, setLeaving] = useState(null);
@@ -779,18 +791,67 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   const allCinemas = cinema === ALL_CINEMAS;
   const cinemaName = selectedShowtime?.cinemaName || (allCinemas ? '' : cinema || '');
 
-  function handleContinue() {
-    if (!selectedShowtime || selectedSeats.length === 0) return;
-    if (typeof onContinue === 'function') {
-      handedOffRef.current = true;
-      onContinue({
-        showtime: selectedShowtime,
-        seats: selectedSeats,
-        total,
-        holdUntil,
-        city,
-        cinema: cinemaName,
+  // Tạo booking rồi tạo giao dịch VNPay, mở modal QR ngay trong luồng.
+  async function handleContinue() {
+    if (!selectedShowtime || selectedSeats.length === 0 || paymentLoading) return;
+
+    // Booking Service nhận userId từ client (chưa có endpoint xác thực dùng chung)
+    const userId = Number(sessionStorage.getItem('mtbs_user_id'));
+    if (!Number.isSafeInteger(userId) || userId <= 0) {
+      setNotice({ type: 'error', text: 'Vui lòng đăng nhập trước khi đặt vé.' });
+      return;
+    }
+
+    bookingRequestIdRef.current ||=
+      window.crypto?.randomUUID?.() ?? `req-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    setNotice(null);
+    setPaymentLoading(true);
+    setPaymentError('');
+    setPayment(null);
+
+    try {
+      const created = await createBooking({
+        userId,
+        showtimeId: Number(selectedShowtime.id),
+        seatIds: selectedSeats.map((seat) => seat.id),
+        sessionId: getSessionId(),
+        requestId: bookingRequestIdRef.current,
       });
+
+      if (!created?.bookingId) {
+        throw new Error('Booking Service không trả về bookingId.');
+      }
+
+      setBooking(created);
+      if (created.holdUntil) setHoldUntil(created.holdUntil);
+      setPaymentOpen(true);
+
+      // Payment được tạo bởi consumer RabbitMQ sau khi booking xong nên phải chờ
+      await waitForPayment(created.bookingId);
+      setPayment(await createVNPayPayment(created.bookingId));
+    } catch (err) {
+      setPaymentError(err.message || 'Không thể tạo giao dịch thanh toán.');
+      setNotice({ type: 'error', text: err.message || 'Không thể tạo Booking.' });
+    } finally {
+      setPaymentLoading(false);
+    }
+  }
+
+  // Bấm "Tạo mã QR" trong modal (thử lại khi bước trên lỗi)
+  async function handleCreateQr() {
+    if (!booking?.bookingId || paymentLoading) return;
+
+    setPaymentLoading(true);
+    setPaymentError('');
+
+    try {
+      await waitForPayment(booking.bookingId);
+      setPayment(await createVNPayPayment(booking.bookingId));
+    } catch (err) {
+      setPaymentError(err.message || 'Không thể tạo giao dịch thanh toán.');
+    } finally {
+      setPaymentLoading(false);
     }
   }
 
@@ -1207,7 +1268,6 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
                 <div>
                   <StepHeading
                     title="Chọn ghế"
-                    subtitle="Chọn chỗ ngồi của bạn. Tổng tiền được cập nhật ngay khi chọn ghế."
                     backLabel="Đổi suất chiếu"
                     onBack={() => handleBackTo(3)}
                   />
@@ -1296,11 +1356,11 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
                         <p className="mt-1 text-[28px] font-semibold text-[var(--color-brand-primary)]">
                           <AnimatedPrice value={total} />
                         </p>
-                        <p className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">
-                          {hasPrice
-                            ? 'Giá vé được hiển thị minh bạch trước khi xác nhận.'
-                            : 'Chưa có giá vé cho suất chiếu này.'}
-                        </p>
+                        {!hasPrice && (
+                          <p className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">
+                            Chưa có giá vé cho suất chiếu này.
+                          </p>
+                        )}
                         <div className="bm-reveal" data-open={hasSeats && Boolean(holdUntil)}>
                           <div className="bm-reveal-inner">
                             <p className="mt-2 text-[12px] text-[var(--color-text-tertiary)]">
@@ -1315,15 +1375,12 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
                       <button
                         type="button"
                         onClick={handleContinue}
-                        disabled={!hasSeats}
+                        disabled={!hasSeats || paymentLoading}
                         className="mt-5 flex h-11 w-full items-center justify-center gap-1.5 rounded-full bg-[var(--color-brand-fill)] text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-fill-hover)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2"
                       >
-                        Tiếp tục
+                        {paymentLoading ? 'Đang tạo giao dịch...' : 'Tiếp tục'}
                         <span aria-hidden="true">→</span>
                       </button>
-                      <p className="mt-3 text-center text-[12px] text-[var(--color-text-tertiary)]">
-                        Bạn có thể quay lại để đổi ghế trước khi thanh toán.
-                      </p>
                     </aside>
                   </div>
                 </div>
@@ -1335,11 +1392,43 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     </div>
   );
 
+  const paymentModal = (
+    <PaymentQrModal
+      open={paymentOpen}
+      onClose={() => setPaymentOpen(false)}
+      bookingId={booking?.bookingId}
+      showtime={selectedShowtime}
+      cinema={cinemaName}
+      seats={selectedSeats}
+      total={booking?.amount ?? total}
+      holdUntil={holdUntil}
+      payment={payment}
+      loading={paymentLoading}
+      error={paymentError}
+      onCreateQr={handleCreateQr}
+    />
+  );
+
   // Nội tuyến: render ngay tại vị trí đặt component.
   // Modal: render qua portal để lớp nền mờ luôn phủ kín toàn màn hình, không bị ảnh hưởng bởi thẻ cha.
-  if (inline) return modal;
+  if (inline) {
+    return (
+      <>
+        {modal}
+        {paymentModal}
+      </>
+    );
+  }
   // Modal chỉ mở sau tương tác trên trình duyệt nên document luôn tồn tại ở đây.
-  return typeof document === 'undefined' ? null : createPortal(modal, document.body);
+  return typeof document === 'undefined'
+    ? null
+    : createPortal(
+        <>
+          {modal}
+          {paymentModal}
+        </>,
+        document.body,
+      );
 }
 
 // Tiêu đề của mỗi bước, kèm nút quay lại bước trước (nếu có)

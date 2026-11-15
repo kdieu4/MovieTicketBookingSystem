@@ -104,6 +104,14 @@ export async function POST(request) {
       maxAge: 14 * 24 * 60 * 60,
     });
 
+    // Auth user id: /api/profile dùng cookie này để tra hồ sơ bên User Service.
+    // Không httpOnly để phía client (sessionStorage) cũng đọc được khi đặt vé.
+    res.cookies.set("mtbs_user_id", String(userId), {
+      ...cookieOptions,
+      httpOnly: false,
+      maxAge: 8 * 60 * 60,
+    });
+
     return res;
   } catch {
     return NextResponse.json(

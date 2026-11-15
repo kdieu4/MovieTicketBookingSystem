@@ -196,6 +196,24 @@ export default function PaymentQrModal({
     );
   }
 
+  // Đóng có animation ngắn (xem .seenema-payment-dialog[closing] trong globals.css)
+  function requestClose() {
+    const dialog = dialogRef.current;
+
+    if (!dialog) return;
+
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      dialog.close();
+      return;
+    }
+
+    dialog.setAttribute('closing', '');
+    window.setTimeout(() => {
+      dialog.removeAttribute('closing');
+      dialog.close();
+    }, 140);
+  }
+
   return createPortal(
     <dialog
       ref={dialogRef}
@@ -337,11 +355,6 @@ export default function PaymentQrModal({
               </span>
             </div>
 
-            <p className="mt-2 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-              Giá thanh toán chính thức được xác nhận bởi Booking Service trước
-              khi tạo giao dịch.
-            </p>
-
             <p
               className={`mt-4 text-[13px] font-medium ${
                 expired
@@ -372,7 +385,7 @@ export default function PaymentQrModal({
           {/* Nút đóng */}
           <Button
             type="button"
-            onClick={() => dialogRef.current?.close()}
+            onClick={() => requestClose()}
             aria-label="Đóng cửa sổ thanh toán"
             className="absolute right-4 top-4"
             style={{ position: "absolute" }}

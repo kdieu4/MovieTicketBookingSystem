@@ -176,6 +176,16 @@ public class BookingServiceImpl implements BookingService {
 
         @Override
         @Transactional(readOnly = true)
+        public List<BookingResponse> getBookingsByUser(Long userId) {
+
+                return bookingRepository.findByUserIdOrderByBookingIdDesc(userId)
+                                .stream()
+                                .map(this::convertToResponse)
+                                .collect(Collectors.toList());
+        }
+
+        @Override
+        @Transactional(readOnly = true)
         public BookingResponse getBookingById(Long id) {
 
                 Booking booking = bookingRepository.findById(id)
@@ -316,6 +326,8 @@ public class BookingServiceImpl implements BookingService {
                 response.setShowtimeId(booking.getShowtimeId());
                 response.setAmount(booking.getAmount());
                 response.setStatus(booking.getStatus());
+                // Hạn giữ ghế thật của vé: booking-service lưu lúc claim ghế bên Movie Service
+                response.setHoldUntil(booking.getPaymentExpiresAt());
 
                 List<Long> seatIds = getBookingSeats(booking.getBookingId())
                                 .stream()
