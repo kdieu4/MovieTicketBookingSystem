@@ -122,15 +122,12 @@ export default function FAQPage() {
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] transition-colors duration-200">
       <Header />
-      <main className="animate-fade-in mx-auto w-full flex-1 max-w-3xl px-4 py-14 sm:px-6 lg:px-8">
+      <main className="animate-fade-in mx-auto w-full max-w-3xl flex-1 px-4 py-14 sm:px-6 lg:px-8">
         <div className="text-center">
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Câu hỏi thường gặp</h1>
-          <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-[var(--color-text-secondary)]">
-            Giải đáp nhanh các thắc mắc về đặt vé, thanh toán, nhận vé tại rạp và tài khoản thành viên.
-          </p>
         </div>
 
-        <div className="mt-12 space-y-10">
+        <div className="mt-10 space-y-10">
           {FAQS.map((group) => (
             <section key={group.category}>
               <h2 className="text-lg font-semibold tracking-tight text-[var(--color-brand-primary)]">

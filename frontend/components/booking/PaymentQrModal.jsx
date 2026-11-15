@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { QRCodeSVG } from "qrcode.react";
+import { Button } from "glisse";
 
 const TIME_ZONE = "Asia/Ho_Chi_Minh";
 
@@ -28,6 +29,23 @@ function formatDateTime(value) {
     minute: "2-digit",
     hour12: false,
   });
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M5 5l10 10M15 5L5 15" />
+    </svg>
+  );
 }
 
 function seatName(seat) {
@@ -352,35 +370,14 @@ export default function PaymentQrModal({
           "
         >
           {/* Nút đóng */}
-          <button
+          <Button
             type="button"
             onClick={() => dialogRef.current?.close()}
             aria-label="Đóng cửa sổ thanh toán"
-            className="
-              absolute right-4 top-4
-              flex h-9 w-9 items-center justify-center
-              rounded-[var(--radius-sm)]
-              text-[var(--color-brand-on-primary-container)]
-              transition-colors
-              hover:bg-[var(--color-fill-secondary)]
-              focus-visible:outline-none
-              focus-visible:ring-2
-              focus-visible:ring-[var(--color-brand-primary)]
-            "
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              aria-hidden="true"
-            >
-              <path d="M5 5l10 10M15 5L5 15" />
-            </svg>
-          </button>
+            className="absolute right-4 top-4"
+            style={{ position: "absolute" }}
+            icon={<CloseIcon />}
+          />
 
           <div className="pt-8">
             <p className="text-[12px] font-semibold uppercase tracking-widest text-[var(--color-brand-on-primary-container)]">
@@ -449,25 +446,15 @@ export default function PaymentQrModal({
 
           {/* TẠO GIAO DỊCH */}
           {!hasPayment && !expired && (
-            <button
+            <Button
               type="button"
+              variant="filled"
               onClick={onCreateQr}
               disabled={!onCreateQr || loading}
-              className="
-                flex h-[44px] w-full max-w-[280px]
-                items-center justify-center
-                rounded-[var(--radius-sm)]
-                bg-[var(--color-brand-primary)]
-                px-4 text-[13px] font-semibold
-                text-[var(--color-brand-on-primary)]
-                transition-colors
-                hover:bg-[var(--color-brand-primary-hover)]
-                disabled:cursor-not-allowed
-                disabled:opacity-50
-              "
+              style={{ height: 44, width: "100%", maxWidth: 280, borderRadius: 22, fontSize: 13 }}
             >
               {loading ? "Đang tạo giao dịch..." : "Tạo mã QR thanh toán"}
-            </button>
+            </Button>
           )}
 
           {safePayUrl && !expired && (
@@ -475,14 +462,9 @@ export default function PaymentQrModal({
               href={safePayUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="
-                flex h-[44px] w-full max-w-[280px]
-                items-center justify-center
-                rounded-[var(--radius-sm)]
-                bg-[var(--color-brand-primary)]
-                px-4 text-[13px] font-semibold
-                text-[var(--color-brand-on-primary)]
-              "
+              className="lg-glass lg-button"
+              data-variant="filled"
+              style={{ height: 44, width: "100%", maxWidth: 280, borderRadius: 22, fontSize: 13 }}
             >
               Mở trang thanh toán VNPay
             </a>

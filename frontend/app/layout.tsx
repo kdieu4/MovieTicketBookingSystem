@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
 import { ThemeProvider } from "@/context/ThemeContext";
 import ClickSpark from "@/components/common/ClickSpark";
+import "glisse/styles.css";
 import "./globals.css";
 
 // Một typeface cho cả site: hỗ trợ đầy đủ dấu tiếng Việt và giữ được độ đậm ở cỡ nhỏ.

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getYouTubeEmbedUrl } from '@/utils/movieHelpers';
 import { IconClose } from '@/components/common/Icons';
+import { Button } from 'glisse';
 
 export default function TrailerModal({ isOpen, onClose, trailerUrl, title }) {
   const [isClosing, setIsClosing] = useState(false);
@@ -64,14 +65,7 @@ export default function TrailerModal({ isOpen, onClose, trailerUrl, title }) {
           <h3 className="text-[15px] font-semibold text-[var(--color-text-primary)] truncate">
             Trailer: {title}
           </h3>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-fill-secondary)] text-[var(--color-text-secondary)] transition-all duration-200 hover:rotate-90 hover:bg-[var(--color-fill-primary)] hover:text-[var(--color-text-primary)]"
-            aria-label="Đóng"
-          >
-            <IconClose />
-          </button>
+          <Button type="button" onClick={handleClose} aria-label="Đóng" icon={<IconClose />} />
         </div>
 
         <div className="relative aspect-video w-full bg-black leading-none">

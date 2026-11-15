@@ -15,14 +15,14 @@ export default function ProfilePage() {
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] transition-colors duration-200">
       <Header />
-      <main className="animate-fade-in w-full flex-1 mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+      {/* justify-center: nội dung ngắn nên căn giữa phần trống giữa header và footer. */}
+      <main className="animate-fade-in mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:px-8">
         <div className="flex items-center gap-5 rounded-[var(--radius-xl)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-6 shadow-[var(--shadow-medium)]">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-brand-fill)] text-xl font-semibold text-[var(--color-brand-on-primary)]">
             LQH
           </div>
           <div>
             <h1 className="text-xl font-semibold tracking-tight">{formData.fullName}</h1>
-            <p className="text-xs text-[var(--color-text-secondary)]">Thành viên VIP · 1,250 Điểm thưởng</p>
           </div>
         </div>
 

@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { IconStar } from '@/components/common/Icons';
+import { Button } from 'glisse';
 import { formatRating, formatVoteCount } from '@/utils/movieHelpers';
 
 export default function MovieCard({ movie, onSelectShowtime, index = 0 }) {
@@ -11,9 +12,8 @@ export default function MovieCard({ movie, onSelectShowtime, index = 0 }) {
   const rating = formatRating(movie.tmdbRating);
   const votes = formatVoteCount(movie.tmdbVoteCount);
 
-  // "Đặt vé" luôn là CTA chính (nền xanh) ở mọi trang; "Chi tiết" của phim sắp chiếu mới dùng nút viền.
-  const actionBase = 'inline-flex h-8 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-semibold transition-[background-color,transform] duration-200 ease-[var(--ease-out)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]';
-  const primaryAction = `${actionBase} bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] hover:bg-[var(--color-brand-fill-hover)]`;
+  // Nút phụ đề kính của glisse: cao 40px mặc định, thu lại 32px cho vừa hàng chữ của card.
+  const cardButtonStyle = { height: 32, borderRadius: 16, padding: '0 14px', fontSize: 12, flex: 'none' };
 
   // Nút "Đặt vé" nằm ngoài vùng Link, nên chỉ cần chặn sự kiện khi bấm.
   function handleSelect(event) {
@@ -77,22 +77,16 @@ export default function MovieCard({ movie, onSelectShowtime, index = 0 }) {
         {isUpcoming || !onSelectShowtime ? (
           <Link
             href={`/phim/${movie.id}`}
-            className={
-              isUpcoming
-                ? `${actionBase} border border-[var(--color-border-separator)] text-[var(--color-text-primary)] hover:bg-[var(--color-fill-tertiary)]`
-                : primaryAction
-            }
+            className="lg-glass lg-button"
+            data-variant={isUpcoming ? undefined : 'filled'}
+            style={cardButtonStyle}
           >
             {isUpcoming ? 'Chi tiết' : 'Đặt vé'}
           </Link>
         ) : (
-          <button
-            type="button"
-            onClick={handleSelect}
-            className={primaryAction}
-          >
+          <Button type="button" variant="filled" onClick={handleSelect} style={cardButtonStyle}>
             Đặt vé
-          </button>
+          </Button>
         )}
       </div>
     </article>

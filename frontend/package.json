@@ -14,6 +14,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cn": "^0.4.0",
+    "glisse": "^0.6.0",
     "lucide-react": "^1.72.0",
     "next": "^15.5.0",
     "nodemailer": "^10.1.2",

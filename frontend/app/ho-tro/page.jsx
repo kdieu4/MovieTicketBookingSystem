@@ -66,8 +66,8 @@ export default function SupportPage() {
     <div className="flex min-h-screen flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] transition-colors duration-200">
       <Header />
 
-      <main className="animate-fade-in mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-        <div className="grid items-start gap-10 lg:grid-cols-2">
+      <main className="animate-fade-in mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-4 py-10 sm:px-6 lg:px-8">
+        <div className="grid items-center gap-10 lg:grid-cols-2">
           <div>
             <span className="inline-block rounded-full bg-[var(--color-fill-secondary)] px-3 py-1 text-xs font-semibold text-[var(--color-brand-primary)]">
               Liên hệ 24/7
@@ -77,7 +77,7 @@ export default function SupportPage() {
               Chúng tôi luôn sẵn sàng lắng nghe và giải đáp mọi thắc mắc của bạn.
             </p>
 
-            <div className="mt-8 space-y-4">
+            <div className="mt-6 space-y-3">
               <div className="flex items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-4 shadow-[var(--shadow-low)]">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-primary-container)] text-xs font-semibold text-[var(--color-brand-primary)]">
                   TEL

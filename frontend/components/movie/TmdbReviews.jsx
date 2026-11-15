@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { IconStar } from '@/components/common/Icons';
+import { Button } from 'glisse';
 
 const PAGE_SIZE = 4;
 
@@ -67,13 +68,9 @@ export default function TmdbReviews({ reviews = [] }) {
 
       {hasMore && (
         <div className="mt-6 flex justify-center">
-          <button
-            type="button"
-            onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
-            className="btn btn-secondary"
-          >
+          <Button type="button" onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}>
             Xem thêm review
-          </button>
+          </Button>
         </div>
       )}
     </section>
