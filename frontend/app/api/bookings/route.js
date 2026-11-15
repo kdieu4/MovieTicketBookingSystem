@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 const BOOKING_SERVICE_URL =
-  process.env.BOOKING_SERVICE_URL || "http://localhost:8082";
+  process.env.BOOKING_SERVICE_URL || "http://localhost:8080";
 
 export async function POST(request) {
   const origin = request.headers.get("origin");

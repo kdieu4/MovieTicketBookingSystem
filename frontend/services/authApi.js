@@ -1,5 +1,5 @@
 const AUTH_API_URL =
-  process.env.NEXT_PUBLIC_AUTH_API_URL || "http://localhost:8085";
+  process.env.NEXT_PUBLIC_AUTH_API_URL || "http://localhost:8080";
 
 // async function postJson(path, body) {
 //   let response;

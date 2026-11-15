@@ -9,6 +9,15 @@ booking-service/bin/
 .idea/
 *.iml
 
+# Service runner logs and PIDs
+/.run/
+
+# Maven build output
+**/target/
+
+# graphify generated graph
+/graphify-out/
+
 **/.next/
 /frontend/.next/
 

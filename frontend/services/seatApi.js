@@ -1,7 +1,7 @@
 import { apiRequest } from "./apiClient";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8083/api";
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api";
 const SESSION_KEY = "mtbs-booking-session-id";
 
 // Sơ đồ ghế được làm mới mỗi 15 giây khi đang mở, nên cache 10 giây không làm dữ liệu cũ hơn hiện tại.
@@ -65,7 +65,7 @@ export function loadSeats(showtimeId, signal) {
 // Khóa ghế tạm thời
 export async function lockSeats(showtimeId, seatIds, token) {
   return apiRequest(
-    `http://localhost:8083/api/showtimes/${showtimeId}/seat-locks`,
+    `/showtimes/${showtimeId}/seat-locks`,
     {
       method: "POST",
       token,
@@ -79,7 +79,7 @@ export async function lockSeats(showtimeId, seatIds, token) {
 // Giải phóng ghế
 export async function unlockSeats(showtimeId, lockId, token) {
   return apiRequest(
-    `http://localhost:8083/api/showtimes/${showtimeId}/seat-locks/${lockId}`,
+    `/showtimes/${showtimeId}/seat-locks/${lockId}`,
     {
       method: "DELETE",
       token,

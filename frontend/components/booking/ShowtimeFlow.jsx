@@ -6,7 +6,7 @@ import SeatPicker, { SEAT_ANIMATIONS } from './SeatPicker';
 import { Reveal, Skeleton } from '@/components/common/Ascii';
 import { getCachedSeats, getSessionId, invalidateSeats, loadSeats } from '@/services/seatApi';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8083/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 const TIME_ZONE = 'Asia/Ho_Chi_Minh';
 const STEP_OUT_MS = 170;
 

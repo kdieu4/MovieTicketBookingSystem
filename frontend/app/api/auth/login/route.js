@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 const AUTH_SERVICE_URL =
-  process.env.AUTH_SERVICE_URL || "http://localhost:8085";
+  process.env.AUTH_SERVICE_URL || "http://localhost:8080";
 
 export async function POST(request) {
   const origin = request.headers.get("origin");

@@ -1,5 +1,5 @@
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8083/api";
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api";
 
 export async function apiRequest(
   path,
@@ -10,7 +10,7 @@ export async function apiRequest(
   }
 
 //   const response = await fetch(`${API_BASE_URL.replace(/\/+$/, "")}${path}`, {
-  const response = await fetch(`${path}`, {
+  const response = await fetch(`${API_BASE_URL.replace(/\/+$/, "")}${path}`, {
     method,
     headers: {
       ...(body !== undefined && { "Content-Type": "application/json" }),

@@ -18,7 +18,7 @@ const NAV_LINKS = [
 // Chỉ hiện khi đang xem chi tiết phim, chèn giữa "Trang chủ" và "Rạp chiếu".
 const MOVIE_TAB = { label: "Phim", href: "/#phim", detailOnly: true };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8083";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
 const SEARCH_LIMIT = 6;
 const SEARCH_DEBOUNCE_MS = 250;
 const PANEL_BORDER = 2; // 1px viền trên + 1px viền dưới
@@ -156,7 +156,7 @@ export default function Header() {
     const timer = setTimeout(async () => {
       try {
         const res = await fetch(
-          `${API_BASE}/api/searchMovies?keyword=${encodeURIComponent(keyword)}&limit=${SEARCH_LIMIT}`,
+          `${API_BASE}/searchMovies?keyword=${encodeURIComponent(keyword)}&limit=${SEARCH_LIMIT}`,
           { signal: controller.signal },
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -275,7 +275,7 @@ export default function Header() {
     if (!query) return;
     try {
       const res = await fetch(
-        `${API_BASE}/api/searchMovies?keyword=${encodeURIComponent(query)}&limit=1`,
+        `${API_BASE}/searchMovies?keyword=${encodeURIComponent(query)}&limit=1`,
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const [movie] = await res.json();

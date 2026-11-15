@@ -10,7 +10,7 @@ import { loginUser, registerUser } from "@/services/authApi";
 
 // Đổi cho khớp backend của bạn. Hai endpoint dự kiến: POST /auth/login và POST /auth/register
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_AUTH_API_URL || "http://localhost:8085";
+  process.env.NEXT_PUBLIC_AUTH_API_URL || "http://localhost:8080";
 
 const EASE = "ease-[cubic-bezier(0.22,1,0.36,1)]";
 

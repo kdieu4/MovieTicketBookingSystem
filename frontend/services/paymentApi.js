@@ -1,4 +1,4 @@
-const PAYMENT_BASE_URL = "http://localhost:8084/api/v1";
+const PAYMENT_BASE_URL = "http://localhost:8080/api/v1";
 
 // export async function createVNPayPayment(bookingId) {
 //   const response = await fetch(`${PAYMENT_BASE_URL}/vnpay`, {

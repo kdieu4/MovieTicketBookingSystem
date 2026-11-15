@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { mapCinema, mapGenre, mapMovie } from './movieApi';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8083/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api';
 const REVALIDATE_SECONDS = 60;
 
 async function fetchJson(path) {

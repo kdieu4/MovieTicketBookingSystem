@@ -16,7 +16,7 @@ import {
 import PaymentQrModal from "./PaymentQrModal";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8083/api";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 const TIME_ZONE = "Asia/Ho_Chi_Minh";
 const STEP_OUT_MS = 170;
 

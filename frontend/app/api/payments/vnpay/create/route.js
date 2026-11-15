@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 const PAYMENT_SERVICE_URL =
-  process.env.PAYMENT_SERVICE_URL || "http://localhost:8084";
+  process.env.PAYMENT_SERVICE_URL || "http://localhost:8080";
 
 export async function POST(request) {
   const origin = request.headers.get("origin");
