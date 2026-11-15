@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Button } from 'glisse';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8083/api';
 
@@ -18,8 +19,9 @@ const FIELD_INPUT_WRAP =
   'group flex h-12 w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border-separator)] bg-[var(--color-fill-tertiary)] px-3.5 text-[var(--color-text-secondary)] transition-[background-color,border-color,box-shadow] duration-200 ease-[var(--ease-out)] hover:bg-[var(--color-fill-secondary)] focus-within:border-[var(--color-brand-primary)] focus-within:bg-[var(--color-bg-primary)] focus-within:ring-2 focus-within:ring-[var(--color-brand-primary)]/25';
 
 // bm-menu: hiệu ứng mở dropdown (định nghĩa trong booking-motion.css)
+// glass-panel: bề mặt kính theo token --lg-surface của glisse (xem globals.css)
 const MENU_PANEL =
-  'bm-menu absolute left-0 top-full z-50 mt-1.5 w-full overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border-opaque-separator)] bg-[var(--color-bg-tertiary)] p-1.5 shadow-[var(--shadow-high)]';
+  'glass-panel bm-menu absolute left-0 top-full z-50 mt-1.5 w-full overflow-y-auto rounded-[18px] p-1.5';
 
 // Bo góc lồng nhau: Radius_con = Radius_cha - Padding (14px - 6px = 8px)
 const MENU_ITEM_BASE =
@@ -507,15 +509,17 @@ export default function HeroSection({
         )}
 
         {/* 4. Tìm suất chiếu */}
-        <button
+        <Button
           type="submit"
+          variant="filled"
           disabled={searching}
           aria-busy={searching}
-          className={`flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--color-brand-fill)] px-6 text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-[var(--color-brand-fill-hover)] active:scale-95 disabled:cursor-wait disabled:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 sm:self-end ${showCinema ? '' : 'sm:col-span-2'} lg:col-span-1`}
+          style={{ height: 48, borderRadius: 24, padding: '0 24px', fontSize: 13 }}
+          className={`!flex sm:self-end ${showCinema ? '' : 'sm:col-span-2'} lg:col-span-1`}
         >
           {searching ? <span className="bm-spinner" aria-hidden="true" /> : <SearchIcon />}
           <span>{searching ? 'Đang tìm...' : 'Tìm suất chiếu'}</span>
-        </button>
+        </Button>
       </form>
 
       {activeMissing.length > 0 && (

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import MovieCard from '@/components/movie/MovieCard';
 import { CheckIcon, IconFilter } from '@/components/common/Icons';
 import Skeleton from '@/components/common/Skeleton';
+import { SegmentedControl } from 'glisse';
 
 const PAGE_SIZE = 10;
 
@@ -75,32 +76,16 @@ export default function MoviesSection({
     <section id="phim" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
       <div>
         <h2 className="section-title">Phim</h2>
-        <p className="section-lede">Phim đang chiếu và sắp ra mắt tại Seenema.</p>
       </div>
 
       {/* Tab chuyển giữa phim đang chiếu và sắp chiếu */}
-      <div className="mt-6 flex flex-wrap items-center gap-2" role="tablist" aria-label="Danh sách phim">
-        {TABS.map(({ id, label }) => {
-          const isActive = tab === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              id={`phim-tab-${id}`}
-              aria-selected={isActive}
-              aria-controls={`phim-panel-${id}`}
-              onClick={() => selectTab(id)}
-              className={`h-9 rounded-full px-4 text-xs font-semibold transition-[background-color,color,border-color,transform] duration-200 active:scale-95 ${
-                isActive
-                  ? 'bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
-                  : 'border border-[var(--color-border-separator)] text-[var(--color-text-secondary)] hover:bg-[var(--color-fill-tertiary)] hover:text-[var(--color-text-primary)]'
-              }`}
-            >
-              {label}
-            </button>
-          );
-        })}
+      <div className="mt-6 flex flex-wrap items-center gap-2">
+        <SegmentedControl
+          aria-label="Danh sách phim"
+          value={tab}
+          onValueChange={selectTab}
+          items={TABS.map(({ id, label }) => ({ value: id, label }))}
+        />
       </div>
 
       {isShowing ? (
@@ -211,9 +196,9 @@ export default function MoviesSection({
 
           {!loading && hasMore && (
             <div className="mt-10 flex justify-center">
-              <button type="button" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)} className="btn btn-secondary">
+              <Button type="button" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}>
                 Xem thêm phim
-              </button>
+              </Button>
             </div>
           )}
         </div>

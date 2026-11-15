@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useTheme } from '@/context/ThemeContext';
+import { Button, Glass, SegmentedControl } from 'glisse';
 
 export default function AccountMenu() {
   const [open, setOpen] = useState(false);
@@ -28,22 +29,22 @@ export default function AccountMenu() {
 
   return (
     <div className="relative" ref={containerRef}>
-      <button
+      {/* Nút kính của glisse: 40x40, chỉ icon nên bắt buộc có aria-label. */}
+      <Button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Tài khoản"
-        className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-separator)] bg-[var(--color-fill-secondary)] text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
-      >
-        <UserIcon />
-      </button>
+        icon={<UserIcon />}
+      />
 
       {(
-        <div
+        // Bề mặt menu dùng token --lg-surface của glisse để khớp với menu gốc thư viện.
+        <Glass
           role="menu"
           aria-hidden={!open}
-          className={`absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-translucent-card)] p-1.5 shadow-[var(--shadow-high)] backdrop-blur-xl origin-top-right transition-all duration-200 ease-out ${
+          className={`glass-panel absolute right-0 top-full z-50 mt-2 w-60 origin-top-right overflow-hidden rounded-[20px] p-1.5 transition-all duration-200 ease-out ${
             open
               ? 'visible translate-y-0 scale-100 opacity-100'
               : 'invisible pointer-events-none -translate-y-1 scale-95 opacity-0'
@@ -67,38 +68,21 @@ export default function AccountMenu() {
           <div className="mt-1 border-t border-[var(--color-border-separator)] px-2.5 pt-2.5 pb-1">
             <p className="text-[11px] font-semibold tracking-wider text-[var(--color-text-secondary)] uppercase">Giao diện</p>
 
-            <div className="relative mt-2 grid grid-cols-2 gap-1 rounded-[var(--radius-sm)] bg-[var(--color-fill-secondary)] p-1">
-              <div
-                aria-hidden="true"
-                className={`absolute top-1 bottom-1 left-1 w-[calc(50%-6px)] rounded-[var(--radius-xs)] bg-[var(--color-brand-fill)] shadow-[var(--shadow-low)] transition-transform duration-300 ease-out pointer-events-none ${
-                  theme === 'dark' ? 'translate-x-[calc(100%+4px)]' : 'translate-x-0'
-                }`}
+            <div className="mt-2">
+              <SegmentedControl
+                aria-label="Chế độ hiển thị"
+                value={theme}
+                onValueChange={setTheme}
+                items={[
+                  { value: 'light', label: 'Sáng' },
+                  { value: 'dark', label: 'Tối' },
+                ]}
               />
-
-              <ThemeOption label="Sáng" active={theme === 'light'} onClick={() => setTheme('light')} />
-              <ThemeOption label="Tối" active={theme === 'dark'} onClick={() => setTheme('dark')} />
             </div>
           </div>
-        </div>
+        </Glass>
       )}
     </div>
-  );
-}
-
-function ThemeOption({ label, active, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`relative z-10 h-7 rounded-[var(--radius-xs)] text-xs font-semibold transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] ${
-        active
-          ? 'text-[var(--color-brand-on-primary)]'
-          : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-      }`}
-    >
-      {label}
-    </button>
   );
 }
 

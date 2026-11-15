@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { IconClose } from '@/components/common/Icons';
+import { Button } from 'glisse';
 import TermsContent from './TermsContent';
 
 export default function TermsModal({ open, onClose, onAgree }) {
@@ -76,15 +77,13 @@ export default function TermsModal({ open, onClose, onAgree }) {
             </h2>
             <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">Cập nhật lần cuối: 22/10/2026</p>
           </div>
-          <button
+          <Button
             ref={closeRef}
             type="button"
             onClick={() => onCloseRef.current()}
             aria-label="Đóng điều khoản"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-xs)] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-fill-tertiary)] hover:text-[var(--color-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
-          >
-            <IconClose />
-          </button>
+            icon={<IconClose />}
+          />
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7 sm:py-6">
@@ -92,24 +91,20 @@ export default function TermsModal({ open, onClose, onAgree }) {
         </div>
 
         <div className="flex shrink-0 items-center justify-end gap-3 border-t border-[var(--color-border-separator)] px-5 py-3.5 sm:px-7">
-          <button
-            type="button"
-            onClick={() => onCloseRef.current()}
-            className="h-10 rounded-[var(--radius-sm)] border border-[var(--color-border-separator)] px-5 text-sm font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-fill-tertiary)] hover:text-[var(--color-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-tertiary)]"
-          >
+          <Button type="button" onClick={() => onCloseRef.current()}>
             Đóng
-          </button>
+          </Button>
           {onAgree && (
-            <button
+            <Button
               type="button"
+              variant="filled"
               onClick={() => {
                 onAgree();
                 onCloseRef.current();
               }}
-              className="h-10 rounded-full bg-[var(--color-brand-fill)] px-5 text-sm font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-fill-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-tertiary)]"
             >
               Đồng ý
-            </button>
+            </Button>
           )}
         </div>
       </div>

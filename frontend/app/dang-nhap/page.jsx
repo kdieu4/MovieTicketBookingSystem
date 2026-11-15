@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import TermsModal from '@/components/legal/TermsModal';
+import { SegmentedControl } from 'glisse';
 
 // Đổi cho khớp backend của bạn. Hai endpoint dự kiến: POST /auth/login và POST /auth/register
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8083/api';
@@ -179,23 +180,16 @@ export default function AuthPage() {
       <main className="animate-fade-in mx-auto w-full max-w-lg flex-1 px-4 py-10 sm:py-14">
         <div className="relative">
           {/* Thanh chuyển floating: nổi phía trên thẻ, đè lên mép trên của thẻ */}
-          <div
-            role="tablist"
-            aria-label="Đăng nhập hoặc đăng ký"
-            className="sticky top-20 z-20 mx-auto -mb-5 grid w-full max-w-xs grid-cols-2 rounded-full border border-[var(--color-border-separator)] bg-[var(--color-bg-translucent-card)] p-1 backdrop-blur-xl"
-          >
-            <div
-              aria-hidden="true"
-              className={`pointer-events-none absolute bottom-1 left-1 top-1 w-[calc(50%-4px)] rounded-full bg-[var(--color-brand-fill)] shadow-[var(--shadow-low)] transition-transform duration-300 ${EASE} motion-reduce:transition-none ${
-                isLogin ? 'translate-x-0' : 'translate-x-full'
-              }`}
+          <div className="sticky top-20 z-20 mx-auto -mb-5 flex w-fit">
+            <SegmentedControl
+              aria-label="Đăng nhập hoặc đăng ký"
+              value={tab}
+              onValueChange={switchTab}
+              items={[
+                { value: 'login', label: 'Đăng nhập' },
+                { value: 'register', label: 'Đăng ký' },
+              ]}
             />
-            <TabButton id="tab-login" controls="panel-login" active={isLogin} onClick={() => switchTab('login')}>
-              Đăng nhập
-            </TabButton>
-            <TabButton id="tab-register" controls="panel-register" active={!isLogin} onClick={() => switchTab('register')}>
-              Đăng ký
-            </TabButton>
           </div>
 
           <div className="rounded-[var(--radius-xl)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] px-5 pb-6 pt-12 shadow-[var(--shadow-medium)] sm:px-8 sm:pb-8">
@@ -213,7 +207,7 @@ export default function AuthPage() {
 
             <div className="mt-6">
               {/* Panel đăng nhập */}
-              <Panel id="panel-login" labelledBy="tab-login" active={isLogin} side="left">
+              <Panel active={isLogin} side="left">
                 <form onSubmit={handleLogin} noValidate>
                   <Banner tone={loginBanner.tone} message={loginBanner.message} />
 
@@ -281,7 +275,7 @@ export default function AuthPage() {
               </Panel>
 
               {/* Panel đăng ký */}
-              <Panel id="panel-register" labelledBy="tab-register" active={!isLogin} side="right">
+              <Panel active={!isLogin} side="right">
                 <form onSubmit={handleRegister} noValidate>
                   <Banner tone={registerBanner.tone} message={registerBanner.message} />
 
@@ -419,34 +413,11 @@ export default function AuthPage() {
 
 // ---------- Thành phần con ----------
 
-function TabButton({ id, controls, active, onClick, children }) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      id={id}
-      aria-selected={active}
-      aria-controls={controls}
-      onClick={onClick}
-      className={`relative z-10 h-9 rounded-full text-xs font-semibold transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] ${
-        active
-          ? 'text-[var(--color-brand-on-primary)]'
-          : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
 // Cả hai panel luôn nằm trong DOM: panel đang ẩn co chiều cao về 0, mờ đi và trượt sang một bên.
 // Thẻ bên ngoài tự co giãn theo chiều cao panel đang hiện.
-function Panel({ id, labelledBy, active, side, children }) {
+function Panel({ active, side, children }) {
   return (
     <div
-      id={id}
-      role="tabpanel"
-      aria-labelledby={labelledBy}
       aria-hidden={!active}
       className={`grid transition-[grid-template-rows,opacity,transform,visibility] duration-500 ${EASE} motion-reduce:transition-none ${
         active

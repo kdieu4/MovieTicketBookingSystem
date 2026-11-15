@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { BRAND_NAME } from '@/styles/tokens';
 import AccountMenu from '@/components/account/AccountMenu';
+import { Button, Glass } from 'glisse';
 import { Reveal, Skeleton } from '@/components/common/Ascii';
 
 const NAV_LINKS = [
@@ -366,11 +367,12 @@ export default function Header() {
               ô tìm kiếm rộng bằng menu nên hai mép trái phải đều thẳng hàng.
             */}
             {panelRendered && (
-              <div
+              // Bề mặt kính cho menu gợi ý, cùng token với menu gốc của glisse.
+              <Glass
                 id="search-results"
                 role="listbox"
                 style={{ height: panelHeight ?? 'auto' }}
-                className={`absolute right-0 top-full z-50 mt-2 w-[max(100%,19rem)] max-w-[calc(100vw-2rem)] origin-top overflow-hidden rounded-2xl border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] shadow-[var(--shadow-high)] backdrop-blur-xl transition-[height,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                className={`glass-panel absolute right-0 top-full z-50 mt-2 w-[max(100%,19rem)] max-w-[calc(100vw-2rem)] origin-top overflow-hidden rounded-[20px] transition-[height,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                   panelVisible
                     ? 'translate-y-0 scale-100 opacity-100'
                     : '-translate-y-2 scale-[0.97] opacity-0'
@@ -481,32 +483,37 @@ export default function Header() {
                   )}
                   </Reveal>
                 </div>
-              </div>
+              </Glass>
             )}
           </div>
 
           {pathname !== '/dang-nhap' && (
-            <Link
-              href="/dang-nhap"
-              className="hidden h-9 items-center justify-center rounded-full bg-[var(--color-brand-fill)] px-4 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-fill-hover)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] sm:inline-flex"
-            >
-              Đăng nhập
-            </Link>
+            // Link CTA dựng bằng class của glisse để vẫn là thẻ <a> đúng nghĩa.
+            <div className="hidden sm:block">
+              <Link
+                href="/dang-nhap"
+                className="lg-glass lg-button"
+                data-variant="filled"
+                style={{ height: 36, borderRadius: 18, padding: '0 16px', fontSize: 12 }}
+              >
+                Đăng nhập
+              </Link>
+            </div>
           )}
 
           <div className="hidden sm:block">
             <AccountMenu />
           </div>
 
-          <button
-            type="button"
-            aria-label={menuOpen ? 'Đóng menu' : 'Mở menu'}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-text-primary)] hover:bg-[var(--color-fill-tertiary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] md:hidden"
-          >
-            <MenuIcon open={menuOpen} />
-          </button>
+          <div className="md:hidden">
+            <Button
+              type="button"
+              aria-label={menuOpen ? 'Đóng menu' : 'Mở menu'}
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((open) => !open)}
+              icon={<MenuIcon open={menuOpen} />}
+            />
+          </div>
         </div>
       </div>
 
@@ -526,12 +533,13 @@ export default function Header() {
               aria-label="Tìm phim"
               className="min-w-0 flex-1 bg-transparent text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none"
             />
-            <button
+            <Button
               type="submit"
-              className="h-8 shrink-0 rounded-full bg-[var(--color-brand-fill)] px-3.5 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-fill-hover)] active:scale-95"
+              variant="filled"
+              style={{ height: 32, borderRadius: 16, padding: '0 14px', fontSize: 12 }}
             >
               Tìm
-            </button>
+            </Button>
           </form>
 
           <nav className="flex flex-col gap-1">
