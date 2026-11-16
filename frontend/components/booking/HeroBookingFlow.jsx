@@ -777,7 +777,7 @@ export default function HeroBookingFlow({ filters, searchId, onSearchSettled, on
                 ? 'sp-pop border-[var(--color-brand-primary)] bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
                 : isDone
                   ? 'cursor-pointer border-[var(--color-brand-primary)] bg-[var(--color-bg-primary)] text-[var(--color-brand-primary)] hover:scale-105 hover:bg-[var(--color-fill-tertiary)] active:scale-90'
-                  : 'cursor-not-allowed border-transparent bg-[var(--color-fill-tertiary)] text-[var(--color-text-quaternary)]';
+                  : 'cursor-not-allowed border-[var(--color-border-separator)] bg-[var(--color-fill-secondary)] text-[var(--color-text-tertiary)]';
               return (
                 <li key={label}>
                   <button

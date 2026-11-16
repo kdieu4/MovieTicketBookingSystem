@@ -196,7 +196,7 @@ export default function MoviesSection({
 
           {!loading && hasMore && (
             <div className="mt-10 flex justify-center">
-              <Button type="button" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}>
+              <Button variant="filled" type="button" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}>
                 Xem thêm phim
               </Button>
             </div>

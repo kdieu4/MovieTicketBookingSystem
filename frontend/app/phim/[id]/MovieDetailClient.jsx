@@ -79,17 +79,7 @@ export default function MovieDetailClient({ movie, reviews = [] }) {
       <Header />
 
       <Reveal lazy={false} className="flex-1">
-      <div className="mx-auto max-w-6xl px-5 pt-6 md:px-8">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--color-text-secondary)] transition-all duration-200 hover:-translate-x-0.5 hover:text-[var(--color-text-primary)]"
-        >
-          <IconArrowLeft /> Quay lại
-        </button>
-      </div>
-
-      <div className="relative mt-4 h-[180px] w-full overflow-hidden md:h-[240px]">
+      <div className="relative h-[180px] w-full overflow-hidden md:h-[240px]">
         {movie.posterUrl && (
           <Image
             src={movie.posterUrl}
@@ -104,6 +94,19 @@ export default function MovieDetailClient({ movie, reviews = [] }) {
           className="absolute inset-0"
           style={{ background: 'linear-gradient(to bottom, transparent 10%, var(--color-bg-primary) 100%)' }}
         />
+
+        {/* Nút quay lại nằm trên banner, canh theo cột nội dung bên dưới. */}
+        <div className="absolute inset-x-0 top-4">
+          <div className="mx-auto max-w-6xl px-5 md:px-8">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="inline-flex items-center gap-1.5 rounded-full bg-black/35 px-3 py-1.5 text-[13px] font-medium text-white backdrop-blur-md transition-all duration-200 hover:-translate-x-0.5 hover:bg-black/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            >
+              <IconArrowLeft /> Quay lại
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="relative z-10 mx-auto -mt-16 max-w-6xl px-5 pb-20 md:-mt-24 md:px-8">
@@ -188,7 +191,7 @@ export default function MovieDetailClient({ movie, reviews = [] }) {
               <button
                 type="button"
                 onClick={() => setIsTrailerOpen(true)}
-                className="mt-4 inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border-opaque-separator)] px-4 py-2 text-[13px] font-medium text-[var(--color-text-primary)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--color-brand-primary)] active:scale-95"
+                className="mt-4 inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--color-brand-fill)] bg-[var(--color-brand-fill)] px-4 py-2 text-[13px] font-medium text-[var(--color-brand-on-primary)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--color-brand-fill-hover)] hover:bg-[var(--color-brand-fill-hover)] active:scale-95"
               >
                 <IconPlay /> Xem trailer
               </button>

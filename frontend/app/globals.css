@@ -652,6 +652,14 @@
   color: var(--color-brand-on-primary);
 }
 
+/* Nút mở menu (tài khoản, hamburger): nền kính mặc định của glisse chìm vào
+   header tối, nên đổi sang nền đặc hơn và thêm viền để thấy rõ khối nút. */
+.lg-button[data-menu-trigger] {
+  --lg-glass: var(--color-fill-secondary);
+  --lg-glass-active: var(--color-fill-primary);
+  box-shadow: inset 0 0 0 1px var(--color-border-opaque-separator);
+}
+
 /* Bề mặt nổi (menu, popover, dropdown) theo đúng token --lg-surface của glisse:
    nền đặc hơn --lg-glass để chữ dễ đọc, blur mạnh như menu gốc của thư viện.
    Không đặt trong @layer vì CSS của glisse cũng không nằm trong layer nào. */

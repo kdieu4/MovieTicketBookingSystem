@@ -33,6 +33,8 @@ export default function AccountMenu() {
 
       setLoggingOut(false);
       setOpen(false);
+      // Báo cho Header/RequireAuth biết phiên đã mất, không phải chờ đổi trang.
+      window.dispatchEvent(new Event('mtbs-auth-changed'));
       router.push('/');
       router.refresh();
     }
@@ -60,6 +62,7 @@ export default function AccountMenu() {
       {/* Nút kính của glisse: 40x40, chỉ icon nên bắt buộc có aria-label. */}
       <Button
         type="button"
+        data-menu-trigger=""
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}

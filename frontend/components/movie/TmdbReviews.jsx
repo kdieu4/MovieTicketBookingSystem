@@ -21,18 +21,18 @@ export default function TmdbReviews({ reviews = [] }) {
     <section className="mt-10 md:mt-12" aria-labelledby="tmdb-reviews-title">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 id="tmdb-reviews-title" className="text-[20px] font-semibold text-[var(--color-text-primary)]">
-          Review phim
+          Đánh giá phim
         </h2>
         {reviews.length > 0 && (
           <span className="text-xs font-medium tabular-nums text-[var(--color-text-tertiary)]">
-            {reviews.length} review
+            {reviews.length} đánh giá
           </span>
         )}
       </div>
 
       {reviews.length === 0 ? (
         <p className="mt-4 rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border-separator)] px-6 py-10 text-center text-sm text-[var(--color-text-secondary)]">
-          Hiện chưa có review nào cho phim này.
+          Hiện chưa có đánh giá nào cho phim này.
         </p>
       ) : (
         <ul className="mt-4 grid gap-3 md:grid-cols-2">
@@ -68,8 +68,8 @@ export default function TmdbReviews({ reviews = [] }) {
 
       {hasMore && (
         <div className="mt-6 flex justify-center">
-          <Button type="button" onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}>
-            Xem thêm review
+          <Button variant="filled" type="button" onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}>
+            Xem thêm đánh giá
           </Button>
         </div>
       )}

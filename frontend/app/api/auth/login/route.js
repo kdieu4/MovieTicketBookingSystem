@@ -57,10 +57,17 @@ export async function POST(request) {
       const status =
         backendStatus >= 400 && backendStatus <= 599 ? backendStatus : 502;
 
+      // Auth Service trả thông điệp tiếng Anh/nội bộ ("Bad credentials",
+      // "Failed to connect to localhost:6379"): ghi log rồi trả câu người dùng hiểu.
+      console.error("[auth/login]", status, result.message);
+
       return NextResponse.json(
         {
           status,
-          message: result.message || "Đăng nhập thất bại.",
+          message:
+            status === 401 || status === 403
+              ? "Email hoặc mật khẩu không đúng."
+              : "Hiện không thể đăng nhập. Vui lòng thử lại sau.",
         },
         { status },
       );
@@ -117,7 +124,7 @@ export async function POST(request) {
     return NextResponse.json(
       {
         status: 503,
-        message: "Không thể kết nối Auth Service.",
+        message: "Hiện không thể đăng nhập. Vui lòng thử lại sau.",
       },
       { status: 503 },
     );

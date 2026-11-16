@@ -7,6 +7,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import TermsModal from '@/components/legal/TermsModal';
 import { SegmentedControl } from 'glisse';
+import { CheckIcon } from '@/components/common/Icons';
 
 // Đổi cho khớp backend của bạn. Hai endpoint dự kiến: POST /auth/login và POST /auth/register
 const API_BASE_URL =
@@ -526,17 +527,35 @@ function Banner({ tone, message }) {
       }`}
     >
       <div className="overflow-hidden">
-        <p
-          className={`mb-4 rounded-[var(--radius-sm)] px-3.5 py-2.5 text-sm ${
+        <div
+          className={`mb-4 flex items-start gap-2.5 rounded-[var(--radius-sm)] border px-3.5 py-2.5 text-sm ${
             shown.tone === 'success'
-              ? 'bg-[var(--color-brand-primary-container)] text-[var(--color-brand-primary)]'
-              : 'bg-[var(--color-system-error)]/10 text-[var(--color-system-error)]'
+              ? 'border-[var(--color-brand-primary)]/40 bg-[var(--color-brand-primary-container)] text-[var(--color-brand-primary)]'
+              : 'border-[var(--color-system-error)]/40 bg-[var(--color-system-error)]/12 text-[var(--color-system-error)]'
           }`}
         >
-          {shown.message}
-        </p>
+          {shown.tone === 'success' ? <CheckIcon /> : <AlertIcon />}
+          <span className="font-medium">{shown.message}</span>
+        </div>
       </div>
     </div>
+  );
+}
+
+function AlertIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+      className="mt-px shrink-0"
+    >
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M8 5v3.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="8" cy="11.2" r="0.9" fill="currentColor" />
+    </svg>
   );
 }
 

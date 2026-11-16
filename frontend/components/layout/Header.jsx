@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { BRAND_NAME } from '@/styles/tokens';
 import AccountMenu from '@/components/account/AccountMenu';
+import { getSession } from '@/services/authApi';
 import { Button, Glass } from 'glisse';
 import { Reveal, Skeleton } from '@/components/common/Ascii';
 
@@ -90,8 +91,32 @@ export default function Header() {
   const [activeResult, setActiveResult] = useState(-1);
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState('idle'); // idle | loading | done | error
+  // Vì cookie phiên là httpOnly, header hỏi route BFF; null = chưa biết.
+  const [hasSession, setHasSession] = useState(null);
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    let active = true;
+
+    async function checkSession() {
+      try {
+        const ok = await getSession();
+        if (active) setHasSession(ok);
+      } catch {
+        if (active) setHasSession(false);
+      }
+    }
+
+    checkSession();
+    // Đăng xuất tại chỗ không đổi pathname, nên phải nghe sự kiện để cập nhật ngay.
+    window.addEventListener('mtbs-auth-changed', checkSession);
+
+    return () => {
+      active = false;
+      window.removeEventListener('mtbs-auth-changed', checkSession);
+    };
+  }, [pathname]);
 
   // Trang chi tiết phim có thêm tab "Phim" trên thanh điều hướng nổi.
   const isMovieDetail = pathname?.startsWith('/phim/') ?? false;
@@ -487,7 +512,7 @@ export default function Header() {
             )}
           </div>
 
-          {pathname !== '/dang-nhap' && (
+          {hasSession === false && pathname !== '/dang-nhap' && (
             // Link CTA dựng bằng class của glisse để vẫn là thẻ <a> đúng nghĩa.
             <div className="hidden sm:block">
               <Link
@@ -501,13 +526,16 @@ export default function Header() {
             </div>
           )}
 
-          <div className="hidden sm:block">
-            <AccountMenu />
-          </div>
+          {hasSession === true && (
+            <div className="hidden sm:block">
+              <AccountMenu />
+            </div>
+          )}
 
           <div className="md:hidden">
             <Button
               type="button"
+              data-menu-trigger=""
               aria-label={menuOpen ? 'Đóng menu' : 'Mở menu'}
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((open) => !open)}
@@ -555,7 +583,7 @@ export default function Header() {
             ))}
           </nav>
 
-          {pathname !== '/dang-nhap' && (
+          {hasSession === false && pathname !== '/dang-nhap' && (
             <Link
               href="/dang-nhap"
               onClick={() => setMenuOpen(false)}
@@ -565,10 +593,12 @@ export default function Header() {
             </Link>
           )}
 
-          <div className="mt-3 flex items-center justify-between border-t border-[var(--color-border-separator)] pt-3">
-            <span className="text-sm font-medium text-[var(--color-text-secondary)]">Giao diện & Tài khoản</span>
-            <AccountMenu />
-          </div>
+          {hasSession === true && (
+            <div className="mt-3 flex items-center justify-between border-t border-[var(--color-border-separator)] pt-3">
+              <span className="text-sm font-medium text-[var(--color-text-secondary)]">Giao diện & Tài khoản</span>
+              <AccountMenu />
+            </div>
+          )}
         </div>
       )}
     </header>
