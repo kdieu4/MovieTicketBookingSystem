@@ -2,6 +2,7 @@ package com.example.controller;
 
 import com.example.base.ApiResponse;
 import com.example.base.RestApiV1;
+import com.example.config.VNPayProperties;
 import com.example.domain.dto.request.VNPayRequest;
 import com.example.service.impl.VNPayService;
 import lombok.AccessLevel;
@@ -27,6 +28,7 @@ import java.util.Map;
 @Slf4j
 public class VNPayController {
     private final VNPayService vnPayService;
+    private final VNPayProperties vnPayProperties;
 
     @PostMapping("/vnpay")
     public ResponseEntity<Map<String, String>> createPayment(@RequestBody VNPayRequest request) {
@@ -46,7 +48,7 @@ public class VNPayController {
         Map<String, String> result = vnPayService.handleReturn(params);
 
         String url = UriComponentsBuilder
-                .fromUriString("http://localhost:3000/payment/return")
+                .fromUriString(vnPayProperties.frontendReturnUrl())
                 .queryParam("status", result.get("status"))
                 .queryParam("txnRef", params.getOrDefault("vnp_TxnRef", ""))
                 .build()

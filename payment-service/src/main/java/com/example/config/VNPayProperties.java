@@ -8,6 +8,7 @@ public record VNPayProperties(
         String hashSecret,
         String payUrl,
         String returnUrl,
+        String frontendReturnUrl,
         String version
 ) {
 }

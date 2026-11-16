@@ -87,9 +87,11 @@ public class VNPayService {
                 + "&vnp_SecureHash=" + signature;
     }
 
-    // 2. Tạo query string
+    // 2. Tạo query string. VNPay chỉ ký các tham số có giá trị nên bỏ tham số rỗng
+    // khi đối chiếu chữ ký, nếu không hash sẽ lệch.
     private String buildQueryString(Map<String, String> params) {
         return params.entrySet().stream()
+                .filter(e -> e.getValue() != null && !e.getValue().isEmpty())
                 .map(e -> encode(e.getKey()) + "=" + encode(e.getValue()))
                 .collect(Collectors.joining("&"));
     }
@@ -133,39 +135,48 @@ public class VNPayService {
                         .getBytes(StandardCharsets.US_ASCII));
     }
 
-    // 5. Xử lý browser redirect (không cập nhật Payment)
+    // 5. Xử lý browser redirect. Xác nhận thanh toán ngay tại đây thay vì chờ
+    // IPN, vì VNPay không gọi được IPN khi server chạy localhost. Tham số
+    // return do VNPay ký bằng hashSecret nên không thể bị client giả mạo.
+    @Transactional
     public Map<String, String> handleReturn(Map<String, String> params) {
 
-        if (!verifySignature(params)) {
-            return Map.of("status", "INVALID_SIGNATURE");
-        }
+        CallbackResult result = confirmPayment(params);
 
-        boolean success = "00".equals(params.get("vnp_ResponseCode"))
-                && "00".equals(params.get("vnp_TransactionStatus"));
-
-        return Map.of(
-                "status", success ? "PENDING_CONFIRMATION" : "FAILED",
-                "message", success
-                        ? "Đang xác nhận thanh toán qua IPN"
-                        : "Thanh toán không thành công");
+        return Map.of("status", result.status(), "message", result.message());
     }
 
-    // 6. Xử lý IPN và cập nhật Payment
+    // 6. Xử lý IPN. Dùng chung logic xác nhận với return URL; giữ format
+    // RspCode/Message theo yêu cầu của VNPay.
     @Transactional
     public Map<String, String> handleIpn(Map<String, String> params) {
 
+        CallbackResult result = confirmPayment(params);
+
+        return response(result.code(), result.message());
+    }
+
+    // Xác thực callback và cập nhật Payment một cách idempotent. Chỉ trả về
+    // kết quả; giao dịch do handleReturn/handleIpn mở nên chạy qua proxy.
+    private CallbackResult confirmPayment(Map<String, String> params) {
+
+        log.info("Received VNPay callback: txnRef={}, responseCode={}, transactionStatus={}",
+                params.get("vnp_TxnRef"),
+                params.get("vnp_ResponseCode"),
+                params.get("vnp_TransactionStatus"));
+
         if (!verifySignature(params)) {
-            return response("97", "Invalid signature");
+            return new CallbackResult("97", "INVALID_SIGNATURE", "Invalid signature");
         }
 
         if (!properties.tmnCode().equals(params.get("vnp_TmnCode"))) {
-            return response("97", "Invalid merchant");
+            return new CallbackResult("97", "INVALID_SIGNATURE", "Invalid merchant");
         }
 
         String txnRef = params.get("vnp_TxnRef");
 
         if (txnRef == null || !txnRef.matches("P[0-9]+")) {
-            return response("01", "Order not found");
+            return new CallbackResult("01", "ORDER_NOT_FOUND", "Order not found");
         }
 
         Long paymentId;
@@ -173,7 +184,7 @@ public class VNPayService {
         try {
             paymentId = Long.parseLong(txnRef.substring(1));
         } catch (NumberFormatException e) {
-            return response("01", "Order not found");
+            return new CallbackResult("01", "ORDER_NOT_FOUND", "Order not found");
         }
 
         Payment payment = paymentRepository
@@ -181,7 +192,7 @@ public class VNPayService {
                 .orElse(null);
 
         if (payment == null) {
-            return response("01", "Order not found");
+            return new CallbackResult("01", "ORDER_NOT_FOUND", "Order not found");
         }
 
         // Đối chiếu số tiền VNPay với database
@@ -192,15 +203,19 @@ public class VNPayService {
                     .multiply(BigDecimal.valueOf(100));
 
             if (receivedAmount.compareTo(expectedAmount) != 0) {
-                return response("04", "Invalid amount");
+                return new CallbackResult("04", "INVALID_AMOUNT", "Invalid amount");
             }
         } catch (RuntimeException e) {
-            return response("04", "Invalid amount");
+            return new CallbackResult("04", "INVALID_AMOUNT", "Invalid amount");
         }
 
-        // Idempotency: không xử lý lại giao dịch đã hoàn tất
+        // Idempotency: callback lặp lại chỉ trả trạng thái đã lưu, không publish
+        // thêm sự kiện.
         if (payment.getStatus() != PaymentStatus.PENDING) {
-            return response("02", "Order already confirmed");
+            return new CallbackResult(
+                    "02",
+                    payment.getStatus().name(),
+                    "Order already confirmed");
         }
 
         boolean success = "00".equals(params.get("vnp_ResponseCode"))
@@ -225,7 +240,15 @@ public class VNPayService {
                     });
         }
 
-        return response("00", "Confirm Success");
+        log.info("Payment {} confirmed as {}", payment.getId(), payment.getStatus());
+
+        return new CallbackResult(
+                "00",
+                payment.getStatus().name(),
+                success ? "Confirm Success" : "Payment failed");
+    }
+
+    private record CallbackResult(String code, String status, String message) {
     }
 
     private Map<String, String> response(String code, String message) {
