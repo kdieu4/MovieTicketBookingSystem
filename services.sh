@@ -4,6 +4,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUN_DIR="$ROOT_DIR/.run"
+COMPOSE_FILE="$ROOT_DIR/docker-compose.yaml"
 mkdir -p "$RUN_DIR"
 
 # Services read secrets (DB, MoMo, internal keys) from a root .env, as their
@@ -45,6 +46,16 @@ wait_for_port() {
 		sleep 1
 		i=$((i + 1))
 	done
+}
+
+start_infra() {
+	echo "Starting Redis + RabbitMQ..."
+	docker compose -f "$COMPOSE_FILE" up -d --wait
+}
+
+stop_infra() {
+	echo "Stopping Redis + RabbitMQ..."
+	docker compose -f "$COMPOSE_FILE" stop
 }
 
 start_one() {
@@ -98,6 +109,8 @@ stop_one() {
 
 case "${1:-}" in
 start)
+	start_infra
+
 	for entry in "${SERVICES[@]}"; do
 		start_one "$entry"
 		# Never let services race Eureka on a cold start.
@@ -136,6 +149,7 @@ stop)
 	for ((i = ${#SERVICES[@]} - 1; i >= 0; i--)); do
 		stop_one "${SERVICES[$i]%%:*}"
 	done
+	stop_infra
 	echo "Stopped."
 	;;
 *)

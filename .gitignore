@@ -5,6 +5,9 @@ booking-service/bin/
 .env
 **/.env
 
+# Chỉ dẫn agent, chỉ dùng local
+AGENTS.md
+
 # IntelliJ IDEA
 .idea/
 *.iml
