@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getYouTubeEmbedUrl } from '@/utils/movieHelpers';
 import { IconClose } from '@/components/common/Icons';
@@ -19,13 +19,13 @@ export default function TrailerModal({ isOpen, onClose, trailerUrl, title }) {
     if (isOpen) setIframeLoaded(false);
   }, [isOpen]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsClosing(true);
     setTimeout(() => {
       onClose();
       setIsClosing(false);
     }, 200);
-  };
+  }, [onClose]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -43,7 +43,7 @@ export default function TrailerModal({ isOpen, onClose, trailerUrl, title }) {
       // Mở lại cuộn trang khi đóng modal
       document.body.style.overflow = '';
     };
-  }, [isOpen]);
+  }, [isOpen, handleClose]);
 
   if (!isOpen || !trailerUrl || !mounted) return null;
 

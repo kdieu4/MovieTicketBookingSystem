@@ -138,7 +138,6 @@ export default function MyTicketsPage() {
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Vé còn thanh toán được: chưa trả tiền, chưa huỷ, còn trong hạn giữ chỗ và
