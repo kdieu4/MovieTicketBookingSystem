@@ -40,7 +40,8 @@ eureka:
 jwt:
   expiryHour: 24
   expiryDay: 14
-  secretKey: 6A8h6Z5PrjWegTOVl3avQuKtzX23I1U9Y7X12ZW94lc=
+  # Gia tri mac dinh chi dung cho dev; production phai set JWT_SECRET (cung gia tri cho movie-service).
+  secretKey: ${JWT_SECRET:6A8h6Z5PrjWegTOVl3avQuKtzX23I1U9Y7X12ZW94lc=}
   refreshKey: DrF2Q9TpJhFjeDpCCFnJLH0hL6liQQahK1EK++wmYSA=
   resetKey: U2kSTGb1ahQjRut5rNdmh2tnari65Jo7DqVFIZQwPWo=
 

@@ -14,8 +14,12 @@ public class MovieSeatClaimClient {
     private final RestClient restClient;
 
     public MovieSeatClaimClient(
-            @Value("${movie-service.base-url}") String baseUrl) {
-        this.restClient = RestClient.create(baseUrl);
+            @Value("${movie-service.base-url}") String baseUrl,
+            @Value("${movie-service.internal-api-key}") String internalApiKey) {
+        this.restClient = RestClient.builder()
+                .baseUrl(baseUrl)
+                .defaultHeader("X-Internal-Api-Key", internalApiKey)
+                .build();
     }
 
     public record ClaimRequest(Long bookingId, String sessionId, List<Long> seatIds) {}
