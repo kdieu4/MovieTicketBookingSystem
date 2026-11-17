@@ -5,6 +5,8 @@ import { createPortal } from 'react-dom';
 import SeatPicker, { SEAT_ANIMATIONS } from './SeatPicker';
 import PaymentQrModal from './PaymentQrModal';
 import { Reveal, Skeleton } from '@/components/common/Ascii';
+import { IconClose } from '@/components/common/Icons';
+import { Button } from 'glisse';
 import { getCachedSeats, getSessionId, invalidateSeats, loadSeats } from '@/services/seatApi';
 import { createBooking } from '@/services/bookingApi';
 import { createVNPayPayment, waitForPayment } from '@/services/paymentApi';
@@ -795,13 +797,6 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   async function handleContinue() {
     if (!selectedShowtime || selectedSeats.length === 0 || paymentLoading) return;
 
-    // Booking Service nhận userId từ client (chưa có endpoint xác thực dùng chung)
-    const userId = Number(sessionStorage.getItem('mtbs_user_id'));
-    if (!Number.isSafeInteger(userId) || userId <= 0) {
-      setNotice({ type: 'error', text: 'Vui lòng đăng nhập trước khi đặt vé.' });
-      return;
-    }
-
     bookingRequestIdRef.current ||=
       window.crypto?.randomUUID?.() ?? `req-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -812,7 +807,6 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
 
     try {
       const created = await createBooking({
-        userId,
         showtimeId: Number(selectedShowtime.id),
         seatIds: selectedSeats.map((seat) => seat.id),
         sessionId: getSessionId(),
@@ -981,17 +975,14 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
             })}
           </ol>
           {!inline && (
-            <button
+            <Button
               ref={closeButtonRef}
               type="button"
               aria-label="Đóng"
               onClick={closeModal}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-xs)] text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-fill-tertiary)] hover:text-[var(--color-text-primary)] active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
-            >
-              <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                <path d="M5 5l10 10M15 5L5 15" />
-              </svg>
-            </button>
+              className="shrink-0"
+              icon={<IconClose />}
+            />
           )}
         </div>
 

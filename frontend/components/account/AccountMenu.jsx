@@ -24,13 +24,6 @@ export default function AccountMenu() {
     } catch {
       setLogoutError('Không kết nối được máy chủ, nhưng đã xoá phiên trên máy.');
     } finally {
-      try {
-        window.sessionStorage.removeItem('mtbs_user_id');
-        window.sessionStorage.removeItem('mtbs_user_name');
-      } catch {
-        // Trình duyệt chặn storage thì bỏ qua
-      }
-
       setLoggingOut(false);
       setOpen(false);
       // Báo cho Header/RequireAuth biết phiên đã mất, không phải chờ đổi trang.

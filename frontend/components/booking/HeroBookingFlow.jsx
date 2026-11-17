@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import SeatPicker, { SEAT_ANIMATIONS } from './SeatPicker';
+import { IconClose } from '@/components/common/Icons';
+import { Button } from 'glisse';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 const SESSION_KEY = 'mtbs-booking-session-id';
@@ -794,17 +796,14 @@ export default function HeroBookingFlow({ filters, searchId, onSearchSettled, on
               );
             })}
           </ol>
-          <button
+          <Button
             ref={closeButtonRef}
             type="button"
             aria-label="Đóng"
             onClick={closeModal}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-xs)] text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-fill-tertiary)] hover:text-[var(--color-text-primary)] active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]"
-          >
-            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-              <path d="M5 5l10 10M15 5L5 15" />
-            </svg>
-          </button>
+            className="shrink-0"
+            icon={<IconClose />}
+          />
         </div>
 
         {/* Khung nội dung: chiều cao chạy mượt theo nội dung bên trong */}

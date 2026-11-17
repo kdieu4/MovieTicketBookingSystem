@@ -141,15 +141,11 @@ export default function AuthPage() {
     setLoading(true);
     setLoginBanner({ tone: 'error', message: '' });
     try {
-      const result = await postJson('/api/auth/login', {
+      await postJson('/api/auth/login', {
         email: login.email.trim(),
         password: login.password,
         rememberMe: login.remember,
       });
-      // Booking Service lấy userId từ sessionStorage khi tạo booking
-      if (result?.data?.userId) {
-        sessionStorage.setItem('mtbs_user_id', String(result.data.userId));
-      }
       router.push('/');
     } catch (err) {
       setLoginBanner({ tone: 'error', message: err.message });

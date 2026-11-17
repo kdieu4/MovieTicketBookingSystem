@@ -31,6 +31,16 @@ export async function POST(request) {
     );
   }
 
+  // Danh tính lấy từ cookie phiên, không tin userId do client gửi lên.
+  const authUserId = Number(request.cookies.get("mtbs_user_id")?.value);
+  if (!Number.isSafeInteger(authUserId) || authUserId <= 0) {
+    return NextResponse.json(
+      { message: "Vui lòng đăng nhập trước khi đặt vé." },
+      { status: 401 },
+    );
+  }
+  bookingData.userId = authUserId;
+
   try {
     const response = await fetch(`${BOOKING_SERVICE_URL}/api/bookings`, {
       method: "POST",

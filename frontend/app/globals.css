@@ -105,20 +105,22 @@
     --color-bg-grouped-secondary: #ffffff;
 
     --color-text-primary: #1d1d1f;
-    /* Ba bậc chữ phụ đã được tối lại để đạt WCAG AA (≥4.5:1) trên cả nền
-       trắng, #f5f5f7 và #e8f2fb — trước đây #737373 chỉ đạt 4.35:1 và
-       #a1a1a6 chỉ 2.4:1 nên rất khó đọc ở theme sáng. */
-    --color-text-secondary: #58585f;
-    --color-text-tertiary: #63636b;
-    --color-text-quaternary: #6e6e76;
+    /* Ba bậc chữ phụ tối hơn nữa để theme sáng dễ đọc: thấp nhất vẫn đạt
+       ≥6.0:1 trên cả nền trắng, #f5f5f7 và #e8f2fb (WCAG AA cần 4.5:1).
+       Trước đây bậc thứ tư chỉ đạt 4.46:1 trên nền xanh nhạt. */
+    --color-text-secondary: #44444b;
+    --color-text-tertiary: #4f4f57;
+    --color-text-quaternary: #5a5a62;
 
-    --color-border-separator: #e0e0e0;
-    --color-border-opaque-separator: #d2d2d7;
+    /* Viền rõ hơn để tách khối trên nền trắng; viền đậm dùng cho control. */
+    --color-border-separator: #d4d4da;
+    --color-border-opaque-separator: #b6b6c0;
 
-    --color-fill-primary: rgba(0, 0, 0, 0.08);
-    --color-fill-secondary: rgba(0, 0, 0, 0.05);
-    --color-fill-tertiary: rgba(0, 0, 0, 0.035);
-    --color-fill-quaternary: rgba(0, 0, 0, 0.02);
+    /* Nền phụ đậm hơn một chút để trạng thái hover/fill không chìm vào nền. */
+    --color-fill-primary: rgba(0, 0, 0, 0.1);
+    --color-fill-secondary: rgba(0, 0, 0, 0.065);
+    --color-fill-tertiary: rgba(0, 0, 0, 0.045);
+    --color-fill-quaternary: rgba(0, 0, 0, 0.025);
 
     --color-system-success: #248a3d;
     --color-system-warning: #b25000;
@@ -136,8 +138,8 @@
     --shadow-medium: none;
     --shadow-high: 3px 5px 30px rgba(0, 0, 0, 0.22);
 
-    --color-scrollbar-thumb: rgba(0, 0, 0, 0.24);
-    --color-scrollbar-thumb-hover: rgba(0, 0, 0, 0.4);
+    --color-scrollbar-thumb: rgba(0, 0, 0, 0.32);
+    --color-scrollbar-thumb-hover: rgba(0, 0, 0, 0.48);
 
     /* Sân khấu tối của hero: giữ nguyên ở cả hai theme để poster luôn nổi. */
     --color-stage-bg: #07070a;
@@ -642,7 +644,7 @@
 /* Chữ phụ/placeholder của glisse ở theme sáng: alpha 0.6 của thư viện chỉ đạt
    ~3.6:1 trên nền trắng, nâng lên 0.78 để đạt ~4.9:1. Theme tối giữ nguyên. */
 :root:not([data-theme="dark"]) {
-  --lg-muted: rgb(60 60 67 / 0.78);
+  --lg-muted: rgb(60 60 67 / 0.85);
 }
 
 /* Nhãn của mục đang chọn nằm trên nền xanh nên phải dùng màu chữ trên nền
