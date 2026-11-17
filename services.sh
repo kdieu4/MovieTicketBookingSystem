@@ -48,7 +48,26 @@ wait_for_port() {
 	done
 }
 
+# Docker Desktop ships as a user unit and is not enabled by default, so a fresh
+# login has no daemon and every compose call fails. Start it and wait for the
+# socket instead of asking the user to do it by hand.
+ensure_docker() {
+	docker info >/dev/null 2>&1 && return 0
+
+	if systemctl --user start docker-desktop 2>/dev/null; then
+		echo "Waiting for Docker Desktop..."
+		for _ in {1..60}; do
+			docker info >/dev/null 2>&1 && return 0
+			sleep 2
+		done
+	fi
+
+	echo "ERROR: Docker daemon is not running. Start Docker Desktop and retry." >&2
+	return 1
+}
+
 start_infra() {
+	ensure_docker
 	echo "Starting Redis + RabbitMQ..."
 	docker compose -f "$COMPOSE_FILE" up -d --wait
 }
