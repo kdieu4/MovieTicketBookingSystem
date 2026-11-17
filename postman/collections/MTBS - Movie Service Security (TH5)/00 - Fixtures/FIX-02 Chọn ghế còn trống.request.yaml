@@ -1,0 +1,21 @@
+$kind: http-request
+name: FIX-02 Chọn ghế còn trống
+url: "{{baseUrl}}/api/getSeatsByShowtime?showtimeId={{showtimeId}}"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Expected HTTP 200", () => pm.response.to.have.status(200));
+      const seats = pm.response.json();
+      pm.test("Trả về danh sách ghế", () => pm.expect(Array.isArray(seats)).to.be.true);
+
+      const now = Date.now();
+      const free = (Array.isArray(seats) ? seats : []).find(s =>
+        !s.isSold && !s.heldByMe && (!s.holdUntil || new Date(s.holdUntil).getTime() < now));
+      pm.test("Tìm thấy ghế còn trống", () => pm.expect(free).to.be.an("object"));
+
+      if (free) pm.collectionVariables.set("seatId", String(free.id));
+    language: text/javascript
+order: 2000

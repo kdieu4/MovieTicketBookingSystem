@@ -1,0 +1,16 @@
+$kind: http-request
+name: PUB-04 API công khai với token rác -> 401
+description: |-
+  Path công khai nhưng có header Authorization không hợp lệ thì resource server
+  vẫn từ chối. Chứng minh filter JWT xử lý mọi request, không chỉ path bảo vệ.
+url: "{{baseUrl}}/api/getMovies"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{invalidToken}}"
+scripts:
+  - type: afterResponse
+    code: pm.test("Token rác bị từ chối ngay cả trên API công khai (401)", () => pm.response.to.have.status(401));
+    language: text/javascript
+order: 4000

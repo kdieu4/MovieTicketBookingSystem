@@ -1,0 +1,29 @@
+$kind: http-request
+name: INT-05 Đúng key -> qua lớp xác thực (không 401)
+description: |-
+  Key đúng thì controller chạy. Dùng ghế không tồn tại (99999999) nên nghiệp vụ
+  trả 409/400/404 và KHÔNG thay đổi dữ liệu thật. Mục tiêu của case này chỉ là
+  chứng minh key đúng đã vượt qua lớp 401.
+url: "{{movieBaseUrl}}/api/internal/showtimes/{{showtimeId}}/seat-claims"
+method: POST
+headers:
+  Content-Type: application/json
+  X-Internal-Api-Key: "{{internalApiKey}}"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "bookingId": 999999,
+      "sessionId": "probe",
+      "seatIds": [99999999]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Key đúng không bị 401", () => pm.expect(pm.response.code).to.not.eql(401));
+      pm.test("Đi tới tầng nghiệp vụ (400/404/409)", () =>
+        pm.expect([400, 404, 409]).to.include(pm.response.code));
+    language: text/javascript
+order: 5000

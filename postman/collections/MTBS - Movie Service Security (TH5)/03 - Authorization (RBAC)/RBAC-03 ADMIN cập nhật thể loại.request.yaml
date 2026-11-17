@@ -1,0 +1,29 @@
+$kind: http-request
+name: RBAC-03 ADMIN cập nhật thể loại -> 200
+description: |-
+  Quản lý danh mục chỉ ADMIN được ghi. Gửi lại đúng tên thể loại hiện có (FIX-03)
+  nên thao tác idempotent, không thay đổi dữ liệu.
+url: "{{baseUrl}}/api/updateGenre?id={{genreId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{adminToken}}"
+body:
+  type: json
+  content: |-
+    {
+      "name": "{{genreName}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("ADMIN cập nhật thể loại trả 200", () => pm.response.to.have.status(200));
+      if (pm.response.code === 200) {
+        pm.test("Trả về đúng thể loại", () =>
+          pm.expect(String(pm.response.json().genreId)).to.eql(pm.collectionVariables.get("genreId")));
+      }
+    language: text/javascript
+order: 3000

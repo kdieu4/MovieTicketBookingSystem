@@ -1,0 +1,20 @@
+$kind: http-request
+name: OWN-10 Giữ ghế không thuộc suất chiếu -> 409
+url: "{{baseUrl}}/api/holdSeats?showtimeId={{showtimeId}}"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "sessionId": "th5-invalid-seat",
+      "seatIds": [99999999]
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Ghế không thuộc suất chiếu trả 409", () => pm.response.to.have.status(409));
+    language: text/javascript
+order: 10000

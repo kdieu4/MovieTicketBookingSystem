@@ -1,0 +1,21 @@
+$kind: http-request
+name: OWN-06 Session A confirm sau khi nhả -> 409
+description: Không còn giữ chỗ hợp lệ thì confirm phải thất bại, kể cả đúng session.
+url: "{{baseUrl}}/api/confirmSeats?showtimeId={{showtimeId}}"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "sessionId": "{{ownerSessionA}}",
+      "seatIds": [{{seatId}}]
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Confirm khi đã nhả ghế trả 409", () => pm.response.to.have.status(409));
+    language: text/javascript
+order: 6000

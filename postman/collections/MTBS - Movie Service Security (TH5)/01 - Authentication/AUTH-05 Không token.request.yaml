@@ -1,0 +1,17 @@
+$kind: http-request
+name: AUTH-05 API bảo vệ không token -> 401
+url: "{{baseUrl}}/api/createShowtime"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {}
+scripts:
+  - type: afterResponse
+    code: pm.test("Thiếu token phải trả 401", () => pm.response.to.have.status(401));
+    language: text/javascript
+order: 5000

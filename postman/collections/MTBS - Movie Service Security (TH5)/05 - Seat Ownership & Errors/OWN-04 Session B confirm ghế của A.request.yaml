@@ -1,0 +1,23 @@
+$kind: http-request
+name: OWN-04 Session B confirm ghế của A -> 409
+description: |-
+  Bằng chứng quyền sở hữu: ghế đang HOLDING bởi session A nên session B không
+  thể confirm, dù biết đúng showtimeId và seatId.
+url: "{{baseUrl}}/api/confirmSeats?showtimeId={{showtimeId}}"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "sessionId": "{{ownerSessionB}}",
+      "seatIds": [{{seatId}}]
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Session khác không confirm được (409)", () => pm.response.to.have.status(409));
+    language: text/javascript
+order: 4000

@@ -1,0 +1,26 @@
+$kind: http-request
+name: RBAC-04 CUSTOMER cập nhật suất chiếu -> 403
+url: "{{baseUrl}}/api/updateShowtime?id={{showtimeId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{customerToken}}"
+body:
+  type: json
+  content: |-
+    {
+      "movieId": {{fixtureMovieId}},
+      "roomId": {{fixtureRoomId}},
+      "startTime": "{{fixtureStart}}",
+      "endTime": "{{fixtureEnd}}",
+      "basePrice": {{fixturePrice}},
+      "status": "{{fixtureStatus}}"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("CUSTOMER không được cập nhật suất chiếu (403)", () => pm.response.to.have.status(403));
+    language: text/javascript
+order: 4000

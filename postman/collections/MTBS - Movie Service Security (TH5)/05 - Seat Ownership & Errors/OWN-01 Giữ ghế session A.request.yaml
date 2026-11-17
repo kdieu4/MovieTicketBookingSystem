@@ -1,0 +1,35 @@
+$kind: http-request
+name: OWN-01 Giữ ghế với session A -> 200
+description: |-
+  Bắt đầu chuỗi kiểm thử quyền sở hữu giữ ghế. Session sinh theo timestamp để
+  lần chạy trước không ảnh hưởng lần này. OWN-05 sẽ nhả ghế để dọn dữ liệu.
+url: "{{baseUrl}}/api/holdSeats?showtimeId={{showtimeId}}"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "sessionId": "{{ownerSessionA}}",
+      "seatIds": [{{seatId}}]
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const stamp = Date.now();
+      pm.collectionVariables.set("ownerSessionA", "th5-owner-a-" + stamp);
+      pm.collectionVariables.set("ownerSessionB", "th5-owner-b-" + stamp);
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Giữ ghế trống trả 200", () => pm.response.to.have.status(200));
+      if (pm.response.code === 200) {
+        const body = pm.response.json();
+        pm.test("Trả về đúng ghế đã giữ", () =>
+          pm.expect(body.seatIds.map(String)).to.include(pm.collectionVariables.get("seatId")));
+      }
+    language: text/javascript
+order: 1000

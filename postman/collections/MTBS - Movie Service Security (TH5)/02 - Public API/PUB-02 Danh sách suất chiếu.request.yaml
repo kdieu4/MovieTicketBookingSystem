@@ -1,0 +1,13 @@
+$kind: http-request
+name: PUB-02 Danh sách suất chiếu -> 200
+url: "{{baseUrl}}/api/getShowtimes"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("API công khai trả 200 khi không token", () => pm.response.to.have.status(200));
+      pm.test("Trả về danh sách suất chiếu", () => pm.expect(pm.response.json()).to.be.an("array"));
+    language: text/javascript
+order: 2000

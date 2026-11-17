@@ -1,0 +1,100 @@
+$kind: collection
+description: |-
+  Bộ kiểm thử bảo mật cho movie-service theo Buổi thực hành 5.
+
+  Cách chạy:
+  1. Điền adminEmail/adminPassword, customerEmail/customerPassword trong Variables (hoặc environment).
+  2. Chạy Collection Runner theo thứ tự folder 00 -> 05.
+  3. Suite dùng showtime có sẵn trong tương lai, không tạo/xoá dữ liệu.
+  4. Cần chạy gateway (8080), auth-service (8085), movie-service (8083).
+  5. Có 3 vai trò: CUSTOMER (chỉ đặt vé), STAFF (quản lý suất chiếu), ADMIN (toàn quyền).
+     Role lấy từ bảng mtbs_auth.roles + user_has_role, không phải enum user_role_enum.
+  6. Điền staffEmail/staffPassword cho AUTH-08; tài khoản này phải có role STAFF.
+  7. Folder 05 giữ rồi nhả ghế của một suất chiếu thật; OWN-05 dọn dẹp. Nếu Runner dừng
+     giữa chừng, ghế sẽ tự nhả khi hết hạn hold.
+  8. Không kiểm thử confirm thành công vì thao tác đó chuyển ghế sang BOOKED vĩnh viễn
+     trên dữ liệu thật.
+
+  Không commit token/password/key thật. `internalApiKey` mặc định chỉ dùng cho dev.
+variables:
+  - key: baseUrl
+    value: http://localhost:8080
+    disabled: false
+  - key: movieBaseUrl
+    value: http://localhost:8083
+    disabled: false
+  - key: adminEmail
+    value: ""
+    disabled: false
+  - key: adminPassword
+    value: ""
+    disabled: false
+  - key: customerEmail
+    value: ""
+    disabled: false
+  - key: customerPassword
+    value: ""
+    disabled: false
+  - key: staffEmail
+    value: ""
+    disabled: false
+  - key: staffPassword
+    value: ""
+    disabled: false
+  - key: adminToken
+    secret: true
+    disabled: false
+  - key: customerToken
+    secret: true
+    disabled: false
+  - key: staffToken
+    secret: true
+    disabled: false
+  - key: invalidToken
+    value: this.is.not.a.jwt
+    disabled: false
+  - key: expiredToken
+    value: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJleHBpcmVkIiwiZXhwIjoxfQ.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    disabled: false
+  - key: internalApiKey
+    value: dev-only-internal-key
+    disabled: false
+  - key: wrongInternalApiKey
+    value: wrong-internal-key
+    disabled: false
+  - key: showtimeId
+    value: ""
+    disabled: false
+  - key: seatId
+    value: ""
+    disabled: false
+  - key: fixtureMovieId
+    value: ""
+    disabled: false
+  - key: fixtureRoomId
+    value: ""
+    disabled: false
+  - key: fixtureStart
+    value: ""
+    disabled: false
+  - key: fixtureEnd
+    value: ""
+    disabled: false
+  - key: fixturePrice
+    value: ""
+    disabled: false
+  - key: fixtureStatus
+    value: SCHEDULED
+    disabled: false
+  - key: genreId
+    value: ""
+    disabled: false
+  - key: genreName
+    value: ""
+    disabled: false
+  - key: ownerSessionA
+    value: ""
+    disabled: false
+  - key: ownerSessionB
+    value: ""
+    disabled: false

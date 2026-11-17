@@ -1,0 +1,27 @@
+$kind: http-request
+name: RBAC-01 Tạo suất chiếu không token -> 401
+description: |-
+  Body hợp lệ nhưng thiếu token. Chứng minh API ghi của movie-service không
+  cho phép ẩn danh, kể cả khi dữ liệu đúng định dạng.
+url: "{{baseUrl}}/api/createShowtime"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "movieId": {{fixtureMovieId}},
+      "roomId": {{fixtureRoomId}},
+      "startTime": "{{fixtureStart}}",
+      "endTime": "{{fixtureEnd}}",
+      "basePrice": {{fixturePrice}},
+      "status": "{{fixtureStatus}}"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Thiếu token phải trả 401", () => pm.response.to.have.status(401));
+    language: text/javascript
+order: 1000

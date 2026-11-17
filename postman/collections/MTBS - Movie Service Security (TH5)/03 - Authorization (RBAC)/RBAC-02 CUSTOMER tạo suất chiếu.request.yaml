@@ -1,0 +1,31 @@
+$kind: http-request
+name: RBAC-02 CUSTOMER tạo suất chiếu -> 403
+description: |-
+  Đã đăng nhập nhưng sai vai trò. 403 (không phải 401) chứng minh token hợp lệ
+  đã được xác thực, và bị chặn ở tầng phân quyền.
+url: "{{baseUrl}}/api/createShowtime"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{customerToken}}"
+body:
+  type: json
+  content: |-
+    {
+      "movieId": {{fixtureMovieId}},
+      "roomId": {{fixtureRoomId}},
+      "startTime": "{{fixtureStart}}",
+      "endTime": "{{fixtureEnd}}",
+      "basePrice": {{fixturePrice}},
+      "status": "{{fixtureStatus}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("CUSTOMER không được tạo suất chiếu (403)", () => pm.response.to.have.status(403));
+      pm.test("Không phải lỗi xác thực (401)", () => pm.expect(pm.response.code).to.not.eql(401));
+    language: text/javascript
+order: 2000

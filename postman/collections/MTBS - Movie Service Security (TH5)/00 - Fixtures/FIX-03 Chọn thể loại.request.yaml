@@ -1,0 +1,21 @@
+$kind: http-request
+name: FIX-03 Chọn thể loại có sẵn
+description: |-
+  Dùng cho case ADMIN cập nhật thể loại. Gửi lại đúng tên hiện có nên thao tác
+  idempotent, không đổi dữ liệu.
+url: "{{baseUrl}}/api/getGenres"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Expected HTTP 200", () => pm.response.to.have.status(200));
+      const genres = pm.response.json();
+      pm.test("Có ít nhất một thể loại", () => pm.expect(genres).to.be.an("array").that.is.not.empty);
+      if (Array.isArray(genres) && genres.length) {
+        pm.collectionVariables.set("genreId", String(genres[0].genreId));
+        pm.collectionVariables.set("genreName", genres[0].name);
+      }
+    language: text/javascript
+order: 3000

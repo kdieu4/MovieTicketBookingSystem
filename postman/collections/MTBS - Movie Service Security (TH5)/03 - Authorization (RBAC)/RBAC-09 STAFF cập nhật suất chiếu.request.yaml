@@ -1,0 +1,32 @@
+$kind: http-request
+name: RBAC-09 STAFF cập nhật suất chiếu -> 404
+description: |-
+  STAFF được phép ghi suất chiếu nên phải vượt qua phân quyền và gặp 404 do id
+  không tồn tại. Dùng id lạ nên không sửa dữ liệu thật.
+url: "{{baseUrl}}/api/updateShowtime?id=99999999"
+method: PUT
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{staffToken}}"
+body:
+  type: json
+  content: |-
+    {
+      "movieId": {{fixtureMovieId}},
+      "roomId": {{fixtureRoomId}},
+      "startTime": "{{fixtureStart}}",
+      "endTime": "{{fixtureEnd}}",
+      "basePrice": {{fixturePrice}},
+      "status": "{{fixtureStatus}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("STAFF qua phân quyền, gặp 404 do id không tồn tại", () => pm.response.to.have.status(404));
+      pm.test("Không bị chặn bởi xác thực/phân quyền", () =>
+        pm.expect([401, 403]).to.not.include(pm.response.code));
+    language: text/javascript
+order: 9000

@@ -1,0 +1,20 @@
+$kind: http-request
+name: OWN-07 holdSeats seatIds rỗng -> 400
+url: "{{baseUrl}}/api/holdSeats?showtimeId={{showtimeId}}"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "sessionId": "th5-invalid-seats",
+      "seatIds": []
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("seatIds rỗng phải trả 400", () => pm.response.to.have.status(400));
+    language: text/javascript
+order: 7000

@@ -1,0 +1,14 @@
+$kind: http-request
+name: RBAC-06 CUSTOMER xoá suất chiếu -> 403
+description: Dùng id không tồn tại để nếu phân quyền sai thì cũng không xoá dữ liệu thật.
+url: "{{baseUrl}}/api/deleteShowtime?id=99999999"
+method: DELETE
+auth:
+  type: bearer
+  credentials:
+    token: "{{customerToken}}"
+scripts:
+  - type: afterResponse
+    code: pm.test("CUSTOMER không được xoá suất chiếu (403)", () => pm.response.to.have.status(403));
+    language: text/javascript
+order: 6000

@@ -1,0 +1,19 @@
+$kind: http-request
+name: RBAC-07 ADMIN xoá suất chiếu không tồn tại -> 404
+description: |-
+  404 (thay vì 401/403) chứng minh ADMIN đã qua được tầng phân quyền. Dùng id
+  không tồn tại nên không xoá dữ liệu thật.
+url: "{{baseUrl}}/api/deleteShowtime?id=99999999"
+method: DELETE
+auth:
+  type: bearer
+  credentials:
+    token: "{{adminToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("ADMIN qua phân quyền, gặp 404 do id không tồn tại", () => pm.response.to.have.status(404));
+      pm.test("Không bị chặn bởi xác thực/phân quyền", () =>
+        pm.expect([401, 403]).to.not.include(pm.response.code));
+    language: text/javascript
+order: 7000
