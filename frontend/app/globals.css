@@ -110,15 +110,15 @@
        #a1a1a6 chỉ 2.4:1 nên rất khó đọc ở theme sáng. */
     --color-text-secondary: #58585f;
     --color-text-tertiary: #63636b;
-    --color-text-quaternary: #6e6e76;
+    --color-text-quaternary: #67676f;
 
-    --color-border-separator: #e0e0e0;
-    --color-border-opaque-separator: #d2d2d7;
+    --color-border-separator: #d7d7dc;
+    --color-border-opaque-separator: #adadb5;
 
-    --color-fill-primary: rgba(0, 0, 0, 0.08);
-    --color-fill-secondary: rgba(0, 0, 0, 0.05);
-    --color-fill-tertiary: rgba(0, 0, 0, 0.035);
-    --color-fill-quaternary: rgba(0, 0, 0, 0.02);
+    --color-fill-primary: rgba(0, 0, 0, 0.1);
+    --color-fill-secondary: rgba(0, 0, 0, 0.07);
+    --color-fill-tertiary: rgba(0, 0, 0, 0.045);
+    --color-fill-quaternary: rgba(0, 0, 0, 0.03);
 
     --color-system-success: #248a3d;
     --color-system-warning: #b25000;
@@ -178,8 +178,10 @@
 
     --color-brand-primary: #2997ff;
     --color-brand-primary-hover: #0066cc;
-    --color-brand-fill: #0071e3;
-    --color-brand-fill-hover: #0066cc;
+    /* Nền nút đặc ở theme tối: #0071e3 chỉ đạt 4.7:1 với chữ trắng, hạ xuống
+       #0066cc để đạt 5.6:1 mà vẫn giữ được sắc xanh của thương hiệu. */
+    --color-brand-fill: #0066cc;
+    --color-brand-fill-hover: #0055b3;
     --color-brand-on-primary: #ffffff;
     --color-brand-primary-container: #0d2b4a;
     --color-brand-on-primary-container: #9ecbff;
@@ -194,17 +196,19 @@
     --color-bg-grouped-secondary: #1d1d1f;
 
     --color-text-primary: #f5f5f7;
-    --color-text-secondary: #cccccc;
-    --color-text-tertiary: #a1a1a6;
-    --color-text-quaternary: #86868b;
+    --color-text-secondary: #d2d2d8;
+    /* Chữ phụ trên card #1d1d1f: #a1a1a6 chỉ đạt 4.6:1 và #86868b chỉ 3.0:1,
+       nên nâng lên để cả hai bậc đều qua WCAG AA. */
+    --color-text-tertiary: #b4b4bb;
+    --color-text-quaternary: #9c9ca3;
 
-    --color-border-separator: #3a3a3c;
-    --color-border-opaque-separator: #48484a;
+    --color-border-separator: #55555a;
+    --color-border-opaque-separator: #6a6a6e;
 
-    --color-fill-primary: rgba(255, 255, 255, 0.14);
-    --color-fill-secondary: rgba(255, 255, 255, 0.1);
-    --color-fill-tertiary: rgba(255, 255, 255, 0.06);
-    --color-fill-quaternary: rgba(255, 255, 255, 0.04);
+    --color-fill-primary: rgba(255, 255, 255, 0.17);
+    --color-fill-secondary: rgba(255, 255, 255, 0.12);
+    --color-fill-tertiary: rgba(255, 255, 255, 0.08);
+    --color-fill-quaternary: rgba(255, 255, 255, 0.06);
 
     --color-system-success: #30d158;
     --color-system-warning: #ff9f0a;
@@ -510,8 +514,9 @@
       box-shadow var(--motion-fast) var(--ease-out);
   }
 
+  /* Placeholder nằm trên nền xám nhạt, để bậc tertiary thì hơi nhòa ở cỡ chữ nhỏ. */
   .field-input::placeholder {
-    color: var(--color-text-tertiary);
+    color: var(--color-text-secondary);
   }
 
   .field-input:focus {
@@ -637,6 +642,19 @@
   /* Đoạn/mục đang chọn lấy nền xanh thương hiệu thay cho trắng (sáng) và
      xám mờ 30% (tối) mặc định của glisse — hai màu đó gần như chìm vào nền. */
   --lg-segment-thumb: var(--color-brand-fill);
+  /* Bề mặt kính của nút: đục hơn mặc định để nút vẫn tách khỏi nền ảnh/hero
+     và viền kính nhìn rõ ở cả hai theme. */
+  --lg-glass: rgb(255 255 255 / 0.74);
+  --lg-glass-active: rgb(234 234 239 / 0.92);
+  --lg-edge: rgb(0 0 0 / 0.14);
+}
+
+:root[data-theme="dark"] {
+  --lg-glass: rgb(52 52 55 / 0.7);
+  --lg-glass-active: rgb(82 82 86 / 0.74);
+  --lg-edge: rgb(255 255 255 / 0.18);
+  /* Chữ phụ/placeholder của glisse: alpha 0.6 chỉ đạt ~4.0:1 trên nền kính tối. */
+  --lg-muted: rgb(235 235 245 / 0.74);
 }
 
 /* Chữ phụ/placeholder của glisse ở theme sáng: alpha 0.6 của thư viện chỉ đạt
@@ -655,7 +673,7 @@
 /* Nút mở menu (tài khoản, hamburger): nền kính mặc định của glisse chìm vào
    header tối, nên đổi sang nền đặc hơn và thêm viền để thấy rõ khối nút. */
 .lg-button[data-menu-trigger] {
-  --lg-glass: var(--color-fill-secondary);
+  --lg-glass: var(--color-fill-primary);
   --lg-glass-active: var(--color-fill-primary);
   box-shadow: inset 0 0 0 1px var(--color-border-opaque-separator);
 }
