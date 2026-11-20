@@ -30,6 +30,12 @@ public class RabbitMQConfig {
     public static final String BOOKING_CREATED_ROUTING_KEY =
             "booking.created";
 
+    public static final String BOOKING_PAID_QUEUE =
+            "booking.paid.queue";
+
+    public static final String BOOKING_PAID_ROUTING_KEY =
+            "booking.paid";
+
     @Bean
     public DirectExchange bookingExchange() {
         return new DirectExchange(EXCHANGE);
@@ -52,13 +58,28 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue bookingPaidQueue() {
+        return new Queue(BOOKING_PAID_QUEUE, true);
+    }
+
+    @Bean
+    public Binding bookingPaidBinding(
+            Queue bookingPaidQueue,
+            DirectExchange bookingExchange) {
+
+        return BindingBuilder
+                .bind(bookingPaidQueue)
+                .to(bookingExchange)
+                .with(BOOKING_PAID_ROUTING_KEY);
+    }
+
+    @Bean
     public MessageConverter jsonMessageConverter() {
         return new JacksonJsonMessageConverter();
     }
 
-    // Fail-soft: movie-service has no consumer yet, so without this it never
-    // opens a RabbitMQ connection. This proves the broker is reachable and
-    // declares the exchange/queue on startup.
+    // Fail-soft: van khoi tao topology va bao loi ro rang thay vi im lang
+    // khi broker khong san sang.
     @Bean
     public ApplicationRunner rabbitConnectionCheck(AmqpAdmin amqpAdmin) {
         return args -> {

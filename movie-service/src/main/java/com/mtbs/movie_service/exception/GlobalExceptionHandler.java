@@ -7,15 +7,19 @@ package com.mtbs.movie_service.exception;
 import com.mtbs.movie_service.domain.dto.response.ErrorResponse;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 /**
  *
  * @author quanghieu
  */
+@Order(org.springframework.core.Ordered.LOWEST_PRECEDENCE)
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -35,6 +39,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleBadRequest(
             IllegalArgumentException ex, HttpServletRequest request) {
         return ErrorResponseFactory.build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler({MissingServletRequestParameterException.class, MethodArgumentTypeMismatchException.class})
+    public ResponseEntity<ErrorResponse> handleBadParameter(
+            Exception ex, HttpServletRequest request) {
+        return ErrorResponseFactory.build(HttpStatus.BAD_REQUEST, "Tham số yêu cầu không hợp lệ", request);
     }
 
     @ExceptionHandler(ResponseStatusException.class)

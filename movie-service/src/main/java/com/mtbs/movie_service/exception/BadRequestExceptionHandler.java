@@ -7,6 +7,7 @@ package com.mtbs.movie_service.exception;
 import com.mtbs.movie_service.domain.dto.response.ErrorResponse;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -23,6 +24,7 @@ import java.util.Map;
  *
  * @author quanghieu
  */
+@Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice
 public class BadRequestExceptionHandler {
 

@@ -132,6 +132,26 @@ public interface ShowtimeSeatRepository extends JpaRepository<ShowtimeSeat, Long
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
             UPDATE ShowtimeSeat ss
+            SET ss.status = :booked,
+                ss.holdBy = null,
+                ss.holdUntil = null,
+                ss.updatedAt = :now
+            WHERE ss.showtime.showtimeId = :showtimeId
+              AND ss.showtimeSeatId IN :seatIds
+              AND ss.status = :holding
+              AND ss.holdBy = :bookingOwner
+            """)
+    int confirmBookingClaim(
+            @Param("showtimeId") Long showtimeId,
+            @Param("seatIds") List<Long> seatIds,
+            @Param("bookingOwner") String bookingOwner,
+            @Param("now") OffsetDateTime now,
+            @Param("holding") SeatStatus holding,
+            @Param("booked") SeatStatus booked);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            UPDATE ShowtimeSeat ss
             SET ss.status = :available,
                 ss.holdBy = null,
                 ss.holdUntil = null
