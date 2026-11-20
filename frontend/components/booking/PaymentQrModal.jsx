@@ -630,7 +630,7 @@ export default function PaymentQrModal({
       </p>
 
       <a
-        href="/ve-cua-toi"
+        href="/"
         onClick={() => clearPaymentSnapshot()}
         className="lg-glass lg-button"
         data-variant="filled"
@@ -646,7 +646,7 @@ export default function PaymentQrModal({
           justifyContent: "center",
         }}
       >
-        Xem vé của tôi
+        Trang chủ
       </a>
 
       <p className="text-[12px] text-[var(--color-text-secondary)]" aria-live="polite">
