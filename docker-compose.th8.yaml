@@ -1,0 +1,231 @@
+# TH8 - Trien khai va van hanh bang Docker Compose.
+#
+# Diem khac voi docker-compose.yaml (chi chay Redis/RabbitMQ cho may dev):
+# file nay dong goi ca 7 Spring Boot service + 2 instance movie-service.
+#
+# Thu tu dung:
+#   1) Build jar:  for s in eureka-server api-gateway auth-service user-service \
+#                     movie-service booking-service payment-service; do \
+#                    (cd $s && mvn -q -DskipTests package); done
+#   2) docker compose -f docker-compose.th8.yaml up -d --build
+#
+# Database la Supabase (managed Postgres), nam ngoai container. Nho vay restart
+# hay xoa container khong the lam mat du lieu nghiep vu; thong tin ket noi lay
+# tu .env (DB_USERNAME, DB_PASSWORD, DB_URL).
+name: mtbs-th8
+
+x-app-env: &app-env
+  EUREKA_URL: http://eureka-server:8761/eureka/
+  # Dang ky bang IP container de Gateway/LoadBalancer goi duoc trong Docker network.
+  EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+
+x-app-depends: &app-depends
+  eureka-server:
+    condition: service_healthy
+
+services:
+  eureka-server:
+    build: ./eureka-server
+    image: mtbs/eureka-server:th8
+    container_name: mtbs-eureka
+    ports:
+      - "8761:8761"
+    environment:
+      <<: *app-env
+      EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
+      EUREKA_CLIENT_FETCH_REGISTRY: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8761/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+  redis:
+    image: redis:6.2-alpine
+    container_name: mtbs-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: mtbs-rabbitmq
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  api-gateway:
+    build: ./api-gateway
+    image: mtbs/api-gateway:th8
+    container_name: mtbs-api-gateway
+    ports:
+      - "8080:8080"
+    env_file: .env
+    environment:
+      <<: *app-env
+      REDIS_HOST: redis
+    depends_on:
+      <<: *app-depends
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+  auth-service:
+    build: ./auth-service
+    image: mtbs/auth-service:th8
+    container_name: mtbs-auth-service
+    ports:
+      - "8085:8085"
+    env_file: .env
+    environment:
+      <<: *app-env
+      REDIS_HOST: redis
+      USER_SERVICE_BASE_URL: http://user-service:8081
+    depends_on:
+      <<: *app-depends
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8085/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+  user-service:
+    build: ./user-service
+    image: mtbs/user-service:th8
+    container_name: mtbs-user-service
+    ports:
+      - "8081:8081"
+    env_file: .env
+    environment:
+      <<: *app-env
+    depends_on: *app-depends
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+  booking-service:
+    build: ./booking-service
+    image: mtbs/booking-service:th8
+    container_name: mtbs-booking-service
+    ports:
+      - "8082:8082"
+    env_file: .env
+    environment:
+      <<: *app-env
+      RABBITMQ_HOST: rabbitmq
+    depends_on:
+      <<: *app-depends
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+  # Instance 1 cua movie-service: cung image, cung Service ID MOVIE-SERVICE.
+  movie-service:
+    build: ./movie-service
+    image: mtbs/movie-service:th8
+    container_name: mtbs-movie-service-1
+    ports:
+      - "8083:8083"
+    env_file: .env
+    environment:
+      <<: *app-env
+      SERVER_PORT: 8083
+      RABBITMQ_HOST: rabbitmq
+      TMDB_TOKEN: ${TMDB_TOKEN:-}
+    depends_on:
+      <<: *app-depends
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8083/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+  # Instance 2: chi doi SERVER_PORT nen Eureka thay hai instance cung ten.
+  movie-service-2:
+    build: ./movie-service
+    image: mtbs/movie-service:th8
+    container_name: mtbs-movie-service-2
+    ports:
+      - "8093:8093"
+    env_file: .env
+    environment:
+      <<: *app-env
+      SERVER_PORT: 8093
+      RABBITMQ_HOST: rabbitmq
+      TMDB_TOKEN: ${TMDB_TOKEN:-}
+    depends_on:
+      <<: *app-depends
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8093/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+  payment-service:
+    build: ./payment-service
+    image: mtbs/payment-service:th8
+    container_name: mtbs-payment-service
+    ports:
+      - "8084:8084"
+    env_file: .env
+    environment:
+      <<: *app-env
+      RABBITMQ_HOST: rabbitmq
+      BOOKING_SERVICE_BASE_URL: http://booking-service:8082
+    depends_on:
+      <<: *app-depends
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8084/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  rabbitmq-data:

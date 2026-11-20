@@ -1,0 +1,3 @@
+# Chi gui jar da build vao build context: khong gui src, .env, log.
+*
+!target/*-SNAPSHOT.jar
