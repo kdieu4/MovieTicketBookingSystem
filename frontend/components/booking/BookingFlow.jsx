@@ -19,8 +19,8 @@ const STEP_OUT_MS = 170;
 // Giá trị rạp mà Hero Section gửi khi người dùng không chọn rạp cụ thể
 const ALL_CINEMAS = 'Tất cả rạp';
 
-// Các bước hiển thị trên thanh tiến trình. Bước 5 (Xác nhận) sẽ nối với phần thanh toán sau.
-const STEP_LABELS = ['Thành phố', 'Rạp chiếu', 'Suất chiếu', 'Chọn ghế', 'Xác nhận'];
+// Các bước hiển thị trên thanh tiến trình. Bước 5 là xác nhận + thanh toán ngay trong luồng.
+const STEP_LABELS = ['Thành phố', 'Rạp chiếu', 'Suất chiếu', 'Chọn ghế', 'Thanh toán'];
 
 // Hệ số giá theo loại ghế, tạm thời dùng ở frontend.
 // Khi backend trả sẵn seat.price cho từng ghế thì giá trị đó được ưu tiên và bảng này không còn dùng.
@@ -299,7 +299,8 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
 
   // Thanh toán: booking do backend tạo, sau đó mở modal QR VNPay
   const [booking, setBooking] = useState(null);
-  const [paymentOpen, setPaymentOpen] = useState(false);
+  // Bước 5: xác nhận thông tin rồi mới tạo booking và giao dịch VNPay
+  const [confirming, setConfirming] = useState(false);
   const [payment, setPayment] = useState(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState('');
@@ -322,6 +323,7 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   const innerRef = useRef(null);
   const dayStripCleanupRef = useRef(null);
   const panelRef = useRef(null); // khung ngoài, dùng để cuộn trang khi đổi bước ở chế độ nội tuyến
+  const payPanelRef = useRef(null); // khối thanh toán ở bước 5, để cuộn tới sau khi quay về từ VNPay
   const firstStepRef = useRef(true);
   // Đã chuyển sang bước thanh toán: giữ nguyên ghế khi component bị gỡ thay vì trả lại
   const handedOffRef = useRef(false);
@@ -457,6 +459,7 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     handedOffRef.current = false;
 
     setOpen(true);
+    setConfirming(false);
     setSelectedShowtime(null);
     setSelectedSeats([]);
     setHoldUntil(null);
@@ -607,12 +610,14 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     };
   }, [selectedShowtime, refreshSeats]);
 
-  const step = !city ? 1 : !cinema ? 2 : !selectedShowtime ? 3 : 4;
+  const step = !city ? 1 : !cinema ? 2 : !selectedShowtime ? 3 : !confirming ? 4 : 5;
 
   // Đổi bước thì cuộn về đầu vùng nội dung.
   // Chế độ nội tuyến: khung không tự cuộn, nên chỉ cuộn trang khi đầu luồng đã trôi lên khỏi màn hình.
   useEffect(() => {
     if (inline) {
+      // Vừa thanh toán xong: để hiệu ứng bên dưới tự cuộn tới thẻ thanh toán
+      if (paid) return;
       if (firstStepRef.current) {
         firstStepRef.current = false;
         return;
@@ -625,6 +630,31 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     }
     scrollRef.current?.scrollTo({ top: 0 });
   }, [step, selectedShowtime, inline]);
+
+  // Vừa khôi phục sau khi thanh toán ở trang phim: trang mới mở ở đầu trang nên
+  // phải cuộn xuống đúng khung thanh toán, nơi hiệu ứng sóng đang chạy.
+  // Cuộn lại vài lần vì ảnh poster/đánh giá phía trên tải xong có thể làm khung trôi đi.
+  useEffect(() => {
+    if (!inline || !paid) return;
+
+    const target = payPanelRef.current ?? panelRef.current;
+    if (!target) return;
+
+    // Căn giữa để thấy trọn thẻ thanh toán, nơi hiệu ứng sóng chạy
+    const align = (smooth) =>
+      target.scrollIntoView({
+        behavior: smooth && !prefersReducedMotion() ? 'smooth' : 'auto',
+        block: payPanelRef.current ? 'center' : 'start',
+      });
+
+    const raf = requestAnimationFrame(() => align(true));
+    const timers = [400, 900, 1600, 2400].map((delay) => window.setTimeout(() => align(false), delay));
+
+    return () => {
+      cancelAnimationFrame(raf);
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [inline, paid]);
 
   // VNPay redirect về kèm ?payment=success: khôi phục bước xác nhận để hiệu ứng chạy đúng
   // nơi người dùng đã đặt vé (đặt vé nhanh ở trang chủ hoặc luồng trong trang phim).
@@ -664,7 +694,7 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     setPayment(null);
     setPaymentError('');
     setOpen(true);
-    setPaymentOpen(true);
+    setConfirming(true);
     setPaid(true);
   }, [filters]);
 
@@ -769,6 +799,7 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
       lastSeatsRef.current = [];
       lastHoldRef.current = null;
       setNotice(null);
+      setConfirming(false);
       setHoldUntil(null);
       setSelectedSeats([]);
       setSelectedShowtime(null);
@@ -786,7 +817,18 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   }
 
   // Bấm vào bước đã qua trên thanh các bước để quay lại
+  function handleBackToSeats() {
+    if (booking) return;
+    runTransition('back', () => setConfirming(false));
+  }
+
   function handleGoToStep(n) {
+    // Đã tạo giao dịch thì không quay lại đổi ghế được nữa
+    if (booking) return;
+    if (n === 4 && confirming) {
+      handleBackToSeats();
+      return;
+    }
     if (n < step) handleBackTo(n);
   }
 
@@ -839,8 +881,15 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   const allCinemas = cinema === ALL_CINEMAS;
   const cinemaName = selectedShowtime?.cinemaName || (allCinemas ? '' : cinema || '');
 
-  // Tạo booking rồi tạo giao dịch VNPay, mở modal QR ngay trong luồng.
-  async function handleContinue() {
+  // Bấm Tiếp tục ở bước chọn ghế: sang bước 5 xác nhận, chưa tạo booking hay giao dịch.
+  function handleContinue() {
+    if (!selectedShowtime || selectedSeats.length === 0 || paymentLoading) return;
+    setNotice(null);
+    runTransition('forward', () => setConfirming(true));
+  }
+
+  // Bấm Thanh toán ở bước 5: tạo booking (nếu chưa có) rồi tạo giao dịch VNPay.
+  async function handlePay() {
     if (!selectedShowtime || selectedSeats.length === 0 || paymentLoading) return;
 
     bookingRequestIdRef.current ||=
@@ -865,7 +914,6 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
 
       setBooking(created);
       if (created.holdUntil) setHoldUntil(created.holdUntil);
-      setPaymentOpen(true);
 
       // Payment được tạo bởi consumer RabbitMQ sau khi booking xong nên phải chờ
       await waitForPayment(created.bookingId);
@@ -890,40 +938,6 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     } catch (err) {
       setPaymentError(err.message || 'Không thể tạo giao dịch thanh toán.');
       setNotice({ type: 'error', text: err.message || 'Không thể tạo Booking.' });
-    } finally {
-      setPaymentLoading(false);
-    }
-  }
-
-  // Bấm "Tạo mã QR" trong modal (thử lại khi bước trên lỗi)
-  async function handleCreateQr() {
-    if (!booking?.bookingId || paymentLoading) return;
-
-    setPaymentLoading(true);
-    setPaymentError('');
-
-    try {
-      await waitForPayment(booking.bookingId);
-      const created = await createVNPayPayment(booking.bookingId);
-      setPayment(created);
-
-      // Tạo lại giao dịch thì cập nhật lại snapshot để lần quay về vẫn khôi phục đúng
-      savePaymentSnapshot({
-        pathname: window.location.pathname,
-        search: window.location.search,
-        bookingId: booking.bookingId,
-        variant: inline ? 'inline' : 'modal',
-        movieTitle: filters?.movieTitle ?? selectedShowtime?.movieTitle ?? null,
-        movieId: selectedShowtime?.movieId ?? null,
-        city,
-        cinema,
-        showtime: selectedShowtime,
-        seats: selectedSeats,
-        booking,
-        holdUntil: booking.holdUntil || holdUntil,
-      });
-    } catch (err) {
-      setPaymentError(err.message || 'Không thể tạo giao dịch thanh toán.');
     } finally {
       setPaymentLoading(false);
     }
@@ -1449,10 +1463,40 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
                         disabled={!hasSeats || paymentLoading}
                         className="mt-5 flex h-11 w-full items-center justify-center gap-1.5 rounded-full bg-[var(--color-brand-fill)] text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-fill-hover)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2"
                       >
-                        {paymentLoading ? 'Đang tạo giao dịch...' : 'Tiếp tục'}
+                        Tiếp tục
                         <span aria-hidden="true">→</span>
                       </button>
                     </aside>
+                  </div>
+                </div>
+              )}
+
+              {/* BƯỚC 5: xác nhận và thanh toán, hiển thị ngay trong luồng thay vì popup */}
+              {step === 5 && selectedShowtime && (
+                <div ref={payPanelRef}>
+                  <StepHeading
+                    title="Thanh toán"
+                    subtitle={`${selectedShowtime.movieTitle} · ${cinemaName}`}
+                    backLabel={booking ? undefined : 'Đổi ghế'}
+                    onBack={booking ? undefined : handleBackToSeats}
+                  />
+
+                  <div className="mt-6">
+                    <PaymentQrModal
+                      inline
+                      open
+                      bookingId={booking?.bookingId}
+                      showtime={selectedShowtime}
+                      cinema={cinemaName}
+                      seats={selectedSeats}
+                      total={booking?.amount ?? total}
+                      holdUntil={holdUntil}
+                      payment={payment}
+                      loading={paymentLoading}
+                      error={paymentError}
+                      onCreateQr={handlePay}
+                      paid={paid}
+                    />
                   </div>
                 </div>
               )}
@@ -1463,44 +1507,13 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     </div>
   );
 
-  const paymentModal = (
-    <PaymentQrModal
-      open={paymentOpen}
-      onClose={() => setPaymentOpen(false)}
-      bookingId={booking?.bookingId}
-      showtime={selectedShowtime}
-      cinema={cinemaName}
-      seats={selectedSeats}
-      total={booking?.amount ?? total}
-      holdUntil={holdUntil}
-      payment={payment}
-      loading={paymentLoading}
-      error={paymentError}
-      onCreateQr={handleCreateQr}
-      paid={paid}
-    />
-  );
-
   // Nội tuyến: render ngay tại vị trí đặt component.
   // Modal: render qua portal để lớp nền mờ luôn phủ kín toàn màn hình, không bị ảnh hưởng bởi thẻ cha.
   if (inline) {
-    return (
-      <>
-        {modal}
-        {paymentModal}
-      </>
-    );
+    return modal;
   }
   // Modal chỉ mở sau tương tác trên trình duyệt nên document luôn tồn tại ở đây.
-  return typeof document === 'undefined'
-    ? null
-    : createPortal(
-        <>
-          {modal}
-          {paymentModal}
-        </>,
-        document.body,
-      );
+  return typeof document === 'undefined' ? null : createPortal(modal, document.body);
 }
 
 // Tiêu đề của mỗi bước, kèm nút quay lại bước trước (nếu có)
