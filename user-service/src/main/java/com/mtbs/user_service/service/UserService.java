@@ -23,4 +23,7 @@ public interface UserService {
     void deleteUser(Long id);
 
     UserResponse getUserByAuthUserId(Long authUserId);
+
+    /** Ho so co thuoc ve tai khoan auth dang dang nhap khong. */
+    boolean isProfileOwner(Long profileId, Long authUserId);
 }

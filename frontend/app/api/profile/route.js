@@ -67,8 +67,10 @@ export async function GET() {
 
 export async function PUT(request) {
   const authUserId = await currentAuthUserId();
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("mtbs_access_token")?.value;
 
-  if (!authUserId) {
+  if (!authUserId || !accessToken) {
     return NextResponse.json(
       { message: "Vui lòng đăng nhập." },
       { status: 401, headers: NO_STORE },
@@ -112,7 +114,10 @@ export async function PUT(request) {
       `${USER_SERVICE_URL}/api/users/${current.body.id}`,
       {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
           fullName,
           email: current.body.email,

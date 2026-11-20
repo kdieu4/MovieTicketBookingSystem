@@ -3,19 +3,23 @@ package com.mtbs.user_service;
 import com.jayway.jsonpath.JsonPath;
 import com.mtbs.user_service.domain.entity.User;
 import com.mtbs.user_service.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -30,12 +34,25 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * test PUT/DELETE khong lam bay du lieu mau cho may dev.
  */
 @SpringBootTest
-@AutoConfigureMockMvc
 @Transactional
+@WithMockUser(authorities = "ROLE_ADMIN")
 class UserControllerTest {
 
-    @Autowired MockMvc mockMvc;
+    @Autowired WebApplicationContext context;
     @Autowired UserRepository userRepository;
+
+    MockMvc mockMvc;
+
+    /**
+     * Tu dung MockMvc de gan {@code springSecurity()}: Boot 4 khong tu noi
+     * SecurityContext cua {@code @WithMockUser} vao filter chain OAuth2.
+     */
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders.webAppContextSetup(context)
+                .apply(springSecurity())
+                .build();
+    }
 
     // ---------------- User TON TAI -> 200 OK ----------------
 

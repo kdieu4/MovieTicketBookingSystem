@@ -2,6 +2,7 @@ package com.example.controller;
 
 import com.example.base.ApiResponse;
 import com.example.base.RestApiV1;
+import com.example.client.BookingOwnershipClient;
 import com.example.config.VNPayProperties;
 import com.example.domain.dto.request.VNPayRequest;
 import com.example.service.impl.VNPayService;
@@ -10,11 +11,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -29,9 +32,14 @@ import java.util.Map;
 public class VNPayController {
     private final VNPayService vnPayService;
     private final VNPayProperties vnPayProperties;
+    private final BookingOwnershipClient bookingOwnershipClient;
 
     @PostMapping("/vnpay")
-    public ResponseEntity<Map<String, String>> createPayment(@RequestBody VNPayRequest request) {
+    public ResponseEntity<Map<String, String>> createPayment(
+            @RequestBody VNPayRequest request,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
+
+        bookingOwnershipClient.assertOwned(request.bookingId(), authorization);
         String payUrl = vnPayService.createPaymentUrl(request.bookingId());
         return ResponseEntity.ok(Map.of("payUrl", payUrl));
     }

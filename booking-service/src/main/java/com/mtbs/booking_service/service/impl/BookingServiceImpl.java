@@ -11,6 +11,7 @@ import com.mtbs.booking_service.domain.dto.response.ShowtimeResponse;
 import com.mtbs.booking_service.domain.entity.Booking;
 import com.mtbs.booking_service.domain.entity.BookingSeat;
 import com.mtbs.booking_service.domain.entity.BookingStatus;
+import com.mtbs.booking_service.exception.BookingNotFoundException;
 import com.mtbs.booking_service.exception.InvalidSeatException;
 import com.mtbs.booking_service.messaging.BookingCreatedEvent;
 import com.mtbs.booking_service.messaging.BookingEventProducer;
@@ -46,9 +47,9 @@ public class BookingServiceImpl implements BookingService {
 
         @Override
         @Transactional
-        public BookingResponse createBooking(CreateBookingRequest request) {
+        public BookingResponse createBooking(CreateBookingRequest request, Long authUserId) {
 
-                var userProfile = userServiceClient.getUserByAuthUserId(request.getUserId());
+                var userProfile = userServiceClient.getUserByAuthUserId(authUserId);
 
                 Long profileUserId = userProfile.getId();
 
@@ -161,9 +162,19 @@ public class BookingServiceImpl implements BookingService {
 
         @Override
         @Transactional(readOnly = true)
-        public List<BookingResponse> getAllBookings() {
+        public List<BookingResponse> getAllBookings(Long authUserId, boolean admin) {
 
-                List<Booking> bookings = bookingRepository.findAll();
+                List<Booking> bookings;
+
+                if (admin) {
+                        bookings = bookingRepository.findAll();
+                } else {
+                        // User Service loi thi van doc duoc booking cu theo id auth.
+                        Long profileId = resolveProfileId(authUserId);
+                        bookings = findBookingsForUser(
+                                        profileId != null ? profileId : authUserId,
+                                        authUserId);
+                }
 
                 List<BookingResponse> responses = new ArrayList<>();
 
@@ -176,9 +187,27 @@ public class BookingServiceImpl implements BookingService {
 
         @Override
         @Transactional(readOnly = true)
-        public List<BookingResponse> getBookingsByUser(Long userId) {
+        public List<BookingResponse> getBookingsByUser(Long userId, Long authUserId, boolean admin) {
 
-                return bookingRepository.findByUserIdOrderByBookingIdDesc(userId)
+                if (admin) {
+                        return bookingRepository.findByUserIdOrderByBookingIdDesc(userId)
+                                        .stream()
+                                        .map(this::convertToResponse)
+                                        .collect(Collectors.toList());
+                }
+
+                Long profileId = resolveProfileId(authUserId);
+
+                boolean owner = authUserId.equals(userId)
+                                || (profileId != null && profileId.equals(userId));
+
+                if (!owner) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                        "Không có quyền xem booking của người dùng khác");
+                }
+
+                // Booking cũ lưu userId theo id tài khoản auth, booking mới theo id hồ sơ.
+                return findBookingsForUser(userId, authUserId)
                                 .stream()
                                 .map(this::convertToResponse)
                                 .collect(Collectors.toList());
@@ -186,27 +215,31 @@ public class BookingServiceImpl implements BookingService {
 
         @Override
         @Transactional(readOnly = true)
-        public BookingResponse getBookingById(Long id) {
+        public BookingResponse getBookingById(Long id, Long authUserId, boolean admin) {
 
-                Booking booking = bookingRepository.findById(id)
-                                .orElseThrow(() -> new IllegalArgumentException(
-                                                "Không tìm thấy booking có ID: " + id));
-
-                return convertToResponse(booking);
+                return convertToResponse(requireOwnedBooking(id, authUserId, admin));
         }
 
         @Override
         @Transactional
         public BookingResponse updateBooking(
                         Long id,
-                        CreateBookingRequest request) {
+                        CreateBookingRequest request,
+                        Long authUserId,
+                        boolean admin) {
 
-                Booking booking = bookingRepository.findById(id)
-                                .orElseThrow(() -> new IllegalArgumentException(
-                                                "Không tìm thấy booking có ID: " + id));
+                Booking booking = requireOwnedBooking(id, authUserId, admin);
 
-                // Kiểm tra User
-                userServiceClient.getUserById(request.getUserId());
+                if (!admin && booking.getStatus() != BookingStatus.PENDING) {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT,
+                                        "Chỉ có thể thay đổi booking đang chờ thanh toán");
+                }
+
+                // Người dùng thường không được đổi chủ booking sang tài khoản khác.
+                Long targetUserId = booking.getUserId();
+                if (admin) {
+                        targetUserId = userServiceClient.getUserByAuthUserId(request.getUserId()).getId();
+                }
 
                 // Lấy Showtime mới
                 ShowtimeResponse showtime = movieServiceClient.getShowtimeById(
@@ -229,7 +262,7 @@ public class BookingServiceImpl implements BookingService {
                 BigDecimal totalAmount = showtime.getBasePrice()
                                 .multiply(BigDecimal.valueOf(selectedSeats.size()));
 
-                booking.setUserId(request.getUserId());
+                booking.setUserId(targetUserId);
                 booking.setShowtimeId(request.getShowtimeId());
                 booking.setAmount(totalAmount.doubleValue());
 
@@ -243,11 +276,14 @@ public class BookingServiceImpl implements BookingService {
 
         @Override
         @Transactional
-        public void deleteBooking(Long id) {
+        public void deleteBooking(Long id, Long authUserId, boolean admin) {
 
-                Booking booking = bookingRepository.findById(id)
-                                .orElseThrow(() -> new IllegalArgumentException(
-                                                "Không tìm thấy booking có ID: " + id));
+                Booking booking = requireOwnedBooking(id, authUserId, admin);
+
+                if (!admin && booking.getStatus() != BookingStatus.PENDING) {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT,
+                                        "Chỉ có thể hủy booking đang chờ thanh toán");
+                }
 
                 // Xóa các ghế thuộc booking trước
                 List<BookingSeat> bookingSeats = getBookingSeats(id);
@@ -256,6 +292,81 @@ public class BookingServiceImpl implements BookingService {
 
                 // Sau đó xóa booking
                 bookingRepository.delete(booking);
+        }
+
+        private Long requireProfileId(Long authUserId) {
+
+                Long profileId = resolveProfileId(authUserId);
+
+                if (profileId == null) {
+                        throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                                        "Không xác định được hồ sơ người dùng");
+                }
+
+                return profileId;
+        }
+
+        /**
+         * Tra id hồ sơ từ id tài khoản auth; trả null khi User Service không
+         * phản hồi để các kiểm tra sở hữu vẫn so được với booking cũ.
+         */
+        private Long resolveProfileId(Long authUserId) {
+
+                if (authUserId == null) {
+                        return null;
+                }
+
+                try {
+                        var profile = userServiceClient.getUserByAuthUserId(authUserId);
+                        return profile == null ? null : profile.getId();
+                } catch (RuntimeException ex) {
+                        return null;
+                }
+        }
+
+        /** Gộp booking theo cả id hồ sơ và id tài khoản auth (dữ liệu cũ). */
+        private List<Booking> findBookingsForUser(Long profileId, Long authUserId) {
+
+                List<Booking> merged = new ArrayList<>(
+                                bookingRepository.findByUserIdOrderByBookingIdDesc(profileId));
+
+                if (!profileId.equals(authUserId)) {
+                        Set<Long> seen = merged.stream()
+                                        .map(Booking::getBookingId)
+                                        .collect(Collectors.toSet());
+
+                        bookingRepository.findByUserIdOrderByBookingIdDesc(authUserId).stream()
+                                        .filter(booking -> seen.add(booking.getBookingId()))
+                                        .forEach(merged::add);
+                }
+
+                merged.sort((left, right) -> Long.compare(
+                                right.getBookingId(), left.getBookingId()));
+
+                return merged;
+        }
+
+        private Booking requireOwnedBooking(Long id, Long authUserId, boolean admin) {
+
+                Booking booking = bookingRepository.findById(id)
+                                .orElseThrow(() -> new BookingNotFoundException(id));
+
+                if (admin) {
+                        return booking;
+                }
+
+                Long profileId = resolveProfileId(authUserId);
+
+                boolean owner = booking.getUserId() != null
+                                && (booking.getUserId().equals(authUserId)
+                                                || booking.getUserId().equals(profileId));
+
+                if (!owner) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                        "Không có quyền truy cập booking của người dùng khác");
+                }
+
+                return booking;
         }
 
         private List<SeatResponse> validateSeats(

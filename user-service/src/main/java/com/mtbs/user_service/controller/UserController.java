@@ -52,7 +52,9 @@ public class UserController {
         })
         @GetMapping("/{id}")
         public ResponseEntity<UserResponse> getUserById(
-                        @Parameter(description = "ID cua nguoi dung", example = "1") @PathVariable Long id) {
+                        @Parameter(description = "ID cua nguoi dung", example = "1") @PathVariable Long id,
+                        org.springframework.security.core.Authentication authentication) {
+                requireSelfOrAdmin(id, authentication);
                 return ResponseEntity.ok(userService.getUserById(id));
         }
 
@@ -76,7 +78,9 @@ public class UserController {
         @PutMapping("/{id}")
         public ResponseEntity<UserResponse> updateUser(
                         @Parameter(description = "ID cua nguoi dung", example = "1") @PathVariable Long id,
-                        @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Day du thong tin nguoi dung moi", required = true, content = @Content(schema = @Schema(implementation = UserRequest.class))) @Valid @RequestBody UserRequest request) {
+                        @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Day du thong tin nguoi dung moi", required = true, content = @Content(schema = @Schema(implementation = UserRequest.class))) @Valid @RequestBody UserRequest request,
+                        org.springframework.security.core.Authentication authentication) {
+                requireSelfOrAdmin(id, authentication);
                 return ResponseEntity.ok(userService.updateUser(id, request));
         }
 
@@ -123,8 +127,48 @@ public class UserController {
                 return ResponseEntity.ok(response);
         }
 
-        private void validateInternalApiKey(String providedKey) {
+        /**
+         * ADMIN xem/sua duoc moi ho so; nguoi dung thuong chi thao tac tren ho so
+         * gan voi authUserId trong access token cua chinh ho.
+         */
+        private void requireSelfOrAdmin(Long id, org.springframework.security.core.Authentication authentication) {
 
+                if (isAdmin(authentication)) {
+                        return;
+                }
+
+                Long authUserId = authUserId(authentication);
+
+                if (!userService.isProfileOwner(id, authUserId)) {
+                        throw new ResponseStatusException(
+                                        HttpStatus.FORBIDDEN,
+                                        "Khong co quyen truy cap ho so nguoi dung khac");
+                }
+        }
+
+        private static boolean isAdmin(org.springframework.security.core.Authentication authentication) {
+                return authentication != null && authentication.getAuthorities().stream()
+                                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority())
+                                                || "ADMIN".equals(authority.getAuthority()));
+        }
+
+        /** Id tai khoan auth do auth-service dat trong access token. */
+        private static Long authUserId(org.springframework.security.core.Authentication authentication) {
+
+                if (authentication != null
+                                && authentication.getPrincipal() instanceof org.springframework.security.oauth2.jwt.Jwt jwt) {
+                        Object claim = jwt.getClaim("userId");
+                        if (claim instanceof Number number) {
+                                return number.longValue();
+                        }
+                }
+
+                throw new ResponseStatusException(
+                                HttpStatus.UNAUTHORIZED,
+                                "Token khong chua thong tin nguoi dung");
+        }
+
+        private void validateInternalApiKey(String providedKey) {
                 if (providedKey == null || !MessageDigest.isEqual(
                                 internalApiKey.getBytes(StandardCharsets.UTF_8),
                                 providedKey.getBytes(StandardCharsets.UTF_8))) {

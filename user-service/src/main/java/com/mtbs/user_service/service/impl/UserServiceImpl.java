@@ -149,4 +149,11 @@ public class UserServiceImpl implements UserService {
 
         return UserResponse.from(user);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isProfileOwner(Long profileId, Long authUserId) {
+        return profileId != null && authUserId != null
+                && userRepository.existsByIdAndAuthUserId(profileId, authUserId);
+    }
 }

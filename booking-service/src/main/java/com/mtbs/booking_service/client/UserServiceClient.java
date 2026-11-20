@@ -4,10 +4,14 @@ import com.mtbs.booking_service.domain.dto.response.UserResponse;
 import com.mtbs.booking_service.exception.ServiceUnavailableException;
 import com.mtbs.booking_service.exception.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
+
+import java.time.Duration;
 import org.springframework.web.client.RestClientException;
 
 @Component
@@ -17,11 +21,17 @@ public class UserServiceClient {
     private final String internalApiKey;
 
     public UserServiceClient(
+            @Qualifier("loadBalancedRestClientBuilder") RestClient.Builder restClientBuilder,
             @Value("${user-service.base-url}") String userServiceBaseUrl,
             @Value("${user-service.internal-api-key}") String internalApiKey) {
 
-        this.restClient = RestClient.builder()
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(2));
+        factory.setReadTimeout(Duration.ofSeconds(3));
+
+        this.restClient = restClientBuilder
                 .baseUrl(userServiceBaseUrl)
+                .requestFactory(factory)
                 .build();
         this.internalApiKey = internalApiKey;
     }
@@ -45,7 +55,7 @@ public class UserServiceClient {
             throw new ServiceUnavailableException(
                     "User Service không phản hồi hoặc timeout");
 
-        } catch (RestClientException ex) {
+        } catch (RestClientException | IllegalStateException ex) {
 
             throw new ServiceUnavailableException(
                     "Không thể kết nối đến User Service");
@@ -80,7 +90,7 @@ public class UserServiceClient {
             throw new ServiceUnavailableException(
                     "User Service không phản hồi hoặc timeout");
 
-        } catch (RestClientException ex) {
+        } catch (RestClientException | IllegalStateException ex) {
             throw new ServiceUnavailableException(
                     "Không thể truy xuất hồ sơ từ User Service");
         }

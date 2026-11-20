@@ -6,10 +6,14 @@ import com.mtbs.booking_service.exception.InvalidSeatException;
 import com.mtbs.booking_service.exception.ServiceUnavailableException;
 import com.mtbs.booking_service.exception.ShowtimeNotFoundException;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
+
+import java.time.Duration;
 import org.springframework.web.client.RestClientException;
 
 import java.util.List;
@@ -20,9 +24,17 @@ public class MovieServiceClient {
 
     private final RestClient restClient;
 
-    public MovieServiceClient(@Value("${movie-service.base-url}") String baseUrl) {
-        this.restClient = RestClient.builder()
+    public MovieServiceClient(
+            @Qualifier("loadBalancedRestClientBuilder") RestClient.Builder restClientBuilder,
+            @Value("${movie-service.base-url}") String baseUrl) {
+        // Timeout để không treo request khi movie-service chậm hoặc chết.
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(2));
+        factory.setReadTimeout(Duration.ofSeconds(3));
+
+        this.restClient = restClientBuilder
                 .baseUrl(baseUrl)
+                .requestFactory(factory)
                 .build();
     }
 
@@ -42,7 +54,7 @@ public class MovieServiceClient {
             throw new ServiceUnavailableException(
                     "Movie Service không phản hồi hoặc timeout");
 
-        } catch (RestClientException ex) {
+        } catch (RestClientException | IllegalStateException ex) {
             throw new ServiceUnavailableException(
                     "Không thể kết nối đến Movie Service: " + ex.getMessage());
         }
@@ -66,7 +78,7 @@ public class MovieServiceClient {
             throw new ServiceUnavailableException(
                     "Movie Service không phản hồi hoặc timeout");
 
-        } catch (RestClientException ex) {
+        } catch (RestClientException | IllegalStateException ex) {
             throw new ServiceUnavailableException(
                     "Không thể kết nối đến Movie Service: " + ex.getMessage());
         }

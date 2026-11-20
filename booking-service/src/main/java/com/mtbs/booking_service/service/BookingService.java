@@ -7,23 +7,25 @@ import java.util.List;
 
 public interface BookingService {
 
-    // Tạo booking
-    BookingResponse createBooking(CreateBookingRequest request);
+    // Tạo booking cho chính người đang đăng nhập (authUserId lấy từ JWT)
+    BookingResponse createBooking(CreateBookingRequest request, Long authUserId);
 
-    // Lấy danh sách booking
-    List<BookingResponse> getAllBookings();
-
-    // Lấy booking theo ID
-    BookingResponse getBookingById(Long id);
+    // Lấy danh sách booking: ADMIN xem tất cả, người dùng chỉ xem của mình
+    List<BookingResponse> getAllBookings(Long authUserId, boolean admin);
 
     // Lấy danh sách booking của một người dùng (mới nhất trước)
-    List<BookingResponse> getBookingsByUser(Long userId);
+    List<BookingResponse> getBookingsByUser(Long userId, Long authUserId, boolean admin);
+
+    // Lấy booking theo ID
+    BookingResponse getBookingById(Long id, Long authUserId, boolean admin);
 
     // Cập nhật booking
     BookingResponse updateBooking(
             Long id,
-            CreateBookingRequest request);
+            CreateBookingRequest request,
+            Long authUserId,
+            boolean admin);
 
     // Xóa booking
-    void deleteBooking(Long id);
+    void deleteBooking(Long id, Long authUserId, boolean admin);
 }
