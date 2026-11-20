@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 
 @Configuration
@@ -37,5 +38,14 @@ public class RedisConfig {
         template.setConnectionFactory(jedisConnectionFactory());
         log.info("Redis connected!");
         return template;
+    }
+
+    /**
+     * Dung cho blacklist jti cua access token da logout: key/value deu la
+     * chuoi nen khong can serializer JDK nhu redisTemplate o tren.
+     */
+    @Bean
+    public StringRedisTemplate stringRedisTemplate(JedisConnectionFactory jedisConnectionFactory) {
+        return new StringRedisTemplate(jedisConnectionFactory);
     }
 }

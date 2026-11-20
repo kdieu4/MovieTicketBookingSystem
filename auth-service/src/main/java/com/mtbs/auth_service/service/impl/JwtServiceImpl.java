@@ -50,6 +50,16 @@ public class JwtServiceImpl implements JwtService {
     }
 
     @Override
+    public String extractJti(String token, TokenType tokenType) {
+        return extractClaims(token, Claims::getId, tokenType);
+    }
+
+    @Override
+    public Date extractExpiration(String token, TokenType tokenType) {
+        return extractClaims(token, Claims::getExpiration, tokenType);
+    }
+
+    @Override
     public boolean isValid(String token, UserDetails userDetail, TokenType tokenType) {
         final String userEmail = extractEmail(token, tokenType);
         return userEmail.equals(userDetail.getUsername()) && !isTokenExpire(token, tokenType);
@@ -57,10 +67,6 @@ public class JwtServiceImpl implements JwtService {
 
     private boolean isTokenExpire(String token, TokenType tokenType) {
         return extractExpiration(token, tokenType).before(new Date());
-    }
-
-    private Date extractExpiration(String token, TokenType tokenType) {
-        return extractClaims(token, Claims::getExpiration, tokenType);
     }
 
     @Override
@@ -98,9 +104,13 @@ public class JwtServiceImpl implements JwtService {
         claims.put("roles", userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .toList());
+        if (userDetails instanceof com.mtbs.auth_service.domain.entity.User user) {
+            claims.put("userId", user.getUserId());
+        }
 
         return Jwts.builder()
                 .setClaims(claims) // thong tin trong payload, dang map, ko muon hien thi trong token
+                .setId(java.util.UUID.randomUUID().toString())
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * expiryHour)) // 8 tieng

@@ -51,14 +51,14 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({ MethodArgumentTypeMismatchException.class })
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleInternalErrorException(Exception e, WebRequest request) {
-        System.out.println("----------handle internal error exception-------");
+        System.out.println("----------handle invalid path variable exception-------");
         ErrorResponse response = new ErrorResponse();
         response.setTimestamp(new Date());
-        response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+        response.setStatus(HttpStatus.BAD_REQUEST.value());
         response.setPath(request.getDescription(false).replace("uri=", ""));
-        response.setError(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase());
+        response.setError(HttpStatus.BAD_REQUEST.getReasonPhrase());
         if (e instanceof MethodArgumentTypeMismatchException) {
             response.setMessage("Failed to convert value of type");
         }
@@ -92,13 +92,13 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(InvalidDataException.class)
-    @ResponseStatus(HttpStatus.CONFLICT)
-    public ErrorResponse handleDuplicateKeyException(InvalidDataException e, WebRequest request) {
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInvalidDataException(InvalidDataException e, WebRequest request) {
         ErrorResponse errorResponse = new ErrorResponse();
         errorResponse.setTimestamp(new Date());
         errorResponse.setPath(request.getDescription(false).replace("uri=", ""));
-        errorResponse.setStatus(HttpStatus.CONFLICT.value());
-        errorResponse.setError(HttpStatus.CONFLICT.getReasonPhrase());
+        errorResponse.setStatus(HttpStatus.BAD_REQUEST.value());
+        errorResponse.setError(HttpStatus.BAD_REQUEST.getReasonPhrase());
         errorResponse.setMessage(e.getMessage());
 
         return errorResponse;

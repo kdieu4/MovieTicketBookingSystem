@@ -12,6 +12,10 @@ public interface JwtService {
 
     String extractEmail(String token, TokenType tokenType);
 
+    String extractJti(String token, TokenType tokenType);
+
+    java.util.Date extractExpiration(String token, TokenType tokenType);
+
     boolean isValid(String token, UserDetails user, TokenType tokenType);
 
 

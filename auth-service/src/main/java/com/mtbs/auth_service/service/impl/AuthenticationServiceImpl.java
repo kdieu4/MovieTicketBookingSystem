@@ -46,6 +46,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     // private final TokenService tokenService;
     private final RedisTokenService redisTokenService;
     private final JwtService jwtService;
+    private final org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
+
+    private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
     private final RestClient.Builder restClientBuilder;
 
@@ -134,6 +137,17 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         final String email = jwtService.extractEmail(accessToken, TokenType.ACCESS_TOKEN);
         User user = userService.getByEmail(email);
 
+        // Vo hieu hoa access token vua dung: gateway tu choi moi request mang jti nay.
+        String jti = jwtService.extractJti(accessToken, TokenType.ACCESS_TOKEN);
+        java.util.Date expiration = jwtService.extractExpiration(accessToken, TokenType.ACCESS_TOKEN);
+        long ttlMillis = expiration.getTime() - System.currentTimeMillis();
+        if (jti != null && ttlMillis > 0) {
+            redisTemplate.opsForValue().set(
+                    BLACKLIST_PREFIX + jti,
+                    "1",
+                    java.time.Duration.ofMillis(ttlMillis));
+        }
+
         // delete token permanent
         redisTokenService.delete(user.getEmail());
 
@@ -188,6 +202,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public void register(RegisterRequest request) {
+        if (!request.password().equals(request.confirmPassword())) {
+            throw new InvalidDataException("Password not match");
+        }
         if (userRepository.existsByEmail(request.email())) {
             throw new DuplicateResouceException("Email đã được sử dụng bởi người dùng khác!");
         }
