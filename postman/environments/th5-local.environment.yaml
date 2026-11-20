@@ -1,0 +1,39 @@
+name: th5-local
+# Chỉ chứa các biến người dùng cần điền. Các biến còn lại (token, showtimeId,
+# seatId, ownTicketId, ownProfileId, ownBookingId, sessionA...) do các bước
+# SETUP tự điền vào collection variables khi chạy, nên không khai báo ở đây —
+# nếu khai báo với giá trị rỗng, environment sẽ che mất giá trị vừa được điền.
+values:
+  # --- địa chỉ service ---
+  - key: baseUrl
+    value: 'http://localhost:8080'
+  - key: movieBaseUrl
+    value: 'http://localhost:8083'
+
+  # --- tài khoản mẫu (đã tạo trong DB dev) ---
+  - key: adminEmail
+    value: 'admin02@mtbs.local'
+  - key: adminPassword
+    value: 'Admin@123'
+  - key: customerEmail
+    value: 'customer01@mtbs.local'
+  - key: customerPassword
+    value: 'Customer@123'
+  - key: otherEmail
+    value: 'staff01@mtbs.local'
+  - key: otherPassword
+    value: 'Staff@123'
+
+  # --- giá trị cố định cho các bài kiểm thử ---
+  - key: invalidToken
+    value: 'this.is.not.a.jwt'
+  - key: wrongInternalApiKey
+    value: 'wrong-internal-key'
+
+  # --- PHẢI ĐIỀN: dán giá trị USER_SERVICE_INTERNAL_API_KEY trong file .env ---
+  - key: internalApiKey
+    value: ''
+
+  # --- tuỳ chọn: dán một token thật đã hết hạn để bài AUTH-07 kiểm đúng hạn ---
+  - key: expiredToken
+    value: ''

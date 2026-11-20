@@ -1,0 +1,45 @@
+$kind: http-request
+name: "P-03 Gửi thanh toán khi payment-service đã dừng - 502/503 (chạy khi đã stop)"
+url: "{{baseUrl}}/api/v1/payments/mock"
+method: POST
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "bookingId": {{downBookingId}},
+      "amount": {{downAmount}},
+      "result": "SUCCESS"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["downBookingId", "downAmount", "customerToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy P-02 trước");
+      }
+      pm.collectionVariables.set("paymentDown", "false");
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        console.log("Bỏ qua P-03: payment-service vẫn đang chạy. Dừng container rồi chạy lại folder này.");
+        return;
+      }
+      pm.collectionVariables.set("paymentDown", "true");
+      pm.test("Payment Service dừng thì không báo thành công", () => {
+        pm.expect([502, 503, 504]).to.include(pm.response.code);
+      });
+      pm.test("Consumer không treo vô hạn", () => pm.expect(pm.response.responseTime).to.be.below(5000));
+      pm.test("Không lộ chi tiết kỹ thuật", () => {
+        const text = pm.response.text();
+        pm.expect(text).to.not.include("Connection refused");
+        pm.expect(text).to.not.include("java.");
+      });
+    language: text/javascript
+order: 5000

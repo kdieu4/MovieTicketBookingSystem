@@ -1,0 +1,8 @@
+$kind: http-request
+name: GET user khong ton tai -> 404 Not Found
+url: "{{baseUrl}}/api/users/999999"
+method: GET
+headers:
+  Accept: application/json
+examples: ./.resources/GET user khong ton tai - 404 Not Found.resources/examples
+order: 2000

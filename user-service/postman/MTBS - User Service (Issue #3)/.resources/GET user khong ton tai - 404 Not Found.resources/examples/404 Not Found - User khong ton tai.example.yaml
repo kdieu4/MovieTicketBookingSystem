@@ -1,0 +1,21 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/api/users/999999"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 404
+  statusText: Not Found
+  headers:
+    Content-Type: application/json
+  body:
+    type: text
+    content: |-
+      {
+        "status": 404,
+        "error": "Not Found",
+        "message": "Khong tim thay user voi id = 999999",
+        "timestamp": "2026-10-03T10:00:05"
+      }
+order: 1000

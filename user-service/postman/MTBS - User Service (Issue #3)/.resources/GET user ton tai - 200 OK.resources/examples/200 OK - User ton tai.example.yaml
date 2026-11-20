@@ -1,0 +1,22 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/api/users/1"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: text
+    content: |-
+      {
+        "id": 1,
+        "fullName": "Nguyen Van An",
+        "email": "an.nguyen@mtbs.vn",
+        "phoneNumber": "0901000001",
+        "createdAt": "2026-10-03T10:00:00"
+      }
+order: 1000

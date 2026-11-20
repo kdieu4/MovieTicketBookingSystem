@@ -1,0 +1,39 @@
+$kind: http-request
+name: "P-02 Tạo đơn trong khi payment-service đang dừng - 201"
+url: "{{baseUrl}}/api/bookings"
+method: POST
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "userId": 47,
+      "showtimeId": {{downShowtimeId}},
+      "seatIds": [{{downSeatId}}],
+      "sessionId": "{{downSessionId}}",
+      "requestId": "th8-down-{{$timestamp}}"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["downShowtimeId", "downSeatId", "downSessionId", "customerToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy P-01 trước");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Tạo được đơn dù Payment Service đang dừng", () => pm.expect([200, 201]).to.include(pm.response.code));
+      if (pm.response.code === 200 || pm.response.code === 201) {
+        const body = pm.response.json();
+        pm.test("Đơn ở trạng thái PENDING", () => pm.expect(body.status).to.eql("PENDING"));
+        pm.collectionVariables.set("downBookingId", String(body.bookingId));
+        pm.collectionVariables.set("downAmount", String(body.amount));
+      }
+    language: text/javascript
+order: 4000

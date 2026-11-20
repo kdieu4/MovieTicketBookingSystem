@@ -1,0 +1,32 @@
+$kind: http-request
+name: "P-03 Thanh toán mô phỏng thất bại - 200"
+url: "{{baseUrl}}/api/v1/payments/mock"
+method: POST
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "bookingId": {{failBookingId}},
+      "amount": {{failAmount}},
+      "result": "FAILED"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["failBookingId", "failAmount", "customerToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy P-02 trước");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Payment Service ghi nhận FAILED", () => pm.response.to.have.status(200));
+      pm.test("Trạng thái giao dịch FAILED", () => pm.expect(pm.response.json().status).to.eql("FAILED"));
+    language: text/javascript
+order: 5000

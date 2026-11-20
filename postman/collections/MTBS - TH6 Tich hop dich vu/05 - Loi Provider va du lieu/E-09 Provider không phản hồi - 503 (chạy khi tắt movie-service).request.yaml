@@ -1,0 +1,39 @@
+$kind: http-request
+name: "E-09 Provider không phản hồi - 503 (chạy khi tắt movie-service)"
+url: "{{baseUrl}}/api/bookings"
+method: POST
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "userId": 47,
+      "showtimeId": 5401,
+      "seatIds": [1],
+      "sessionId": "th6-provider-down",
+      "requestId": "th6-e9-{{$timestamp}}"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["customerToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy các bước SETUP ở đầu folder này");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 503) {
+        pm.test("Provider không phản hồi thì trả 503", () => pm.response.to.have.status(503));
+        pm.test("Mã lỗi SERVICE_UNAVAILABLE", () => pm.expect(pm.response.json().error).to.eql("SERVICE_UNAVAILABLE"));
+        pm.test("Không lộ chi tiết kỹ thuật", () => pm.expect(JSON.stringify(pm.response.json())).to.not.include("Connection refused"));
+      } else {
+        console.log("Bỏ qua E-09: movie-service đang chạy, mã " + pm.response.code);
+      }
+    language: text/javascript
+order: 10000

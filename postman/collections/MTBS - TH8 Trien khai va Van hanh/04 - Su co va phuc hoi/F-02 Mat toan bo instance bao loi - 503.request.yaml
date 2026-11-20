@@ -1,0 +1,44 @@
+$kind: http-request
+name: "F-02 Mất toàn bộ instance, Consumer báo lỗi rõ ràng - 503 (chạy khi đã dừng cả hai)"
+url: "{{baseUrl}}/api/bookings"
+method: POST
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "userId": 47,
+      "showtimeId": 1,
+      "seatIds": [1],
+      "sessionId": "th8-provider-down",
+      "requestId": "th8-f02-{{$timestamp}}"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["customerToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy SETUP-01 ở đầu folder này");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 503) {
+        pm.test("Mất toàn bộ Provider thì trả 503", () => pm.response.to.have.status(503));
+        pm.test("Consumer không treo vô hạn", () => pm.expect(pm.response.responseTime).to.be.below(5000));
+        pm.test("Không lộ chi tiết kỹ thuật", () => {
+          const text = JSON.stringify(pm.response.json());
+          pm.expect(text).to.not.include("Connection refused");
+          pm.expect(text).to.not.include("java.");
+        });
+      } else {
+        console.log("Bỏ qua F-02: movie-service vẫn còn instance, mã " + pm.response.code
+          + ". Dừng cả 8083 và 8093 rồi chạy lại.");
+      }
+    language: text/javascript
+order: 4000

@@ -1,0 +1,18 @@
+{
+  "name": "th8-local",
+  "values": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "default", "enabled": true },
+    { "key": "eurekaUrl", "value": "http://localhost:8761", "type": "default", "enabled": true },
+    { "key": "userUrl", "value": "http://localhost:8081", "type": "default", "enabled": true },
+    { "key": "bookingUrl", "value": "http://localhost:8082", "type": "default", "enabled": true },
+    { "key": "movieUrl", "value": "http://localhost:8083", "type": "default", "enabled": true },
+    { "key": "movie2Url", "value": "http://localhost:8093", "type": "default", "enabled": true },
+    { "key": "paymentUrl", "value": "http://localhost:8084", "type": "default", "enabled": true },
+    { "key": "authUrl", "value": "http://localhost:8085", "type": "default", "enabled": true },
+    { "key": "customerEmail", "value": "customer01@mtbs.local", "type": "default", "enabled": true },
+    { "key": "customerPassword", "value": "Customer@123", "type": "default", "enabled": true }
+  ],
+  "_postman_variable_scope": "environment",
+  "id": "b7c2d4e1-3f6a-4b2c-8d90-1a2b3c4d5e6f",
+  "_postman_exported_using": "Postman/11.0.0"
+}

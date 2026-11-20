@@ -1,0 +1,23 @@
+$kind: http-request
+name: "E-08 Payment Service báo không có giao dịch - 404"
+url: "{{baseUrl}}/api/v1/payments/booking/99999999"
+method: GET
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["customerToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy các bước SETUP ở đầu folder này");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Không có giao dịch trả 404", () => pm.response.to.have.status(404));
+    language: text/javascript
+order: 9000

@@ -1,0 +1,34 @@
+$kind: http-request
+name: "E-05 Giữ ghế không qua bước giữ chỗ - 409"
+url: "{{baseUrl}}/api/bookings"
+method: POST
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "userId": 47,
+      "showtimeId": {{showtimeId}},
+      "seatIds": [{{seatId}}],
+      "sessionId": "th6-no-hold",
+      "requestId": "th6-e5-{{$timestamp}}"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["customerToken", "showtimeId", "seatId"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy các bước SETUP ở đầu folder này");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Consumer không cho đặt ghế chưa giữ", () => pm.expect([400, 409]).to.include(pm.response.code));
+      pm.test("Thông báo nghiệp vụ rõ ràng", () => pm.expect(JSON.stringify(pm.response.json())).to.match(/ghế|giữ|SEAT/));
+    language: text/javascript
+order: 6000

@@ -1,0 +1,16 @@
+$kind: http-request
+name: "H-05 Movie Service instance 8093 - 200"
+url: "{{movie2Url}}/actuator/health"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Movie Service 8093 trả 200", () => pm.response.to.have.status(200));
+      pm.test("Movie Service 8093 báo UP", () => pm.expect(pm.response.json().status).to.eql("UP"));
+      pm.test("Không lộ chi tiết nội bộ", () => {
+        pm.expect(pm.response.json()).to.not.have.property("components");
+      });
+    language: text/javascript
+order: 5000

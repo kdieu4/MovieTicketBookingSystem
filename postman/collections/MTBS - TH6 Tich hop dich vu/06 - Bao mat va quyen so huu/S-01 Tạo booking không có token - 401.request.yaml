@@ -1,0 +1,24 @@
+$kind: http-request
+name: "S-01 Tạo booking không có token - 401"
+url: "{{baseUrl}}/api/bookings"
+method: POST
+headers:
+  "Content-Type": "application/json"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "userId": 47,
+      "showtimeId": 5401,
+      "seatIds": [1],
+      "sessionId": "th6-anon",
+      "requestId": "th6-s1-{{$timestamp}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Bắt buộc đăng nhập", () => pm.response.to.have.status(401));
+    language: text/javascript
+order: 4000

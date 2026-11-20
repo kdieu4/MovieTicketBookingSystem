@@ -1,0 +1,34 @@
+$kind: http-request
+name: "P-09 Thanh toán mô phỏng thành công - 200"
+url: "{{baseUrl}}/api/v1/payments/mock"
+method: POST
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "bookingId": {{paidBookingId}},
+      "amount": {{paidAmount}},
+      "result": "SUCCESS"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["paidBookingId", "paidAmount", "customerToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy P-08 trước");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Payment Service ghi nhận SUCCESS", () => pm.response.to.have.status(200));
+      const body = pm.response.json();
+      pm.test("Trạng thái giao dịch SUCCESS", () => pm.expect(body.status).to.eql("SUCCESS"));
+      pm.test("Có mã giao dịch", () => pm.expect(body.transactionCode).to.be.a("string").and.not.empty);
+    language: text/javascript
+order: 12000

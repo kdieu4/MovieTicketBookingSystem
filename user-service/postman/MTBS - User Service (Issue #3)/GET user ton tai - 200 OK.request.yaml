@@ -1,0 +1,9 @@
+$kind: http-request
+name: GET user ton tai -> 200 OK
+description: User id=1 (Nguyen Van An) ton tai trong du lieu mau data.sql.
+url: "{{baseUrl}}/api/users/1"
+method: GET
+headers:
+  Accept: application/json
+examples: ./.resources/GET user ton tai - 200 OK.resources/examples
+order: 1000

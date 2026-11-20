@@ -1,0 +1,14 @@
+$kind: collection
+description: "Bộ kiểm thử TH7: Service Registry và Service Discovery. Kiểm tra Eureka liệt kê dịch vụ, booking-service gọi user-service và movie-service bằng Service ID, hai instance movie-service cùng đăng ký, LoadBalancer phân phối request, và lỗi khi mất toàn bộ instance."
+variables:
+  baseUrl: http://localhost:8080
+  eurekaUrl: http://localhost:8761
+  customerEmail: customer01@mtbs.local
+  customerPassword: Customer@123
+  customerToken: ""
+  showtimeId: ""
+  seatId: ""
+  sessionId: ""
+  bookingId: ""
+  registryMovieInstances: ""
+  instancePorts: ""

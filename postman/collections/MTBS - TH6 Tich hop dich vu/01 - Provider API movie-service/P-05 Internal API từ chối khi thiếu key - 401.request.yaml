@@ -1,0 +1,34 @@
+$kind: http-request
+name: "P-05 Internal API từ chối khi thiếu key - 401"
+url: "{{movieBaseUrl}}/api/internal/showtimes/{{showtimeId}}/seat-claims"
+method: POST
+headers:
+  "Content-Type": "application/json"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "bookingId": {{providerBookingId}},
+      "sessionId": "{{sessionId}}",
+      "seatIds": [{{seatId}}]
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["showtimeId", "seatId", "sessionId", "providerBookingId"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy các bước SETUP ở đầu folder này");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Thiếu X-Internal-Api-Key thì bị chặn", () => pm.response.to.have.status(401));
+      pm.test("Không lộ thông tin nội bộ", () => {
+        const body = pm.response.json();
+        pm.expect(body).to.not.have.property("stackTrace");
+      });
+    language: text/javascript
+order: 6000

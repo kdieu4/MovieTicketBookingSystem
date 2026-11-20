@@ -1,0 +1,21 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/api/users/abc"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 400
+  statusText: Bad Request
+  headers:
+    Content-Type: application/json
+  body:
+    type: text
+    content: |-
+      {
+        "status": 400,
+        "error": "Bad Request",
+        "message": "ID khong hop le",
+        "timestamp": "2026-10-03T10:00:08"
+      }
+order: 1000

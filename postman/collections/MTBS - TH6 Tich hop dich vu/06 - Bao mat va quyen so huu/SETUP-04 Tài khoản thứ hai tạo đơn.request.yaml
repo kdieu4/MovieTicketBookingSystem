@@ -1,0 +1,36 @@
+$kind: http-request
+name: "SETUP-04 Tài khoản thứ hai tạo đơn"
+url: "{{baseUrl}}/api/bookings"
+method: POST
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{otherToken}}"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "userId": 47,
+      "showtimeId": {{showtimeId}},
+      "seatIds": [{{seatId}}],
+      "sessionId": "{{sessionId}}-other",
+      "requestId": "th6-other-{{$timestamp}}"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["showtimeId", "seatId", "sessionId", "otherToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy các bước SETUP ở đầu folder này");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Tạo được đơn của tài khoản thứ hai", () => pm.expect([200, 201]).to.include(pm.response.code));
+      const body = pm.response.json();
+      pm.test("Đơn thuộc tài khoản thứ hai", () => pm.expect(body.userId).to.not.eql(47));
+      if (body.bookingId) pm.collectionVariables.set("otherBookingId", String(body.bookingId));
+    language: text/javascript
+order: 3500

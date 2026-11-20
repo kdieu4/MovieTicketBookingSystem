@@ -1,0 +1,31 @@
+$kind: http-request
+name: "SETUP-01 Đăng nhập CUSTOMER"
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  "Content-Type": "application/json"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{customerEmail}}",
+      "password": "{{customerPassword}}",
+      "platform": "WEB"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      pm.collectionVariables.unset("customerToken");
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Setup: đăng nhập CUSTOMER", () => pm.response.to.have.status(200));
+      if (pm.response.code === 200) {
+        const data = pm.response.json().data ?? {};
+        pm.test("Setup: lấy được accessToken", () => pm.expect(data.accessToken).to.be.a("string").and.not.empty);
+        if (data.accessToken) pm.collectionVariables.set("customerToken", data.accessToken);
+      }
+    language: text/javascript
+order: 1000

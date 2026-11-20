@@ -1,0 +1,27 @@
+$kind: http-request
+name: "P-06 Giao dịch thất bại được lưu trong database - 200"
+url: "{{baseUrl}}/api/v1/payments/booking/{{failBookingId}}"
+method: GET
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["failBookingId", "customerToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy P-02 trước");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Tra được giao dịch", () => pm.response.to.have.status(200));
+      const raw = pm.response.json();
+      const body = raw.data ?? raw;
+      const state = body.paymentStatus ?? body.status;
+      pm.test("Giao dịch FAILED", () => pm.expect(state).to.eql("FAILED"));
+    language: text/javascript
+order: 8000

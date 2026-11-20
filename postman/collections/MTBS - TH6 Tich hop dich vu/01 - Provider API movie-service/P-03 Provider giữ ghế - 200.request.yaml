@@ -1,0 +1,36 @@
+$kind: http-request
+name: "P-03 Provider giữ ghế - 200"
+url: "{{movieBaseUrl}}/api/holdSeats?showtimeId={{showtimeId}}"
+queryParams:
+  - key: "showtimeId"
+    value: "{{showtimeId}}"
+method: POST
+headers:
+  "Content-Type": "application/json"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "sessionId": "{{sessionId}}",
+      "seatIds": [{{seatId}}]
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["showtimeId", "seatId", "sessionId"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy các bước SETUP ở đầu folder này");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Giữ ghế thành công", () => pm.response.to.have.status(200));
+      const body = pm.response.json();
+      pm.test("Trả về hạn giữ ghế", () => pm.expect(body.holdUntil).to.be.a("string").and.not.empty);
+      pm.test("Đúng ghế đã giữ", () => pm.expect(body.seatIds.map(String)).to.include(String(pm.variables.get("seatId"))));
+      if (body.holdUntil) pm.collectionVariables.set("holdUntil", body.holdUntil);
+    language: text/javascript
+order: 4000

@@ -1,0 +1,48 @@
+$kind: http-request
+name: "R-01 Eureka liệt kê đủ dịch vụ, hai instance đăng ký bằng IP container - 200"
+url: "{{eurekaUrl}}/eureka/apps"
+method: GET
+headers:
+  "Accept": "application/json"
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["eurekaUrl"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - kiểm tra environment th8-local");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Registry trả 200", () => pm.response.to.have.status(200));
+      const apps = (pm.response.json().applications?.application) || [];
+      const names = apps.map(function (a) { return a.name; });
+      ["API-GATEWAY", "BOOKING-SERVICE", "USER-SERVICE", "MOVIE-SERVICE", "PAYMENT-SERVICE", "AUTH-SERVICE"]
+        .forEach(function (name) {
+          pm.test("Registry có " + name, () => pm.expect(names).to.include(name));
+        });
+
+      const movie = apps.find(function (a) { return a.name === "MOVIE-SERVICE"; });
+      pm.test("Có MOVIE-SERVICE", () => pm.expect(movie).to.be.an("object"));
+      const raw = (movie && movie.instance) || [];
+      const instances = Array.isArray(raw) ? raw : [raw];
+      const ports = instances.map(function (i) { return i.port && i.port.$; });
+      pm.collectionVariables.set("registryMovieInstances", String(ports.length));
+      pm.test("Hai instance cùng một Service ID", () => {
+        pm.expect(ports.length).to.be.at.least(2);
+        pm.expect(new Set(ports).size).to.eql(ports.length);
+      });
+
+      const ips = instances.map(function (i) { return i.ipAddr; });
+      pm.test("Instance đăng ký bằng IP container, không phải localhost", () => {
+        pm.expect(ips.length).to.be.at.least(1);
+        ips.forEach(function (ip) {
+          pm.expect(ip === "127.0.0.1" || ip === "localhost").to.be.false;
+        });
+      });
+      console.log("Instance MOVIE-SERVICE: " + ports.join(", ") + " | IP: " + ips.join(", "));
+    language: text/javascript
+order: 1000

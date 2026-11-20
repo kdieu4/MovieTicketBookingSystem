@@ -1,0 +1,32 @@
+$kind: http-request
+name: "F-07 Trả tiền lại cho đơn đã thất bại không hồi sinh đơn - 200"
+url: "{{baseUrl}}/api/v1/payments/mock"
+method: POST
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "bookingId": {{failBookingId}},
+      "amount": {{failAmount}},
+      "result": "SUCCESS"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["failBookingId", "failAmount", "customerToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy các bước SETUP ở đầu folder này");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Không tạo giao dịch mới", () => pm.response.to.have.status(200));
+      pm.test("Vẫn giữ kết quả FAILED", () => pm.expect(pm.response.json().status).to.eql("FAILED"));
+    language: text/javascript
+order: 9000

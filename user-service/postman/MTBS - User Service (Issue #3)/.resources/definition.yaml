@@ -1,0 +1,12 @@
+$kind: collection
+description: |-
+  Kiem thu User Service tuan nay.
+
+  Chi 1 endpoint: GET /api/users/{id}
+  - User ton tai       -> 200 OK
+  - User khong ton tai -> 404 Not Found
+  - ID khong phai so   -> 400 Bad Request
+
+  Pham vi tuan nay CHUA dung Authentication / JWT / Role.
+variables:
+  baseUrl: http://localhost:8081

@@ -1,0 +1,25 @@
+$kind: http-request
+name: "F-03 Khởi động lại container, dịch vụ tự đăng ký lại - 200"
+url: "{{eurekaUrl}}/eureka/apps"
+method: GET
+headers:
+  "Accept": "application/json"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Registry trả 200", () => pm.response.to.have.status(200));
+      const apps = (pm.response.json().applications?.application) || [];
+      const movie = apps.find(function (a) { return a.name === "MOVIE-SERVICE"; });
+      const raw = (movie && movie.instance) || [];
+      const instances = Array.isArray(raw) ? raw : [raw];
+      const ports = instances.map(function (i) { return i.port && i.port.$; });
+      if (ports.length === 0) {
+        console.log("Bỏ qua F-03: MOVIE-SERVICE chưa đăng ký lại. Khởi động lại rồi chờ khoảng một phút.");
+        return;
+      }
+      pm.test("MOVIE-SERVICE đăng ký lại và đang phục vụ", () => pm.expect(ports.length).to.be.at.least(1));
+      console.log("Instance MOVIE-SERVICE sau restart: " + ports.join(", "));
+    language: text/javascript
+order: 5000

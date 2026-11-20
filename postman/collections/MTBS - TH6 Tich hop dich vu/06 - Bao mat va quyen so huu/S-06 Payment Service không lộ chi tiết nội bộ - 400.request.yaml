@@ -1,0 +1,29 @@
+$kind: http-request
+name: "S-06 Payment Service không lộ chi tiết nội bộ - 400"
+url: "{{baseUrl}}/api/v1/payments/booking/abc"
+method: GET
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["customerToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy các bước SETUP ở đầu folder này");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Trả mã lỗi nghiệp vụ", () => pm.response.to.have.status(400));
+      const raw = JSON.stringify(pm.response.json());
+      pm.test("Không lộ stack trace", () => pm.expect(raw).to.not.include("at com.example"));
+      pm.test("Không lộ tên bảng hay SQL", () => {
+        pm.expect(raw.toLowerCase()).to.not.include("select ");
+        pm.expect(raw.toLowerCase()).to.not.include("payments");
+      });
+    language: text/javascript
+order: 9000

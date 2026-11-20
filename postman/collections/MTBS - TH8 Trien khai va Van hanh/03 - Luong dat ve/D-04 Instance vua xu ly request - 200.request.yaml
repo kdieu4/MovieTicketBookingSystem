@@ -1,0 +1,18 @@
+$kind: http-request
+name: "D-04 Instance nào vừa xử lý request - 200"
+url: "{{baseUrl}}/api/instance-info"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Gọi được endpoint chẩn đoán", () => pm.response.to.have.status(200));
+      const body = pm.response.json();
+      pm.test("Trả về instance đang phục vụ", () => {
+        pm.expect(body.serviceName).to.eql("MOVIE-SERVICE");
+        pm.expect(body.port).to.be.a("number");
+      });
+      console.log("Request do instance " + body.instanceId + " xử lý");
+    language: text/javascript
+order: 6000

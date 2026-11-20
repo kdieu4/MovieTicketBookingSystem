@@ -1,0 +1,37 @@
+$kind: collection
+description: "Bộ kiểm thử TH8: triển khai và vận hành bằng Docker Compose. Kiểm tra sức khỏe Actuator của 8 thành phần, Eureka nhận hai instance movie-service trong Docker network, luồng đặt vé qua Gateway, phân phối tải, mất instance và bảo toàn dữ liệu sau restart container. Hai folder cuối kiểm tra trạng thái nghiệp vụ khi thanh toán thành công, thất bại và khi payment-service bị dừng."
+variables:
+  baseUrl: http://localhost:8080
+  eurekaUrl: http://localhost:8761
+  userUrl: http://localhost:8081
+  bookingUrl: http://localhost:8082
+  movieUrl: http://localhost:8083
+  movie2Url: http://localhost:8093
+  paymentUrl: http://localhost:8084
+  authUrl: http://localhost:8085
+  customerEmail: customer01@mtbs.local
+  customerPassword: Customer@123
+  customerToken: ""
+  showtimeId: ""
+  seatId: ""
+  sessionId: ""
+  bookingId: ""
+  bookingAmount: ""
+  registryMovieInstances: ""
+  instancePorts: ""
+  failBookingId: ""
+  failAmount: ""
+  paidBookingId: ""
+  paidAmount: ""
+  downBookingId: ""
+  downAmount: ""
+  paymentDown: ""
+  failShowtimeId: ""
+  failSeatId: ""
+  failSessionId: ""
+  paidShowtimeId: ""
+  paidSeatId: ""
+  paidSessionId: ""
+  downShowtimeId: ""
+  downSeatId: ""
+  downSessionId: ""

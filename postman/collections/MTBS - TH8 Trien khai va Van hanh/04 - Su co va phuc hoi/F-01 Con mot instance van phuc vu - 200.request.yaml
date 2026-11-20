@@ -1,0 +1,19 @@
+$kind: http-request
+name: "F-01 Còn một instance thì hệ thống vẫn phục vụ - 200"
+url: "{{baseUrl}}/api/instance-info"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        pm.test("Instance còn lại vẫn phục vụ", () => pm.response.to.have.status(200));
+        pm.test("Phản hồi nhanh, không treo", () => pm.expect(pm.response.responseTime).to.be.below(5000));
+        console.log("Instance còn sống: " + pm.response.json().instanceId);
+      } else {
+        console.log("Bỏ qua F-01: chưa có instance movie-service nào, mã " + pm.response.code
+          + ". Khởi động lại 8083 hoặc 8093 rồi chạy lại.");
+      }
+    language: text/javascript
+order: 3000

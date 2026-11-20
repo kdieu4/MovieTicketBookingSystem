@@ -1,0 +1,33 @@
+$kind: http-request
+name: "SETUP-03 Tài khoản thứ hai giữ ghế"
+url: "{{baseUrl}}/api/holdSeats?showtimeId={{showtimeId}}"
+queryParams:
+  - key: "showtimeId"
+    value: "{{showtimeId}}"
+method: POST
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{otherToken}}"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "sessionId": "{{sessionId}}-other",
+      "seatIds": [{{seatId}}]
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["showtimeId", "seatId", "sessionId", "otherToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy các bước SETUP ở đầu folder này");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Tài khoản thứ hai giữ được ghế", () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 3000

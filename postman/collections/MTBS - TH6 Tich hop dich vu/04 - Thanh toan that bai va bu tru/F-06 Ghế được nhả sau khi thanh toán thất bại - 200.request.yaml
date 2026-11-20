@@ -1,0 +1,29 @@
+$kind: http-request
+name: "F-06 Ghế được nhả sau khi thanh toán thất bại - 200"
+url: "{{movieBaseUrl}}/api/getSeatsByShowtime?showtimeId={{showtimeId}}"
+queryParams:
+  - key: "showtimeId"
+    value: "{{showtimeId}}"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["showtimeId", "seatId"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy các bước SETUP ở đầu folder này");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Provider trả 200", () => pm.response.to.have.status(200));
+      const seats = pm.response.json();
+      const seat = seats.find(x => String(x.id) === String(pm.variables.get("seatId")));
+      pm.test("Ghế về trống (đã bù trừ)", () => {
+        pm.expect(seat.isSold).to.be.false;
+        pm.expect(seat.holdUntil).to.be.oneOf([null, undefined]);
+      });
+    language: text/javascript
+order: 8000

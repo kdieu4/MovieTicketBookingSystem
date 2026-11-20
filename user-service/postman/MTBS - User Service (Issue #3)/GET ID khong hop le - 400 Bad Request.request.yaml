@@ -1,0 +1,8 @@
+$kind: http-request
+name: GET ID khong hop le -> 400 Bad Request
+url: "{{baseUrl}}/api/users/abc"
+method: GET
+headers:
+  Accept: application/json
+examples: ./.resources/GET ID khong hop le - 400 Bad Request.resources/examples
+order: 3000

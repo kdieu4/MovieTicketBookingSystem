@@ -1,0 +1,23 @@
+$kind: http-request
+name: "S-03 Xem đơn của người khác - 403"
+url: "{{baseUrl}}/api/bookings/{{otherBookingId}}"
+method: GET
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["customerToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy các bước SETUP ở đầu folder này");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Không xem được đơn người khác", () => pm.expect([403, 404]).to.include(pm.response.code));
+    language: text/javascript
+order: 6000

@@ -1,0 +1,25 @@
+$kind: http-request
+name: "P-10 Chờ Consumer xử lý sự kiện thanh toán"
+url: "{{baseUrl}}/api/bookings/{{paidBookingId}}"
+method: GET
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["paidBookingId", "customerToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy P-08 trước");
+      }
+      const until = Date.now() + 2500;
+      while (Date.now() < until) {}
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Đọc được đơn sau khi chờ", () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 13000
