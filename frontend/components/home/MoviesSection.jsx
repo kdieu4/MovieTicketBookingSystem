@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import MovieCard from '@/components/movie/MovieCard';
-import { CheckIcon, IconFilter } from '@/components/common/Icons';
+import { IconFilter } from '@/components/common/Icons';
 import Skeleton from '@/components/common/Skeleton';
 import { Button, SegmentedControl } from 'glisse';
 
@@ -156,7 +156,6 @@ export default function MoviesSection({
                     >
                       {name}
                       <span className="chip-count">{count}</span>
-                      {isSelected && <CheckIcon className="h-3 w-3 shrink-0" />}
                     </button>
                   );
                 })}
