@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Header from '@/components/layout/Header';
 import FeaturedSection from '@/components/home/FeaturedSection';
 import MoviesSection from '@/components/home/MoviesSection';
@@ -21,6 +21,24 @@ export default function HomePageClient({
   // Luồng đặt vé dùng chung cho FeaturedSection và nút "Chọn suất" trên thẻ phim
   const [filters, setFilters] = useState(null);
   const [searchId, setSearchId] = useState(0);
+
+  // Đặt vé nhanh xong quay về từ VNPay: dựng lại filters từ URL để BookingFlow
+  // mở lại đúng modal xác nhận (trang chủ tải lại thì state filters bị mất).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const movieTitle = params.get('movieTitle');
+
+    if (!movieTitle) return;
+
+    setFilters({
+      movieTitle,
+      city: params.get('city') || undefined,
+      cinema: params.get('cinema') || undefined,
+    });
+    setSearchId((n) => n + 1);
+  }, []);
 
   // Mở luồng đặt vé cho một phim (dành cho thẻ phim và FeaturedSection)
   const openBooking = useCallback((title) => {

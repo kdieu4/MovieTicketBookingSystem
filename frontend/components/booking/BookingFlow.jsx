@@ -10,6 +10,7 @@ import { Button } from 'glisse';
 import { getCachedSeats, getSessionId, invalidateSeats, loadSeats } from '@/services/seatApi';
 import { createBooking } from '@/services/bookingApi';
 import { createVNPayPayment, waitForPayment } from '@/services/paymentApi';
+import { clearPaymentSnapshot, readPaymentSnapshot, savePaymentSnapshot } from '@/utils/paymentSnapshot';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 const TIME_ZONE = 'Asia/Ho_Chi_Minh';
@@ -302,6 +303,9 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   const [payment, setPayment] = useState(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState('');
+  // VNPay đã xác nhận thanh toán: bảng thanh toán chuyển sang trạng thái chờ hiệu ứng rồi mở trang vé
+  const [paid, setPaid] = useState(false);
+  const restoredRef = useRef(false);
   // Giữ nguyên requestId để backend chống tạo trùng khi người dùng bấm lại
   const bookingRequestIdRef = useRef(null);
 
@@ -622,6 +626,48 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     scrollRef.current?.scrollTo({ top: 0 });
   }, [step, selectedShowtime, inline]);
 
+  // VNPay redirect về kèm ?payment=success: khôi phục bước xác nhận để hiệu ứng chạy đúng
+  // nơi người dùng đã đặt vé (đặt vé nhanh ở trang chủ hoặc luồng trong trang phim).
+  useEffect(() => {
+    if (restoredRef.current) return;
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') !== 'success') return;
+
+    const snapshot = readPaymentSnapshot();
+    if (!snapshot) return;
+
+    // Khớp trang đã đặt vé, hoặc trang phim của đúng bộ phim đó
+    const samePage = snapshot.pathname === window.location.pathname;
+    const sameMovie = snapshot.movieId && window.location.pathname === `/phim/${snapshot.movieId}`;
+    if (!samePage && !sameMovie) return;
+
+    // Chưa có filters thì chưa dựng được luồng đặt vé (trang chủ đọc filters từ URL)
+    if (!filters) return;
+
+    restoredRef.current = true;
+    clearPaymentSnapshot();
+
+    // Bỏ tham số của lần thanh toán khỏi URL để tải lại không mở lại hiệu ứng
+    window.history.replaceState(null, '', window.location.pathname);
+
+    // Ghế đã được đặt, không trả lại khi component bị gỡ
+    handedOffRef.current = true;
+
+    setCity(snapshot.city || null);
+    setCinema(snapshot.cinema || null);
+    setSelectedShowtime(snapshot.showtime || null);
+    setSelectedSeats(Array.isArray(snapshot.seats) ? snapshot.seats : []);
+    setHoldUntil(snapshot.holdUntil || null);
+    setBooking(snapshot.booking || null);
+    setPayment(null);
+    setPaymentError('');
+    setOpen(true);
+    setPaymentOpen(true);
+    setPaid(true);
+  }, [filters]);
+
   // Đo chiều cao nội dung để khung tự giãn, co lại mượt (không vượt quá 92% chiều cao màn hình)
   const hasFilters = Boolean(filters);
   useEffect(() => {
@@ -824,6 +870,23 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
       // Payment được tạo bởi consumer RabbitMQ sau khi booking xong nên phải chờ
       await waitForPayment(created.bookingId);
       setPayment(await createVNPayPayment(created.bookingId));
+
+      // Lưu lại bước xác nhận để VNPay redirect về còn khôi phục đúng màn hình này
+      savePaymentSnapshot({
+        pathname: window.location.pathname,
+        search: window.location.search,
+        bookingId: created.bookingId,
+        // 'modal' = đặt vé nhanh ở trang chủ, 'inline' = đặt vé trong trang phim
+        variant: inline ? 'inline' : 'modal',
+        movieTitle: filters?.movieTitle ?? selectedShowtime?.movieTitle ?? null,
+        movieId: selectedShowtime?.movieId ?? null,
+        city,
+        cinema,
+        showtime: selectedShowtime,
+        seats: selectedSeats,
+        booking: created,
+        holdUntil: created.holdUntil || holdUntil,
+      });
     } catch (err) {
       setPaymentError(err.message || 'Không thể tạo giao dịch thanh toán.');
       setNotice({ type: 'error', text: err.message || 'Không thể tạo Booking.' });
@@ -841,7 +904,24 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
 
     try {
       await waitForPayment(booking.bookingId);
-      setPayment(await createVNPayPayment(booking.bookingId));
+      const created = await createVNPayPayment(booking.bookingId);
+      setPayment(created);
+
+      // Tạo lại giao dịch thì cập nhật lại snapshot để lần quay về vẫn khôi phục đúng
+      savePaymentSnapshot({
+        pathname: window.location.pathname,
+        search: window.location.search,
+        bookingId: booking.bookingId,
+        variant: inline ? 'inline' : 'modal',
+        movieTitle: filters?.movieTitle ?? selectedShowtime?.movieTitle ?? null,
+        movieId: selectedShowtime?.movieId ?? null,
+        city,
+        cinema,
+        showtime: selectedShowtime,
+        seats: selectedSeats,
+        booking,
+        holdUntil: booking.holdUntil || holdUntil,
+      });
     } catch (err) {
       setPaymentError(err.message || 'Không thể tạo giao dịch thanh toán.');
     } finally {
@@ -1397,6 +1477,7 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
       loading={paymentLoading}
       error={paymentError}
       onCreateQr={handleCreateQr}
+      paid={paid}
     />
   );
 
