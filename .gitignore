@@ -25,3 +25,5 @@ AGENTS.md
 /frontend/.next/
 
 **/node_modules/
+# Ảnh/bản sao tạm khi so sánh giao diện, không commit
+/frontend/.backup/

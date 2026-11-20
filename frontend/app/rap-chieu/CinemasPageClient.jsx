@@ -1,12 +1,17 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import ShowMoreButton from '@/components/common/ShowMoreButton';
 import { Reveal } from '@/components/common/Ascii';
+import { useRowPagination } from '@/utils/useRowPagination';
 
 const ALL_CITIES = 'Tất cả';
+// 3 hàng đầu, mỗi lần bấm mở thêm 2 hàng.
+const FIRST_ROWS = 3;
+const STEP_ROWS = 2;
 
 export default function CinemasPage({ cinemas = [], error = false }) {
   const [city, setCity] = useState(ALL_CITIES);
@@ -16,7 +21,17 @@ export default function CinemasPage({ cinemas = [], error = false }) {
     return [ALL_CITIES, ...unique.sort((a, b) => a.localeCompare(b, 'vi'))];
   }, [cinemas]);
 
-  const visibleCinemas = city === ALL_CITIES ? cinemas : cinemas.filter((cinema) => cinema.city === city);
+  const visibleCinemas =
+    city === ALL_CITIES ? cinemas : cinemas.filter((cinema) => cinema.city === city);
+
+  const rowPager = useRowPagination(visibleCinemas.length, { initialRows: FIRST_ROWS, stepRows: STEP_ROWS });
+  const { reset: resetRows } = rowPager;
+  const shownCinemas = visibleCinemas.slice(0, rowPager.visibleCount);
+
+  // Đổi thành phố thì thu lại 3 hàng đầu.
+  useEffect(() => {
+    resetRows();
+  }, [city, resetRows]);
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] transition-colors duration-200">
@@ -58,13 +73,13 @@ export default function CinemasPage({ cinemas = [], error = false }) {
 
         {visibleCinemas.length > 0 ? (
           <>
-            <p className="mt-6 text-xs font-medium text-[var(--color-text-tertiary)]">
+            <p id="danh-sach-rap" className="mt-6 scroll-mt-24 text-xs font-medium text-[var(--color-text-tertiary)]">
               {visibleCinemas.length} rạp {city === ALL_CITIES ? 'trên toàn quốc' : `tại ${city}`}
             </p>
 
             <Reveal key={city} lazy={false} className="mt-4">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {visibleCinemas.map((cinema, index) => (
+            <div ref={rowPager.gridRef} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {shownCinemas.map((cinema, index) => (
                 <article
                   key={cinema.id}
                   data-ascii="surface"
@@ -105,6 +120,10 @@ export default function CinemasPage({ cinemas = [], error = false }) {
               ))}
             </div>
             </Reveal>
+
+            {rowPager.hasMore && (
+              <ShowMoreButton onClick={rowPager.showMore} />
+            )}
           </>
         ) : (
           <div className="mt-8 rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border-separator)] px-6 py-14 text-center">

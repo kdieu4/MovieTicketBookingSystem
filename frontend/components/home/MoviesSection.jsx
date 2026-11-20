@@ -1,14 +1,18 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import MovieCard from '@/components/movie/MovieCard';
 import { IconFilter } from '@/components/common/Icons';
+import ShowMoreButton from '@/components/common/ShowMoreButton';
 import Skeleton from '@/components/common/Skeleton';
-import { Button, SegmentedControl } from 'glisse';
+import { useRowPagination } from '@/utils/useRowPagination';
+import { SegmentedControl } from 'glisse';
 
-const PAGE_SIZE = 10;
+// 3 hàng đầu, mỗi lần bấm mở thêm 2 hàng; số cột do lưới thực tế quyết định.
+const FIRST_ROWS = 3;
+const STEP_ROWS = 2;
 
 const TABS = [
   { id: 'showing', label: 'Đang chiếu' },
@@ -23,7 +27,6 @@ export default function MoviesSection({
 }) {
   const [tab, setTab] = useState('showing');
   const [selectedGenres, setSelectedGenres] = useState([]);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const isShowing = tab === 'showing';
   const isAllSelected = selectedGenres.length === 0;
@@ -44,12 +47,10 @@ export default function MoviesSection({
   function selectTab(id) {
     setTab(id);
     setSelectedGenres([]);
-    setVisibleCount(PAGE_SIZE);
   }
 
   function handleSelectAll() {
     setSelectedGenres([]);
-    setVisibleCount(PAGE_SIZE);
   }
 
   function handleToggleGenre(genreName) {
@@ -59,7 +60,6 @@ export default function MoviesSection({
       }
       return [...prev, genreName];
     });
-    setVisibleCount(PAGE_SIZE);
   }
 
   const filteredMovies = useMemo(() => {
@@ -69,8 +69,15 @@ export default function MoviesSection({
     );
   }, [movies, selectedGenres, isAllSelected]);
 
-  const visibleMovies = filteredMovies.slice(0, visibleCount);
-  const hasMore = visibleCount < filteredMovies.length;
+  // Lọc trước rồi mới cắt theo hàng để "3 hàng đầu" luôn tính trên danh sách đang xem.
+  const rowPager = useRowPagination(filteredMovies.length, { initialRows: FIRST_ROWS, stepRows: STEP_ROWS });
+  const { reset: resetRows } = rowPager;
+  const visibleMovies = filteredMovies.slice(0, rowPager.visibleCount);
+
+  // Đổi tab hoặc đổi bộ lọc thì thu về 3 hàng đầu.
+  useEffect(() => {
+    resetRows();
+  }, [tab, selectedGenres, resetRows]);
 
   return (
     <section id="phim" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
@@ -163,7 +170,10 @@ export default function MoviesSection({
             </div>
           )}
 
-          <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-5">
+          <div
+            ref={rowPager.gridRef}
+            className="mt-8 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-5"
+          >
             {loading
               ? Array.from({ length: 5 }).map((_, i) => <CardSkeleton key={i} />)
               : visibleMovies.map((movie, index) => (
@@ -193,12 +203,8 @@ export default function MoviesSection({
             </div>
           )}
 
-          {!loading && hasMore && (
-            <div className="mt-10 flex justify-center">
-              <Button variant="filled" type="button" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}>
-                Xem thêm phim
-              </Button>
-            </div>
+          {!loading && rowPager.hasMore && (
+            <ShowMoreButton onClick={rowPager.showMore} />
           )}
         </div>
       ) : (

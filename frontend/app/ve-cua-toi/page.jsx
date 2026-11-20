@@ -4,9 +4,14 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import ShowMoreButton from '@/components/common/ShowMoreButton';
 import PaymentQrModal from '@/components/booking/PaymentQrModal';
+import { useRowPagination } from '@/utils/useRowPagination';
 
 const TIME_ZONE = 'Asia/Ho_Chi_Minh';
+// Vé xếp một cột: 3 vé đầu, mỗi lần bấm mở thêm 2 vé.
+const FIRST_ROWS = 3;
+const STEP_ROWS = 2;
 
 const currency = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -120,8 +125,7 @@ export default function MyTicketsPage() {
       }
 
       setTickets(Array.isArray(body) ? body : []);
-      setStatus('ready');
-    } catch (err) {
+      setStatus('ready');    } catch (err) {
       setError(err.message);
       setStatus('error');
     }
@@ -139,6 +143,15 @@ export default function MyTicketsPage() {
       alive = false;
     };
   }, []);
+
+  const ticketPager = useRowPagination(tickets.length, { initialRows: FIRST_ROWS, stepRows: STEP_ROWS });
+  const { reset: resetTicketRows } = ticketPager;
+  const shownTickets = tickets.slice(0, ticketPager.visibleCount);
+
+  // Tải lại danh sách (sau khi thanh toán) thì thu về 3 vé đầu.
+  useEffect(() => {
+    resetTicketRows();
+  }, [tickets.length, resetTicketRows]);
 
   // Vé còn thanh toán được: chưa trả tiền, chưa huỷ, còn trong hạn giữ chỗ và
   // suất chiếu chưa bắt đầu. Hạn này KHÔNG được gia hạn khi quay lại sau.
@@ -257,8 +270,9 @@ export default function MyTicketsPage() {
         )}
 
         {status === 'ready' && tickets.length > 0 && (
-          <ul className="mt-8 space-y-4">
-            {tickets.map((ticket, index) => {
+          <>
+          <ul ref={ticketPager.gridRef} id="danh-sach-ve" className="mt-8 scroll-mt-24 space-y-4">
+            {shownTickets.map((ticket, index) => {
               const badge = statusBadge(ticket, now);
               const remaining = holdRemainingMs(ticket, now);
 
@@ -374,6 +388,10 @@ export default function MyTicketsPage() {
               );
             })}
           </ul>
+          {ticketPager.hasMore && (
+            <ShowMoreButton onClick={ticketPager.showMore} />
+          )}
+          </>
         )}
       </main>
 
