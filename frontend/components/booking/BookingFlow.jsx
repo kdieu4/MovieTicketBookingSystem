@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import SeatPicker, { SEAT_ANIMATIONS } from './SeatPicker';
 import PaymentQrModal from './PaymentQrModal';
 import { Reveal, Skeleton } from '@/components/common/Ascii';
+import { uniqueCities } from '@/utils/movieHelpers';
 import { getCachedSeats, getSessionId, invalidateSeats, loadSeats } from '@/services/seatApi';
 import { createBooking } from '@/services/bookingApi';
 import { createVNPayPayment, waitForPayment } from '@/services/paymentApi';
@@ -22,7 +23,7 @@ const STEP_OUT_MS = 170;
 const ALL_CINEMAS = 'Tất cả rạp';
 
 // Các bước hiển thị trên thanh tiến trình.
-const STEP_LABELS = ['Thành phố', 'Rạp chiếu', 'Suất chiếu', 'Chọn ghế', 'Xác nhận'];
+const STEP_LABELS = ['Thành phố', 'Rạp chiếu', 'Suất chiếu', 'Chọn ghế', 'Thanh toán'];
 
 // Hệ số giá theo loại ghế, tạm thời dùng ở frontend.
 // Khi backend trả sẵn seat.price cho từng ghế thì giá trị đó được ưu tiên và bảng này không còn dùng.
@@ -248,6 +249,11 @@ function uniqueByName(items) {
   });
 }
 
+// Gộp thành phố trùng nhau chỉ khác dấu ("Da Nang" và "Đà Nẵng") trước khi hiển thị
+function toCityList(list) {
+  return uniqueByName(uniqueCities(list.map((item) => toCity(item).name)).map((name) => ({ name })));
+}
+
 // Cache thành phố theo tên phim, sống suốt phiên trang. Chỉ lưu kết quả thành công.
 const citiesCache = new Map();
 
@@ -255,7 +261,7 @@ const citiesCache = new Map();
 export function prefetchCities(movieTitle) {
   if (!movieTitle || citiesCache.has(movieTitle)) return;
   fetchList('getCities', { movieTitle })
-    .then((list) => citiesCache.set(movieTitle, uniqueByName(list.map(toCity))))
+    .then((list) => citiesCache.set(movieTitle, toCityList(list)))
     .catch(() => {});
 }
 
@@ -497,7 +503,7 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
 
     fetchList('getCities', { movieTitle: key }, controller.signal)
       .then((list) => {
-        const items = uniqueByName(list.map(toCity));
+        const items = toCityList(list);
         citiesCache.set(key, items);
         setCities({ status: items.length > 0 ? 'ready' : 'empty', items });
       })
@@ -1487,7 +1493,7 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
               {step === 5 && selectedShowtime && (
                 <div>
                   <StepHeading
-                    title="Xác nhận"
+                    title="Thanh toán"
                     subtitle={`${selectedShowtime.movieTitle} · ${cinemaName}`}
                     backLabel={booking ? undefined : 'Đổi ghế'}
                     onBack={booking ? undefined : handleBackToSeats}

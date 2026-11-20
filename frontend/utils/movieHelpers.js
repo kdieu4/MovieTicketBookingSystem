@@ -105,3 +105,36 @@ export function groupSeatsByRow(seats) {
   Array.from(map.values()).forEach((rowSeats) => rowSeats.sort((a, b) => a.number - b.number));
   return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
 }
+// Tên thành phố trong dữ liệu có cả bản không dấu ("Da Nang") lẫn có dấu ("Đà Nẵng").
+// So sánh bằng bản bỏ dấu để gộp lại, và giữ bản có dấu để hiển thị.
+function cityKey(name) {
+  return String(name || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .trim();
+}
+
+function hasDiacritics(name) {
+  return cityKey(name) !== String(name || '').toLowerCase().trim();
+}
+
+export function uniqueCities(names) {
+  const byKey = new Map();
+
+  for (const raw of names || []) {
+    const name = typeof raw === 'string' ? raw.trim() : '';
+    if (!name) continue;
+
+    const key = cityKey(name);
+    const current = byKey.get(key);
+
+    if (!current || (!hasDiacritics(current) && hasDiacritics(name))) {
+      byKey.set(key, name);
+    }
+  }
+
+  return [...byKey.values()];
+}

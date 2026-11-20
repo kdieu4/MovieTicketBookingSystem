@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Button } from 'glisse';
+import { uniqueCities } from '@/utils/movieHelpers';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
@@ -147,8 +148,10 @@ export default function HeroSection({
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
-        setCities(data);
-        setSelectedCity((current) => current || data[0]);
+        // Gộp các thành phố trùng nhau chỉ khác dấu, ví dụ "Da Nang" và "Đà Nẵng"
+        const unique = uniqueCities(data);
+        setCities(unique);
+        setSelectedCity((current) => current || unique[0]);
         setCitiesStatus('ready');
       } else {
         setCities([]);
