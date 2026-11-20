@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getPaymentById } from "@/services/paymentApi";
+import { paymentReturnUrl, readPaymentSnapshot } from "@/utils/paymentSnapshot";
 
 const TICKETS_PATH = "/ve-cua-toi";
 
@@ -44,7 +45,9 @@ export default function VNPayReturnPage() {
           if (cancelled) return;
 
           if (payment.paymentStatus === "SUCCESS") {
-            window.location.replace(TICKETS_PATH);
+            // Quay lại đúng màn hình đã đặt vé (bước Xác nhận) để chạy hiệu ứng
+            // distortion-waves; không có snapshot thì về danh sách vé như trước.
+            window.location.replace(paymentReturnUrl(readPaymentSnapshot()));
             return;
           }
 
