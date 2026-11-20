@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { QRCodeSVG } from "qrcode.react";
+import { DistortionWave } from "distortion-waves";
 import { Button } from "glisse";
 
 const TIME_ZONE = "Asia/Ho_Chi_Minh";
@@ -67,6 +68,7 @@ function formatRemaining(seconds) {
 export default function PaymentQrModal({
   open,
   onClose,
+  inline = false,
   bookingId,
   showtime,
   cinema,
@@ -77,10 +79,32 @@ export default function PaymentQrModal({
   loading = false,
   error = "",
   onCreateQr,
+  paid = false,
 }) {
   const dialogRef = useRef(null);
   const [mounted, setMounted] = useState(false);
   const [remaining, setRemaining] = useState(null);
+
+  // Sau khi VNPay xác nhận thanh toán: nút đổi thành "Đang thanh toán",
+  // đợi 1 giây cho người dùng kịp đọc rồi mới cho sóng distortion quét qua
+  // và mang bảng thanh toán sang màn hình kết quả.
+  const [paying, setPaying] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const waveRef = useRef(null);
+
+  useEffect(() => {
+    if (!paid) {
+      setPaying(false);
+      setRevealed(false);
+      return;
+    }
+
+    setPaying(true);
+
+    const timer = window.setTimeout(() => setRevealed(true), 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [paid]);
 
   // Chỉ sử dụng Portal sau khi component được mount
   useEffect(() => {
@@ -89,7 +113,7 @@ export default function PaymentQrModal({
 
   // Mở dialog bằng API gốc của trình duyệt
   useEffect(() => {
-    if (!mounted || !open) return;
+    if (!mounted || !open || inline) return;
 
     const dialog = dialogRef.current;
 
@@ -104,7 +128,7 @@ export default function PaymentQrModal({
         dialog.close();
       }
     };
-  }, [mounted, open]);
+  }, [mounted, open, inline]);
 
   // Đồng hồ đếm ngược thời gian giữ ghế
   useEffect(() => {
@@ -130,7 +154,11 @@ export default function PaymentQrModal({
     return () => clearInterval(interval);
   }, [open, holdUntil]);
 
-  if (!mounted || !open || !showtime) {
+  if (!open || !showtime) {
+    return null;
+  }
+
+  if (!inline && !mounted) {
     return null;
   }
 
@@ -183,19 +211,6 @@ export default function PaymentQrModal({
   const qrValue = safePayUrl;
   const hasPayment = Boolean(safePayUrl);
 
-  {
-    qrValue && !expired && (
-      <QRCodeSVG
-        value={qrValue}
-        size={216}
-        level="L"
-        bgColor="#FFFFFF"
-        fgColor="#000000"
-        title="QR mở trang thanh toán VNPay"
-      />
-    );
-  }
-
   // Đóng có animation ngắn (xem .seenema-payment-dialog[closing] trong globals.css)
   function requestClose() {
     const dialog = dialogRef.current;
@@ -214,26 +229,8 @@ export default function PaymentQrModal({
     }, 140);
   }
 
-  return createPortal(
-    <dialog
-      ref={dialogRef}
-      onClose={onClose}
-      aria-labelledby="seenema-payment-title"
-      aria-describedby="seenema-payment-description"
-      className="
-        seenema-payment-dialog
-        fixed left-1/2 top-1/2
-        m-0 w-[calc(100%-24px)] max-w-[920px]
-        -translate-x-1/2 -translate-y-1/2
-        overflow-hidden
-        rounded-[var(--radius-lg)]
-        border border-[var(--color-border-opaque-separator)]
-        bg-[var(--color-bg-primary)]
-        p-0 text-[var(--color-text-primary)]
-        shadow-[var(--shadow-high)]
-      "
-    >
-      <div className="relative grid max-h-[90vh] overflow-y-auto md:grid-cols-[1.15fr_1fr]">
+  const payView = (
+      <div className="relative grid max-h-[90vh] overflow-y-auto bg-[var(--color-bg-primary)] md:grid-cols-[1.15fr_1fr]">
         {/* CỘT TRÁI: THÔNG TIN VÉ */}
         <section className="p-6 sm:p-8">
           <div className="mb-4">
@@ -241,7 +238,7 @@ export default function PaymentQrModal({
               MÃ ĐẶT VÉ
             </p>
             <p className="mt-1 text-[15px] font-semibold text-[var(--color-brand-primary)]">
-              {bookingId ? `#${bookingId}` : "Chưa tạo Booking"}
+              {bookingId ? `#${bookingId}` : "Chưa tạo giao dịch"}
             </p>
           </div>
           <div className="mb-6 flex items-center gap-3">
@@ -382,15 +379,17 @@ export default function PaymentQrModal({
             sm:p-8
           "
         >
-          {/* Nút đóng */}
-          <Button
-            type="button"
-            onClick={() => requestClose()}
-            aria-label="Đóng cửa sổ thanh toán"
-            className="absolute right-4 top-4"
-            style={{ position: "absolute" }}
-            icon={<CloseIcon />}
-          />
+          {/* Nút đóng: chỉ dùng khi hiển thị dạng dialog */}
+          {!inline && (
+            <Button
+              type="button"
+              onClick={() => requestClose()}
+              aria-label="Đóng cửa sổ thanh toán"
+              className="absolute right-4 top-4"
+              style={{ position: "absolute" }}
+              icon={<CloseIcon />}
+            />
+          )}
 
           <div className="pt-8">
             <p className="text-[12px] font-semibold uppercase tracking-widest text-[var(--color-brand-on-primary-container)]">
@@ -458,29 +457,69 @@ export default function PaymentQrModal({
           </div>
 
           {/* TẠO GIAO DỊCH */}
-          {!hasPayment && !expired && (
-            <Button
+          {paid ? (
+            // Đang chờ hiệu ứng: giữ đúng kích thước nút cũ để bố cục không nhảy
+            <button
               type="button"
-              variant="filled"
-              onClick={onCreateQr}
-              disabled={!onCreateQr || loading}
-              style={{ height: 44, width: "100%", maxWidth: 280, borderRadius: 22, fontSize: 13 }}
-            >
-              {loading ? "Đang tạo giao dịch..." : "Tạo mã QR thanh toán"}
-            </Button>
-          )}
-
-          {safePayUrl && !expired && (
-            <a
-              href={safePayUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+              disabled
+              aria-live="polite"
               className="lg-glass lg-button"
               data-variant="filled"
-              style={{ height: 44, width: "100%", maxWidth: 280, borderRadius: 22, fontSize: 13 }}
+              style={{
+                height: 44,
+                width: "100%",
+                maxWidth: 280,
+                borderRadius: 22,
+                fontSize: 13,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                cursor: "progress",
+              }}
             >
-              Mở trang thanh toán VNPay
-            </a>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                className="animate-spin"
+                aria-hidden="true"
+              >
+                <path d="M21 12a9 9 0 1 1-6.2-8.6" />
+              </svg>
+              Đang thanh toán
+            </button>
+          ) : (
+            <>
+              {!hasPayment && !expired && (
+                <Button
+                  type="button"
+                  variant="filled"
+                  onClick={onCreateQr}
+                  disabled={!onCreateQr || loading}
+                  style={{ height: 44, width: "100%", maxWidth: 280, borderRadius: 22, fontSize: 13 }}
+                >
+                  {loading ? "Đang tạo giao dịch..." : "Tạo mã QR thanh toán"}
+                </Button>
+              )}
+
+              {safePayUrl && !expired && (
+                // Điều hướng ngay trong tab hiện tại: VNPay sẽ redirect về /payment/return
+                // rồi trang đó tự chuyển tiếp sang màn hình xác nhận.
+                <a
+                  href={safePayUrl}
+                  className="lg-glass lg-button"
+                  data-variant="filled"
+                  style={{ height: 44, width: "100%", maxWidth: 280, borderRadius: 22, fontSize: 13 }}
+                >
+                  Thanh toán qua VNPay
+                </a>
+              )}
+            </>
           )}
 
           {error && (
@@ -504,6 +543,105 @@ export default function PaymentQrModal({
           </p>
         </section>
       </div>
+  );
+
+  // Màn hình kết quả: sóng distortion mang bảng thanh toán sang đây
+  const successView = (
+    <div className="flex h-full min-h-[420px] w-full flex-col items-center justify-center gap-3 bg-[var(--color-bg-primary)] p-8 text-center">
+      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-brand-primary-container)] text-[var(--color-system-success)]">
+        <svg
+          width="34"
+          height="34"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4.5 12.5l5 5 10-11" />
+        </svg>
+      </span>
+
+      <p className="text-[12px] font-semibold uppercase tracking-widest text-[var(--color-text-secondary)]">
+        Seenema Payment
+      </p>
+
+      <h2 className="text-[22px] font-semibold text-[var(--color-text-primary)]">
+        Thanh toán thành công
+      </h2>
+
+      <p className="max-w-[320px] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
+        {showtime.movieTitle} · {seats.length} ghế · {formatVND(total)}
+      </p>
+
+      <p className="text-[12px] text-[var(--color-text-secondary)]">
+        Mã đặt vé {bookingId ? `#${bookingId}` : "đang cập nhật"}
+      </p>
+
+      <a
+        href="/ve-cua-toi"
+        className="lg-glass lg-button"
+        data-variant="filled"
+        style={{
+          height: 44,
+          width: "100%",
+          maxWidth: 280,
+          borderRadius: 22,
+          fontSize: 13,
+          marginTop: 8,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        Xem vé của tôi
+      </a>
+    </div>
+  );
+
+  const content = (
+    <DistortionWave
+      ref={waveRef}
+      revealed={revealed}
+      type="vertical"
+      palette="colorful"
+      className="block w-full bg-[var(--color-bg-primary)]"
+      revealedContent={successView}
+    >
+      {payView}
+    </DistortionWave>
+  );
+
+  if (inline) {
+    return (
+      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-primary)]">
+        {content}
+      </div>
+    );
+  }
+
+  return createPortal(
+    <dialog
+      ref={dialogRef}
+      onClose={onClose}
+      aria-labelledby="seenema-payment-title"
+      aria-describedby="seenema-payment-description"
+      className="
+        seenema-payment-dialog
+        fixed left-1/2 top-1/2
+        m-0 w-[calc(100%-24px)] max-w-[920px]
+        -translate-x-1/2 -translate-y-1/2
+        overflow-hidden
+        rounded-[var(--radius-lg)]
+        border border-[var(--color-border-opaque-separator)]
+        bg-[var(--color-bg-primary)]
+        p-0 text-[var(--color-text-primary)]
+        shadow-[var(--shadow-high)]
+      "
+    >
+      {content}
     </dialog>,
     document.body,
   );

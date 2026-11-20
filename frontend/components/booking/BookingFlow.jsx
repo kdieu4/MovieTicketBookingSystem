@@ -8,6 +8,11 @@ import { Reveal, Skeleton } from '@/components/common/Ascii';
 import { getCachedSeats, getSessionId, invalidateSeats, loadSeats } from '@/services/seatApi';
 import { createBooking } from '@/services/bookingApi';
 import { createVNPayPayment, waitForPayment } from '@/services/paymentApi';
+import {
+  clearPaymentSnapshot,
+  readPaymentSnapshot,
+  savePaymentSnapshot,
+} from '@/utils/paymentSnapshot';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 const TIME_ZONE = 'Asia/Ho_Chi_Minh';
@@ -16,7 +21,7 @@ const STEP_OUT_MS = 170;
 // Giá trị rạp mà Hero Section gửi khi người dùng không chọn rạp cụ thể
 const ALL_CINEMAS = 'Tất cả rạp';
 
-// Các bước hiển thị trên thanh tiến trình. Bước 5 (Xác nhận) sẽ nối với phần thanh toán sau.
+// Các bước hiển thị trên thanh tiến trình.
 const STEP_LABELS = ['Thành phố', 'Rạp chiếu', 'Suất chiếu', 'Chọn ghế', 'Xác nhận'];
 
 // Hệ số giá theo loại ghế, tạm thời dùng ở frontend.
@@ -294,9 +299,15 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   const [holdUntil, setHoldUntil] = useState(null);
   const [notice, setNotice] = useState(null); // { type: 'error', text }
 
-  // Thanh toán: booking do backend tạo, sau đó mở modal QR VNPay
+  // Thanh toán: bước 5 xác nhận, booking do backend tạo khi bấm thanh toán
   const [booking, setBooking] = useState(null);
-  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  // VNPay đã xác nhận thanh toán cho booking của bước 5 (khôi phục sau khi redirect về)
+  const [paid, setPaid] = useState(false);
+  // Bỏ qua một lần tải lại sơ đồ ghế khi vừa khôi phục bước xác nhận sau thanh toán
+  const skipSeatReloadRef = useRef(false);
+  // Chỉ khôi phục một lần cho mỗi lần tải trang
+  const restoredRef = useRef(false);
   const [payment, setPayment] = useState(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState('');
@@ -455,6 +466,12 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     setSelectedSeats([]);
     setHoldUntil(null);
     setNotice(null);
+    setConfirming(false);
+    setBooking(null);
+    setPaid(false);
+    setPayment(null);
+    setPaymentError('');
+    setPaymentLoading(false);
     setSelectedDate(null);
     setCinemaQuery('');
     setCinemas(EMPTY_LIST);
@@ -571,6 +588,12 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   // Tải sơ đồ ghế khi chọn suất chiếu. Dùng dữ liệu vừa prefetch nếu còn mới để mở ghế ngay.
   useEffect(() => {
     if (!selectedShowtime) return;
+    // Vừa khôi phục bước xác nhận sau khi thanh toán: ghế đã nằm trong snapshot,
+    // không tải lại để khỏi ghi đè lựa chọn đang hiển thị.
+    if (skipSeatReloadRef.current) {
+      skipSeatReloadRef.current = false;
+      return;
+    }
     const controller = new AbortController();
     const cached = getCachedSeats(selectedShowtime.id);
 
@@ -601,7 +624,50 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     };
   }, [selectedShowtime, refreshSeats]);
 
-  const step = !city ? 1 : !cinema ? 2 : !selectedShowtime ? 3 : 4;
+  const step = !city ? 1 : !cinema ? 2 : !selectedShowtime ? 3 : !confirming ? 4 : 5;
+
+  // VNPay redirect về kèm ?payment=success: khôi phục đúng nơi đã đặt vé
+  // (modal ở trang chủ hoặc luồng trong trang phim) để hiệu ứng chạy ngay tại đó.
+  // Phải chờ filters: ở trang chủ filters được dựng lại từ URL sau khi mount.
+  useEffect(() => {
+    if (restoredRef.current) return;
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') !== 'success') return;
+
+    const snapshot = readPaymentSnapshot();
+    if (!snapshot) return;
+
+    // Khớp trang đã đặt vé, hoặc trang phim của đúng bộ phim đó
+    const samePage = snapshot.pathname === window.location.pathname;
+    const sameMovie =
+      snapshot.movieId && window.location.pathname === `/phim/${snapshot.movieId}`;
+
+    if (!samePage && !sameMovie) return;
+
+    // Chưa có filters thì chưa dựng được luồng đặt vé (trang chủ đọc filters từ URL)
+    if (!filters) return;
+
+    restoredRef.current = true;
+    clearPaymentSnapshot();
+
+    // Bỏ các tham số của lần thanh toán khỏi URL để tải lại không mở lại hiệu ứng
+    window.history.replaceState(null, '', window.location.pathname);
+
+    skipSeatReloadRef.current = true;
+    setCity(snapshot.city || null);
+    setCinema(snapshot.cinema || null);
+    setSelectedShowtime(snapshot.showtime || null);
+    setSelectedSeats(Array.isArray(snapshot.seats) ? snapshot.seats : []);
+    setHoldUntil(snapshot.holdUntil || null);
+    setBooking(snapshot.booking || null);
+    setPayment(null);
+    setPaymentError('');
+    setConfirming(true);
+    setPaid(true);
+    setOpen(true);
+  }, [filters]);
 
   // Đổi bước thì cuộn về đầu vùng nội dung.
   // Chế độ nội tuyến: khung không tự cuộn, nên chỉ cuộn trang khi đầu luồng đã trôi lên khỏi màn hình.
@@ -722,8 +788,16 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
       lastHoldRef.current = null;
       setNotice(null);
       setHoldUntil(null);
-      setSelectedSeats([]);
-      setSelectedShowtime(null);
+      setConfirming(false);
+      setBooking(null);
+      setPayment(null);
+      setPaymentError('');
+      if (n <= 4) {
+        setSelectedSeats([]);
+      }
+      if (n <= 3) {
+        setSelectedShowtime(null);
+      }
       if (n <= 2) {
         setCinema(null);
         setSelectedDate(null);
@@ -737,8 +811,20 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     });
   }
 
+  // Từ bước xác nhận quay lại chọn ghế: giữ nguyên ghế đang được giữ
+  function handleBackToSeats() {
+    if (booking) return;
+    runTransition('back', () => setConfirming(false));
+  }
+
   // Bấm vào bước đã qua trên thanh các bước để quay lại
   function handleGoToStep(n) {
+    // Đã tạo giao dịch thì không quay lại đổi ghế được nữa
+    if (booking) return;
+    if (n === 4 && confirming) {
+      handleBackToSeats();
+      return;
+    }
     if (n < step) handleBackTo(n);
   }
 
@@ -791,8 +877,15 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   const allCinemas = cinema === ALL_CINEMAS;
   const cinemaName = selectedShowtime?.cinemaName || (allCinemas ? '' : cinema || '');
 
-  // Tạo booking rồi tạo giao dịch VNPay, mở modal QR ngay trong luồng.
-  async function handleContinue() {
+  // Bấm Tiếp tục ở bước chọn ghế: sang bước 5 xác nhận, chưa tạo giao dịch.
+  function handleContinue() {
+    if (!selectedShowtime || selectedSeats.length === 0 || paymentLoading) return;
+    setNotice(null);
+    runTransition('forward', () => setConfirming(true));
+  }
+
+  // Bấm Thanh toán ở bước xác nhận: tạo booking (nếu chưa có) rồi tạo giao dịch VNPay.
+  async function handlePay() {
     if (!selectedShowtime || selectedSeats.length === 0 || paymentLoading) return;
 
     // Booking Service nhận userId từ client (chưa có endpoint xác thực dùng chung)
@@ -802,54 +895,58 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
       return;
     }
 
-    bookingRequestIdRef.current ||=
-      window.crypto?.randomUUID?.() ?? `req-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
     setNotice(null);
     setPaymentLoading(true);
     setPaymentError('');
-    setPayment(null);
 
     try {
-      const created = await createBooking({
-        userId,
-        showtimeId: Number(selectedShowtime.id),
-        seatIds: selectedSeats.map((seat) => seat.id),
-        sessionId: getSessionId(),
-        requestId: bookingRequestIdRef.current,
-      });
+      let current = booking;
 
-      if (!created?.bookingId) {
-        throw new Error('Booking Service không trả về bookingId.');
+      if (!current?.bookingId) {
+        bookingRequestIdRef.current ||=
+          window.crypto?.randomUUID?.() ?? `req-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+        current = await createBooking({
+          userId,
+          showtimeId: Number(selectedShowtime.id),
+          seatIds: selectedSeats.map((seat) => seat.id),
+          sessionId: getSessionId(),
+          requestId: bookingRequestIdRef.current,
+        });
+
+        if (!current?.bookingId) {
+          throw new Error('Booking Service không trả về bookingId.');
+        }
+
+        setBooking(current);
+        if (current.holdUntil) setHoldUntil(current.holdUntil);
       }
 
-      setBooking(created);
-      if (created.holdUntil) setHoldUntil(created.holdUntil);
-      setPaymentOpen(true);
-
       // Payment được tạo bởi consumer RabbitMQ sau khi booking xong nên phải chờ
-      await waitForPayment(created.bookingId);
-      setPayment(await createVNPayPayment(created.bookingId));
+      await waitForPayment(current.bookingId);
+      setPayment(await createVNPayPayment(current.bookingId));
+
+      // Lưu lại bước xác nhận để VNPay redirect về còn khôi phục đúng màn hình này
+      savePaymentSnapshot({
+        pathname: window.location.pathname,
+        search: window.location.search,
+        bookingId: current.bookingId,
+        // 'modal' = đặt vé nhanh ở trang chủ, 'inline' = đặt vé trong trang phim
+        variant: inline ? 'inline' : 'modal',
+        movieTitle: filters?.movieTitle ?? selectedShowtime?.movieTitle ?? null,
+        filterCity: filters?.city ?? null,
+        filterCinema: filters?.cinema ?? null,
+        movieId: selectedShowtime?.movieId ?? null,
+        city,
+        cinema,
+        showtime: selectedShowtime,
+        seats: selectedSeats,
+        booking: current,
+        holdUntil: current.holdUntil || holdUntil,
+      });
     } catch (err) {
       setPaymentError(err.message || 'Không thể tạo giao dịch thanh toán.');
       setNotice({ type: 'error', text: err.message || 'Không thể tạo Booking.' });
-    } finally {
-      setPaymentLoading(false);
-    }
-  }
-
-  // Bấm "Tạo mã QR" trong modal (thử lại khi bước trên lỗi)
-  async function handleCreateQr() {
-    if (!booking?.bookingId || paymentLoading) return;
-
-    setPaymentLoading(true);
-    setPaymentError('');
-
-    try {
-      await waitForPayment(booking.bookingId);
-      setPayment(await createVNPayPayment(booking.bookingId));
-    } catch (err) {
-      setPaymentError(err.message || 'Không thể tạo giao dịch thanh toán.');
     } finally {
       setPaymentLoading(false);
     }
@@ -1375,13 +1472,43 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
                       <button
                         type="button"
                         onClick={handleContinue}
-                        disabled={!hasSeats || paymentLoading}
+                        disabled={!hasSeats}
                         className="mt-5 flex h-11 w-full items-center justify-center gap-1.5 rounded-full bg-[var(--color-brand-fill)] text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-fill-hover)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2"
                       >
-                        {paymentLoading ? 'Đang tạo giao dịch...' : 'Tiếp tục'}
+                        Tiếp tục
                         <span aria-hidden="true">→</span>
                       </button>
                     </aside>
+                  </div>
+                </div>
+              )}
+
+              {/* BƯỚC 5: xác nhận và thanh toán, hiển thị ngay trong luồng thay vì popup */}
+              {step === 5 && selectedShowtime && (
+                <div>
+                  <StepHeading
+                    title="Xác nhận"
+                    subtitle={`${selectedShowtime.movieTitle} · ${cinemaName}`}
+                    backLabel={booking ? undefined : 'Đổi ghế'}
+                    onBack={booking ? undefined : handleBackToSeats}
+                  />
+
+                  <div className="mt-6">
+                    <PaymentQrModal
+                      inline
+                      open
+                      bookingId={booking?.bookingId}
+                      showtime={selectedShowtime}
+                      cinema={cinemaName}
+                      seats={selectedSeats}
+                      total={booking?.amount ?? total}
+                      holdUntil={holdUntil}
+                      payment={payment}
+                      loading={paymentLoading}
+                      error={paymentError}
+                      onCreateQr={handlePay}
+                      paid={paid}
+                    />
                   </div>
                 </div>
               )}
@@ -1392,43 +1519,13 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     </div>
   );
 
-  const paymentModal = (
-    <PaymentQrModal
-      open={paymentOpen}
-      onClose={() => setPaymentOpen(false)}
-      bookingId={booking?.bookingId}
-      showtime={selectedShowtime}
-      cinema={cinemaName}
-      seats={selectedSeats}
-      total={booking?.amount ?? total}
-      holdUntil={holdUntil}
-      payment={payment}
-      loading={paymentLoading}
-      error={paymentError}
-      onCreateQr={handleCreateQr}
-    />
-  );
-
   // Nội tuyến: render ngay tại vị trí đặt component.
   // Modal: render qua portal để lớp nền mờ luôn phủ kín toàn màn hình, không bị ảnh hưởng bởi thẻ cha.
   if (inline) {
-    return (
-      <>
-        {modal}
-        {paymentModal}
-      </>
-    );
+    return modal;
   }
   // Modal chỉ mở sau tương tác trên trình duyệt nên document luôn tồn tại ở đây.
-  return typeof document === 'undefined'
-    ? null
-    : createPortal(
-        <>
-          {modal}
-          {paymentModal}
-        </>,
-        document.body,
-      );
+  return typeof document === 'undefined' ? null : createPortal(modal, document.body);
 }
 
 // Tiêu đề của mỗi bước, kèm nút quay lại bước trước (nếu có)
