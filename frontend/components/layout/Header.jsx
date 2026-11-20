@@ -383,7 +383,7 @@ export default function Header() {
                 aria-expanded={showPanel}
                 aria-controls="search-results"
                 aria-autocomplete="list"
-                className="w-40 bg-transparent text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none lg:w-64"
+                className="w-40 bg-transparent text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)] focus:outline-none lg:w-64"
               />
             </form>
 
@@ -559,7 +559,7 @@ export default function Header() {
               onChange={(e) => setMobileQuery(e.target.value)}
               placeholder="Tìm phim, đạo diễn..."
               aria-label="Tìm phim"
-              className="min-w-0 flex-1 bg-transparent text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)] focus:outline-none"
             />
             <Button
               type="submit"
