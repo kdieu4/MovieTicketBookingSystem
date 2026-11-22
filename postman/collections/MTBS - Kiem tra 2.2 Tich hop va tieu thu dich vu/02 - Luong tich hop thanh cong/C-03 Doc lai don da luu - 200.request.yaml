@@ -1,0 +1,27 @@
+$kind: http-request
+name: "C-03 Đọc lại đơn đã lưu - 200"
+url: "{{baseUrl}}/api/bookings/{{bookingId}}"
+method: GET
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["bookingId", "customerToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy C-02 trước");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Đọc được đơn vừa tạo", () => pm.response.to.have.status(200));
+      const body = pm.response.json();
+      pm.test("Đúng bookingId", () => pm.expect(String(body.bookingId)).to.eql(String(pm.variables.get("bookingId"))));
+      pm.test("Vẫn PENDING trước khi thanh toán", () => pm.expect(body.status).to.eql("PENDING"));
+      pm.test("Số tiền được giữ nguyên khi đọc lại", () => pm.expect(String(body.amount)).to.eql(String(pm.variables.get("bookingAmount"))));
+    language: text/javascript
+order: 5000

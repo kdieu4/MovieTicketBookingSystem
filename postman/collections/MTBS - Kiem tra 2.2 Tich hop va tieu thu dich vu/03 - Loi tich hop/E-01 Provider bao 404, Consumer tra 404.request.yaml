@@ -1,0 +1,40 @@
+$kind: http-request
+name: "E-01 Provider báo 404, Consumer trả 404 - 404"
+url: "{{baseUrl}}/api/bookings"
+method: POST
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "userId": 47,
+      "showtimeId": 99999999,
+      "seatIds": [1],
+      "sessionId": "kt2-no-showtime",
+      "requestId": "kt2-e1-{{$timestamp}}"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["customerToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy SETUP-01 trước");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Provider báo không tìm thấy, Consumer trả 404", () => pm.response.to.have.status(404));
+      const body = pm.response.json();
+      pm.test("Mã lỗi SHOWTIME_NOT_FOUND", () => pm.expect(body.error).to.eql("SHOWTIME_NOT_FOUND"));
+      pm.test("Không lộ chi tiết kỹ thuật của Provider", () => {
+        const text = JSON.stringify(body);
+        pm.expect(text).to.not.include("java.");
+        pm.expect(text).to.not.include("Connection refused");
+      });
+    language: text/javascript
+order: 2000

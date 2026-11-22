@@ -1,0 +1,32 @@
+$kind: http-request
+name: "P-02 Provider trả trạng thái ghế - 200"
+url: "{{movieBaseUrl}}/api/getSeatsByShowtime?showtimeId={{showtimeId}}"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["movieBaseUrl", "showtimeId"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy P-01 trước");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Provider trả 200", () => pm.response.to.have.status(200));
+      const seats = pm.response.json();
+      pm.test("Trả về mảng ghế", () => pm.expect(Array.isArray(seats)).to.be.true);
+      pm.test("Mỗi ghế có id và trạng thái bán", () => {
+        const first = seats[0];
+        pm.expect(first).to.have.property("id");
+        pm.expect(first).to.have.property("isSold");
+      });
+
+      const free = (Array.isArray(seats) ? seats : [])
+        .find(x => !x.isSold && !x.heldByMe);
+      pm.test("Còn ít nhất một ghế trống để test", () => pm.expect(free).to.not.be.undefined);
+      if (free) pm.collectionVariables.set("seatId", String(free.id));
+    language: text/javascript
+order: 2000

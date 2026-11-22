@@ -1,0 +1,44 @@
+$kind: http-request
+name: "P-01 Provider trả danh sách suất chiếu - 200"
+url: "{{movieBaseUrl}}/api/getShowtimes"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["movieBaseUrl"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - kiểm tra môi trường kt2-local");
+      }
+      if (!pm.collectionVariables.get("sessionId")) {
+        pm.collectionVariables.set("sessionId", "kt2-" + Date.now());
+      }
+      if (!pm.collectionVariables.get("providerBookingId")) {
+        pm.collectionVariables.set("providerBookingId", String(900000 + Math.floor(Math.random() * 99999)));
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Provider trả 200", () => pm.response.to.have.status(200));
+      const list = pm.response.json();
+      pm.test("Trả về mảng suất chiếu", () => pm.expect(Array.isArray(list)).to.be.true);
+
+      const first = Array.isArray(list) ? list[0] : null;
+      pm.test("Mỗi suất chiếu có showtimeId, movieId, basePrice", () => {
+        pm.expect(first).to.have.property("showtimeId");
+        pm.expect(first).to.have.property("movieId");
+        pm.expect(first).to.have.property("basePrice");
+      });
+
+      const future = (Array.isArray(list) ? list : [])
+        .filter(s => s.startTime && new Date(s.startTime).getTime() > Date.now() && s.status !== "CANCELLED")
+        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))[0] || first;
+
+      if (future) {
+        pm.collectionVariables.set("showtimeId", String(future.showtimeId));
+        pm.collectionVariables.set("fixturePrice", String(future.basePrice));
+      }
+    language: text/javascript
+order: 1000

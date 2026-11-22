@@ -1,0 +1,41 @@
+# Kết quả chạy khi Movie Service dừng - 22/11/2026
+# Lệnh: postman collection run ... -i "03 - Loi tich hop/SETUP-01 Đăng nhập CUSTOMER" -i "03 - Loi tich hop/E-03 ..."
+
+Running your collection...
+postman
+
+MTBS - Kiem tra 2.2 Tich hop va tieu thu dich vu
+
+Folder 03 - Loi tich hop
+Sub-folder SETUP-01 Đăng nhập CUSTOMER
+
+  POST http://localhost:8080/auth/login [200 OK, 954 B, 383 ms]
+  Pass  Setup: đăng nhập CUSTOMER
+  Pass  Setup: lấy được accessToken
+
+Sub-folder E-03 Provider không khả dụng - 503 (chạy khi tắt movie-service)
+
+  POST http://localhost:8080/api/bookings [503 Service Unavailable, 639 B, 556 ms]
+  Pass  Provider không phản hồi thì Consumer trả 503
+  Pass  Mã lỗi SERVICE_UNAVAILABLE
+  Pass  Không lộ chi tiết kỹ thuật
+
+-------------------------------------------------------------------------
+|                         |             executed |               failed |
+--------------------------+----------------------+-----------------------
+|              iterations |                    1 |                    0 |
+--------------------------+----------------------+-----------------------
+|                requests |                    2 |                    0 |
+--------------------------+----------------------+-----------------------
+|            test-scripts |                    2 |                    0 |
+--------------------------+----------------------+-----------------------
+|      prerequest-scripts |                    2 |                    0 |
+--------------------------+----------------------+-----------------------
+|              assertions |                    5 |                    0 |
+-------------------------------------------------------------------------
+| total run duration: 1233 ms                                           |
+-------------------------------------------------------------------------
+| total data received: 677 B (approx)                                   |
+-------------------------------------------------------------------------
+| average response time: 470 ms [min: 383 ms, max: 556 ms, s.d.: 86 ms] |
+-------------------------------------------------------------------------

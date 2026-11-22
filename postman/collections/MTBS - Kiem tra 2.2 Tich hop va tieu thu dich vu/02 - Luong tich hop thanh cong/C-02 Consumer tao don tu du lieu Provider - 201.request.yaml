@@ -1,0 +1,43 @@
+$kind: http-request
+name: "C-02 Consumer tạo đơn từ dữ liệu Provider - 201"
+url: "{{baseUrl}}/api/bookings"
+method: POST
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "userId": 47,
+      "showtimeId": {{showtimeId}},
+      "seatIds": [{{seatId}}],
+      "sessionId": "{{sessionId}}",
+      "requestId": "kt2-c2-{{$timestamp}}"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["showtimeId", "seatId", "sessionId", "customerToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy SETUP-01 và SETUP-FIX-01 trước");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Consumer tạo đơn thành công", () => pm.expect([200, 201]).to.include(pm.response.code));
+      const body = pm.response.json();
+
+      pm.test("Đơn ở trạng thái PENDING", () => pm.expect(body.status).to.eql("PENDING"));
+      pm.test("Đơn gắn đúng suất chiếu đã gửi", () => pm.expect(String(body.showtimeId)).to.eql(String(pm.variables.get("showtimeId"))));
+      pm.test("Đơn có đúng số ghế đã gửi", () => pm.expect(body.seatIds.length).to.eql(1));
+      pm.test("Số tiền do Provider tính, không phải Booking tự đặt", () => pm.expect(Number(body.amount)).to.be.above(0));
+      pm.test("Hạn giữ ghế lấy từ kết quả Provider", () => pm.expect(body.holdUntil).to.be.a("string").and.not.empty);
+
+      if (body.bookingId) pm.collectionVariables.set("bookingId", String(body.bookingId));
+      if (body.amount) pm.collectionVariables.set("bookingAmount", String(body.amount));
+    language: text/javascript
+order: 4000

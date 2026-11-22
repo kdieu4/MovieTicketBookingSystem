@@ -1,0 +1,122 @@
+# Kết quả chạy đầy đủ - 22/11/2026
+# Lệnh: postman collection run "postman/collections/MTBS - Kiem tra 2.2 Tich hop va tieu thu dich vu" -e postman/environments/kt2-local.environment.json
+
+postman
+
+MTBS - Kiem tra 2.2 Tich hop va tieu thu dich vu
+
+Folder 01 - Provider API movie-service
+Sub-folder P-01 Provider trả danh sách suất chiếu - 200
+
+  GET http://localhost:8083/api/getShowtimes [200 OK, 1.04 MB, 5.5 s]
+  Pass  Provider trả 200
+  Pass  Trả về mảng suất chiếu
+  Pass  Mỗi suất chiếu có showtimeId, movieId, basePrice
+
+Sub-folder P-02 Provider trả trạng thái ghế - 200
+
+  GET http://localhost:8083/api/getSeatsByShowtime?showtimeId=12602 [200 OK, 833 B, 750 ms]
+  Pass  Provider trả 200
+  Pass  Trả về mảng ghế
+  Pass  Mỗi ghế có id và trạng thái bán
+  Pass  Còn ít nhất một ghế trống để test
+
+Sub-folder P-03 Provider báo 404 khi suất chiếu không tồn tại
+
+  GET http://localhost:8083/api/getShowtimeById?id=99999999 [404 Not Found, 637 B, 227 ms]
+  Pass  Provider trả 404
+  Pass  Body có thông báo lỗi, không có stack trace
+
+Sub-folder P-04 Internal API từ chối khi thiếu key - 401
+
+  POST http://localhost:8083/api/internal/showtimes/12602/seat-claims [401 Unauthorized, 614 B, 45 ms]
+  Pass  Thiếu X-Internal-Api-Key thì bị chặn
+  Pass  Không lộ thông tin nội bộ
+
+Folder 02 - Luong tich hop thanh cong
+Sub-folder SETUP-01 Đăng nhập CUSTOMER
+
+  POST http://localhost:8080/auth/login [200 OK, 954 B, 372 ms]
+  Pass  Setup: đăng nhập CUSTOMER
+  Pass  Setup: lấy được accessToken
+
+Sub-folder SETUP-FIX-01 Chọn suất chiếu và ghế trống
+
+  GET http://localhost:8083/api/getShowtimes [200 OK, 1.04 MB, 4.5 s]
+  Pass  Provider trả về danh sách suất chiếu
+  GET http://localhost:8083/api/getSeatsByShowtime?showtimeId=12602 [errored]
+     Could not read response data.
+  Pass  Tìm được suất chiếu còn ghế trống
+
+Sub-folder C-01 Giữ ghế qua Gateway - 200
+
+  POST http://localhost:8080/api/holdSeats?showtimeId=12602 [200 OK, 561 B, 654 ms]
+  Pass  Giữ ghế thành công
+  Pass  Có hạn giữ ghế do Provider trả về
+
+Sub-folder C-02 Consumer tạo đơn từ dữ liệu Provider - 201
+
+  POST http://localhost:8080/api/bookings [201 Created, 632 B, 2.1 s]
+  Pass  Consumer tạo đơn thành công
+  Pass  Đơn ở trạng thái PENDING
+  Pass  Đơn gắn đúng suất chiếu đã gửi
+  Pass  Đơn có đúng số ghế đã gửi
+  Pass  Số tiền do Provider tính, không phải Booking tự đặt
+  Pass  Hạn giữ ghế lấy từ kết quả Provider
+
+Sub-folder C-03 Đọc lại đơn đã lưu - 200
+
+  GET http://localhost:8080/api/bookings/239 [200 OK, 626 B, 867 ms]
+  Pass  Đọc được đơn vừa tạo
+  Pass  Đúng bookingId
+  Pass  Vẫn PENDING trước khi thanh toán
+  Pass  Số tiền được giữ nguyên khi đọc lại
+
+Folder 03 - Loi tich hop
+Sub-folder SETUP-01 Đăng nhập CUSTOMER
+
+  POST http://localhost:8080/auth/login [200 OK, 954 B, 417 ms]
+  Pass  Setup: đăng nhập CUSTOMER
+  Pass  Setup: lấy được accessToken
+
+Sub-folder E-01 Provider báo 404, Consumer trả 404 - 404
+
+  POST http://localhost:8080/api/bookings [404 Not Found, 589 B, 867 ms]
+  Pass  Provider báo không tìm thấy, Consumer trả 404
+  Pass  Mã lỗi SHOWTIME_NOT_FOUND
+  Pass  Không lộ chi tiết kỹ thuật của Provider
+
+Sub-folder E-02 Consumer kiểm tra dữ liệu đầu vào - 400
+
+  POST http://localhost:8080/api/bookings [400 Bad Request, 583 B, 13 ms]
+  Pass  Dữ liệu đầu vào không hợp lệ bị từ chối
+  Pass  Mã lỗi INVALID_REQUEST
+  Pass  Không lộ stack trace
+
+Sub-folder E-03 Provider không khả dụng - 503 (chạy khi tắt movie-service)
+
+  POST http://localhost:8080/api/bookings [400 Bad Request, 586 B, 1275 ms]
+  -
+  | 'Bỏ qua E-03: movie-service đang chạy, mã 400. Dừng mo
+  | vie-service rồi chạy lại request này.'
+  -
+
+--------------------------------------------------------------------------
+|                         |              executed |               failed |
+--------------------------+-----------------------+-----------------------
+|              iterations |                     1 |                    0 |
+--------------------------+-----------------------+-----------------------
+|                requests |                    13 |                    0 |
+--------------------------+-----------------------+-----------------------
+|            test-scripts |                    13 |                    0 |
+--------------------------+-----------------------+-----------------------
+|      prerequest-scripts |                    12 |                    0 |
+--------------------------+-----------------------+-----------------------
+|              assertions |                    35 |                    0 |
+--------------------------------------------------------------------------
+| total run duration: 22.4 s                                             |
+--------------------------------------------------------------------------
+| total data received: 2.09 MB (approx)                                  |
+--------------------------------------------------------------------------
+| average response time: 1361 ms [min: 13 ms, max: 5.5 s, s.d.: 1666 ms] |
+--------------------------------------------------------------------------

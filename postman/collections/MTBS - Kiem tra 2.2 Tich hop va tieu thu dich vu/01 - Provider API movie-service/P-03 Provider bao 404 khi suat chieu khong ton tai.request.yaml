@@ -1,0 +1,16 @@
+$kind: http-request
+name: "P-03 Provider báo 404 khi suất chiếu không tồn tại"
+url: "{{movieBaseUrl}}/api/getShowtimeById?id=99999999"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Provider trả 404", () => pm.response.to.have.status(404));
+      pm.test("Body có thông báo lỗi, không có stack trace", () => {
+        const body = pm.response.json();
+        pm.expect(JSON.stringify(body)).to.not.include("java.");
+      });
+    language: text/javascript
+order: 3000

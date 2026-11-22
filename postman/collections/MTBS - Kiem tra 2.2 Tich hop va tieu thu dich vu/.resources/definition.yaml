@@ -1,0 +1,15 @@
+$kind: collection
+description: "Bo kiem thu phan 2.2 cua Bai kiem tra 2: Provider API doc lap, Consumer goi Provider de hoan thanh nghiep vu dat ve, kiem tra du lieu tra ve, va xu ly loi 404 - 503 - 400."
+variables:
+  baseUrl: http://localhost:8080
+  movieBaseUrl: http://localhost:8083
+  customerEmail: customer01@mtbs.local
+  customerPassword: Customer@123
+  sessionId: ""
+  providerBookingId: ""
+  showtimeId: ""
+  seatId: ""
+  fixturePrice: ""
+  customerToken: ""
+  bookingId: ""
+  bookingAmount: ""

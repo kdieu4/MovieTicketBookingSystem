@@ -1,0 +1,34 @@
+$kind: http-request
+name: "C-01 Giữ ghế qua Gateway - 200"
+url: "{{baseUrl}}/api/holdSeats?showtimeId={{showtimeId}}"
+queryParams:
+  - key: "showtimeId"
+    value: "{{showtimeId}}"
+method: POST
+headers:
+  "Content-Type": "application/json"
+  "Authorization": "Bearer {{customerToken}}"
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "sessionId": "{{sessionId}}",
+      "seatIds": [{{seatId}}]
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const required = ["showtimeId", "seatId", "sessionId", "customerToken"];
+      const missing = required.filter(function (k) { return !pm.variables.get(k); });
+      if (missing.length) {
+          throw new Error("Thiếu biến " + missing.join(", ") + " - chạy SETUP-01 và SETUP-FIX-01 trước");
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Giữ ghế thành công", () => pm.response.to.have.status(200));
+      pm.test("Có hạn giữ ghế do Provider trả về", () => pm.expect(pm.response.json().holdUntil).to.be.a("string").and.not.empty);
+    language: text/javascript
+order: 3000
