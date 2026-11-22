@@ -10,7 +10,7 @@
 | Gọi Provider bằng Service ID | Đã có từ TH7 | `RestClientConfig` với `@LoadBalanced` |
 | Môi trường chạy để lấy minh chứng | Đã có từ TH8 | `docker-compose.th8.yaml` |
 | Bộ kiểm thử riêng cho 2.2 | Bổ sung cho bài kiểm tra | Collection `MTBS - Kiem tra 2.2` |
-| API contract cho 2.2 | Bổ sung cho bài kiểm tra | `docs/LeQuangHieu/api-contract.md` |
+| API contract cho 2.2 | Bổ sung cho bài kiểm tra | `docs/api/api-contract.md` |
 | Minh chứng lỗi 400 và 503 | Bổ sung cho bài kiểm tra | `docs/LeQuangHieu/testing/` |
 
 Phần bổ sung chính là bộ kiểm thử 13 request, tài liệu hợp đồng API và minh chứng cho ba nhóm lỗi. Mã nguồn tích hợp không phải viết lại từ đầu.
@@ -93,7 +93,7 @@ Xác thực:
 
 ## 5. Hợp đồng API
 
-Hợp đồng đầy đủ ở `docs/LeQuangHieu/api-contract.md`. Tóm tắt phần quan trọng:
+Hợp đồng đầy đủ ở `docs/api/api-contract.md`. Tóm tắt phần quan trọng:
 
 | Lời gọi | Request chính | Response thành công | Lỗi cần xử lý |
 | --- | --- | --- | --- |

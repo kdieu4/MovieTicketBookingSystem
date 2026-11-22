@@ -30,7 +30,7 @@ Em muốn nhấn mạnh một điều: Consumer thiếu dữ liệu thì gọi A
 
 ## Hợp đồng API (2:30 – 4:00)
 
-Trên màn hình: `api-contract.md`, mục 5 và mục 6.
+Trên màn hình: `docs/api/api-contract.md`, mục 5 và mục 6.
 
 Hợp đồng API ghi rõ ba nội dung: API mà Provider cung cấp, API mà Consumer cung cấp, và cách ánh xạ lỗi.
 
