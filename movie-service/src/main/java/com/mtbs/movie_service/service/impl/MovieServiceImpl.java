@@ -5,7 +5,9 @@
 package com.mtbs.movie_service.service.impl;
 
 import com.mtbs.movie_service.domain.dto.request.MovieRequest;
+import com.mtbs.movie_service.domain.dto.response.GenreFacetResponse;
 import com.mtbs.movie_service.domain.dto.response.GenreResponse;
+import com.mtbs.movie_service.domain.dto.response.MoviePageResponse;
 import com.mtbs.movie_service.domain.dto.response.MovieResponse;
 import com.mtbs.movie_service.domain.entity.Genre;
 import com.mtbs.movie_service.domain.entity.Movie;
@@ -17,13 +19,19 @@ import com.mtbs.movie_service.service.MovieService;
 import com.mtbs.movie_service.specification.MovieSpecifications;
 import jakarta.persistence.criteria.Expression;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 /**
  *
@@ -34,6 +42,10 @@ import java.util.Set;
 public class MovieServiceImpl implements MovieService {
 
     private static final int MAX_SUGGESTIONS = 20;
+    private static final int DEFAULT_PAGE_SIZE = 12;
+    private static final int MAX_PAGE_SIZE = 60;
+    /** Giu thu tu cu (id tang dan) de danh sach on dinh giua cac trang. */
+    private static final Sort BY_ID = Sort.by(Sort.Direction.ASC, "movieId");
 
     private final MovieRepository movieRepository;
     private final GenreRepository genreRepository;
@@ -84,6 +96,77 @@ public class MovieServiceImpl implements MovieService {
         return movieRepository.findAll(spec).stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MoviePageResponse searchMoviesPaged(MovieStatus status, List<Long> genreIds, String title,
+            int page, int size) {
+        Specification<Movie> spec = Specification.where(MovieSpecifications.hasStatus(status))
+                .and(MovieSpecifications.hasAnyGenre(genreIds))
+                .and(MovieSpecifications.titleContains(title));
+
+        Page<Movie> result = movieRepository.findAll(spec, PageRequest.of(safePage(page), safeSize(size), BY_ID));
+        Page<MovieResponse> mapped = result.map(this::toResponse);
+
+        // So phim cua tung the loai: bo dieu kien the loai de chip nao cung con so that,
+        // neu khong thi vua chon mot the loai la cac chip khac tut ve 0.
+        Specification<Movie> facetSpec = Specification.where(MovieSpecifications.hasStatus(status))
+                .and(MovieSpecifications.titleContains(title));
+
+        return MoviePageResponse.from(mapped, genreFacets(facetSpec));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getMovieTitles(MovieStatus status) {
+        Specification<Movie> spec = Specification.where(MovieSpecifications.hasStatus(status));
+
+        List<String> titles = new ArrayList<>();
+        for (Movie movie : movieRepository.findAll(spec, BY_ID)) {
+            if (movie.getTitle() != null) {
+                titles.add(movie.getTitle());
+            }
+        }
+        return titles;
+    }
+
+    /** Dem so phim cua tung the loai trong toan bo ket qua khop bo loc. */
+    private List<GenreFacetResponse> genreFacets(Specification<Movie> spec) {
+        Map<Long, GenreFacetResponse> facets = new LinkedHashMap<>();
+
+        for (Movie movie : movieRepository.findAll(spec)) {
+            if (movie.getGenres() == null) {
+                continue;
+            }
+            for (Genre genre : movie.getGenres()) {
+                if (genre == null || genre.getGenreId() == null) {
+                    continue;
+                }
+                GenreFacetResponse current = facets.get(genre.getGenreId());
+                facets.put(genre.getGenreId(), new GenreFacetResponse(
+                        genre.getGenreId(),
+                        genre.getName(),
+                        current == null ? 1 : current.count() + 1));
+            }
+        }
+
+        List<GenreFacetResponse> sorted = new ArrayList<>(facets.values());
+        sorted.sort(Comparator
+                .comparingLong(GenreFacetResponse::count).reversed()
+                .thenComparing(GenreFacetResponse::name, Comparator.nullsLast(String::compareTo)));
+        return sorted;
+    }
+
+    private static int safePage(int page) {
+        return Math.max(page, 0);
+    }
+
+    private static int safeSize(int size) {
+        if (size <= 0) {
+            return DEFAULT_PAGE_SIZE;
+        }
+        return Math.min(size, MAX_PAGE_SIZE);
     }
 
     @Override

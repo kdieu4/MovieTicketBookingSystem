@@ -27,8 +27,15 @@ public class CinemaController {
     private final CinemaService cinemaService;
 
     @GetMapping("/getCinemas")
-    public ResponseEntity<List<CinemaResponse>> getAllCinemas() {
-        return ResponseEntity.ok(cinemaService.getAllCinemas());
+    public ResponseEntity<?> getAllCinemas(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        // Khong truyen page/size thi tra mang nhu cu de khong lam vo client cu.
+        if (page == null && size == null) {
+            return ResponseEntity.ok(cinemaService.getAllCinemas());
+        }
+        return ResponseEntity.ok(cinemaService.getAllCinemasPaged(
+                page == null ? 0 : page, size == null ? 0 : size));
     }
 
     @GetMapping("/getCinemaById")
@@ -42,10 +49,16 @@ public class CinemaController {
     }
 
     @GetMapping("/getCinemasByCity")
-    public ResponseEntity<List<CinemaResponse>> getCinemasByCity(
+    public ResponseEntity<?> getCinemasByCity(
             @RequestParam String city,
-            @RequestParam(required = false) String movieTitle) {
-        return ResponseEntity.ok(cinemaService.getCinemasByCity(city, movieTitle));
+            @RequestParam(required = false) String movieTitle,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        if (page == null && size == null) {
+            return ResponseEntity.ok(cinemaService.getCinemasByCity(city, movieTitle));
+        }
+        return ResponseEntity.ok(cinemaService.getCinemasByCityPaged(
+                city, movieTitle, page == null ? 0 : page, size == null ? 0 : size));
     }
 
     @PostMapping("/createCinema")

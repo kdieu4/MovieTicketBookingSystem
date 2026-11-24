@@ -31,11 +31,23 @@ public class MovieController {
     private final TmdbService tmdbService;
 
     @GetMapping("/getMovies")
-    public ResponseEntity<List<MovieResponse>> getMovies(
+    public ResponseEntity<?> getMovies(
             @RequestParam(required = false) MovieStatus status,
             @RequestParam(required = false) List<Long> genreIds,
-            @RequestParam(required = false) String title) {
-        return ResponseEntity.ok(movieService.searchMovies(status, genreIds, title));
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        // Khong truyen page/size thi tra mang nhu cu, nho vay client cu khong bi vo.
+        if (page == null && size == null) {
+            return ResponseEntity.ok(movieService.searchMovies(status, genreIds, title));
+        }
+        return ResponseEntity.ok(movieService.searchMoviesPaged(
+                status, genreIds, title, page == null ? 0 : page, size == null ? 0 : size));
+    }
+
+    @GetMapping("/getMovieTitles")
+    public ResponseEntity<List<String>> getMovieTitles(@RequestParam(required = false) MovieStatus status) {
+        return ResponseEntity.ok(movieService.getMovieTitles(status));
     }
 
     @GetMapping("/searchMovies")
