@@ -5,9 +5,9 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import dynamic from 'next/dynamic';
 import Badge from '@/components/common/Badge';
 import BookingFlow from '@/components/booking/BookingFlow';
-import TrailerModal from '@/components/movie/TrailerModal';
 import TmdbReviews from '@/components/movie/TmdbReviews';
 import { IconArrowLeft, IconClock, IconCalendar, IconPlay, IconStar } from '@/components/common/Icons';
 import { GlassButton } from '@/components/liquid-glass';
@@ -15,6 +15,10 @@ import { BrandGlassButton } from '@/components/common/BrandButton';
 import { Reveal } from '@/components/common/Ascii';
 import { AGE_LABEL, STATUS_LABEL, formatDuration, formatRating, formatVoteCount } from '@/utils/movieHelpers';
 import '@/styles/booking-motion.css';
+
+// TrailerModal chỉ mở khi bấm "Xem trailer" nên tách khỏi gói JS đầu trang, không
+// làm chậm lần hydrate đầu và cũng không đổi gì trên giao diện.
+const TrailerModal = dynamic(() => import('@/components/movie/TrailerModal'), { ssr: false });
 
 // Khóa lưu dữ liệu đặt vé để trang thanh toán đọc lại
 const CHECKOUT_KEY = 'mtbs-checkout';
@@ -88,7 +92,11 @@ export default function MovieDetailClient({ movie, reviews = [] }) {
             alt=""
             aria-hidden="true"
             fill
-            sizes="100vw"
+            // Ảnh chỉ làm nền mờ nên không cần bản lớn: trước đây sizes="100vw"
+            // khiến trình tối ưu ảnh phải tạo bản rộng 1920px (60 KB) cho mỗi lần
+            // xem đầu tiên, làm chậm cả lần vẽ đầu tiên của trang.
+            sizes="640px"
+            quality={50}
             className="scale-105 object-cover opacity-40 blur-[4px]"
           />
         )}
