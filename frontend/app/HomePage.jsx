@@ -6,16 +6,14 @@ import HeroSection from '@/components/home/HeroSection';
 import MoviesSection from '@/components/home/MoviesSection';
 import ShowtimeFlow from '@/components/booking/ShowtimeFlow';
 import Footer from '@/components/layout/Footer';
-import { fetchNowShowingMovies, fetchComingSoonMovies, fetchGenres } from '@/services/movieApi';
+import { fetchMovieTitles, fetchNowShowingMoviesPage } from '@/services/movieApi';
 import '@/styles/booking-motion.css';
 
 export default function HomePage() {
-  const [nowShowing, setNowShowing] = useState([]);
-  const [comingSoon, setComingSoon] = useState([]);
-  const [genres, setGenres] = useState([]);
-
-  const [loadingNowShowing, setLoadingNowShowing] = useState(true);
-  const [loadingComingSoon, setLoadingComingSoon] = useState(true);
+  // Danh sách phim do MoviesSection tự lấy theo trang; ở đây chỉ cần phim nổi bật
+  // và danh sách tên phim cho ô gợi ý của thanh tìm kiếm.
+  const [featured, setFeatured] = useState(null);
+  const [movieTitles, setMovieTitles] = useState([]);
   const [error, setError] = useState(null);
 
   // Luồng tìm suất chiếu từ thanh HeroSection
@@ -26,32 +24,19 @@ export default function HomePage() {
   useEffect(() => {
     let cancelled = false;
 
-    fetchNowShowingMovies()
-      .then((data) => {
-        if (!cancelled) setNowShowing(data);
+    fetchNowShowingMoviesPage({ page: 0, size: 1 })
+      .then((result) => {
+        if (!cancelled) setFeatured(result.items[0] ?? null);
       })
       .catch(() => {
         if (!cancelled) setError('Không thể tải danh sách phim đang chiếu.');
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingNowShowing(false);
       });
 
-    fetchGenres()
-      .then((data) => {
-        if (!cancelled) setGenres(data);
+    fetchMovieTitles()
+      .then((titles) => {
+        if (!cancelled) setMovieTitles(titles);
       })
       .catch(() => {
-      });
-
-    fetchComingSoonMovies()
-      .then((data) => {
-        if (!cancelled) setComingSoon(data);
-      })
-      .catch(() => {
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingComingSoon(false);
       });
 
     return () => {
@@ -72,11 +57,11 @@ export default function HomePage() {
     setSearching(true);
   }
 
-  const featuredMovie = nowShowing[0]
+  const featuredMovie = featured
     ? {
-        ...nowShowing[0],
-        trailerUrl: nowShowing[0].trailerUrl ?? null,
-        bookingUrl: `/phim/${nowShowing[0].id}/suat-chieu`,
+        ...featured,
+        trailerUrl: featured.trailerUrl ?? null,
+        bookingUrl: `/phim/${featured.id}/suat-chieu`,
       }
     : null;
 
@@ -94,19 +79,14 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* 1. Phần Phim: tab Đang chiếu / Sắp chiếu */}
-        <MoviesSection
-          movies={nowShowing}
-          comingSoon={comingSoon}
-          loading={loadingNowShowing || loadingComingSoon}
-          onSelectShowtime={handleSelectShowtime}
-        />
+        {/* 1. Phần Phim: tab Đang chiếu / Sắp chiếu, mỗi tab lấy theo trang */}
+        <MoviesSection onSelectShowtime={handleSelectShowtime} />
 
         {/* 2. Thanh tìm suất chiếu nhanh (HeroSection) nằm bên dưới */}
         <HeroSection
-          movies={nowShowing}
+          movies={featured ? [featured] : []}
           featuredMovie={featuredMovie}
-          movieTitles={nowShowing.map((m) => m.title)}
+          movieTitles={movieTitles}
           onSearch={handleSearchShowtimes}
           onSelectShowtime={handleSelectShowtime}
           searching={searching}

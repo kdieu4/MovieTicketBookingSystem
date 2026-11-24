@@ -1,17 +1,21 @@
 import HomePageClient from './HomePageClient';
-import { getMovieLists } from '@/services/movieApi.server';
+import { getMoviePage, getMovieTitles } from '@/services/movieApi.server';
 
-// Dữ liệu phim đổi chậm: render sẵn ở server và làm mới mỗi phút thay vì đợi JS tải xong mới gọi API.
+// Dữ liệu phim đổi chậm: render sẵn trang phim đầu tiên ở server và làm mới mỗi
+// phút. Danh sách phim đầy đủ do MoviesSection tự tải theo trang ở client.
 export const revalidate = 60;
 
 export default async function Page() {
-  const { nowShowing, comingSoon, error } = await getMovieLists();
+  const [showingPage, movieTitles] = await Promise.all([
+    getMoviePage('SHOWING').catch(() => null),
+    getMovieTitles().catch(() => []),
+  ]);
 
   return (
     <HomePageClient
-      initialNowShowing={nowShowing}
-      initialComingSoon={comingSoon}
-      initialError={error}
+      initialNowShowing={showingPage?.items ?? []}
+      movieTitles={movieTitles}
+      initialError={showingPage === null}
     />
   );
 }

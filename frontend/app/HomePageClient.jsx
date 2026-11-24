@@ -12,11 +12,12 @@ import SearchBooking from '@/components/home/SearchBooking';
 
 export default function HomePageClient({
   initialNowShowing = [],
-  initialComingSoon = [],
+  movieTitles = [],
   initialError = false,
 }) {
+  // Trang chủ chỉ cần trang phim đầu tiên (cho khối nổi bật và ô gợi ý tìm kiếm).
+  // Danh sách phim đầy đủ do MoviesSection tự lấy theo trang.
   const nowShowing = initialNowShowing;
-  const comingSoon = initialComingSoon;
 
   // Luồng đặt vé dùng chung cho FeaturedSection và nút "Chọn suất" trên thẻ phim
   const [filters, setFilters] = useState(null);
@@ -81,17 +82,13 @@ export default function HomePageClient({
         <div className="relative z-20 -mt-10 sm:-mt-14">
           <SearchBooking
             movies={nowShowing}
-            movieTitles={nowShowing.map((m) => m.title)}
+            movieTitles={movieTitles}
             onContinue={handleContinue}
           />
         </div>
 
         {/* 3. KHỐI PHIM: tab Đang chiếu / Sắp chiếu */}
-        <MoviesSection
-          movies={nowShowing}
-          comingSoon={comingSoon}
-          onSelectShowtime={handleSelectShowtime}
-        />
+        <MoviesSection onSelectShowtime={handleSelectShowtime} />
       </main>
 
       {/* BookingFlow dùng chung cho MoviesSection và FeaturedSection */}

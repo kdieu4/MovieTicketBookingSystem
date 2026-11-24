@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import { mapCinema, mapGenre, mapMovie } from './movieApi';
+import { mapCinema, mapMovie } from './movieApi';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api';
 const REVALIDATE_SECONDS = 60;
@@ -12,17 +12,58 @@ async function fetchJson(path) {
   return res.json();
 }
 
-export const getNowShowingMovies = cache(async () =>
-  (await fetchJson('/getMovies?status=SHOWING')).map(mapMovie)
-);
+/** Mot trang phim theo trang thai, dung chung dinh dang voi client. */
+export const getMoviePage = cache(async (status, { page = 0, size = 12 } = {}) => {
+  const payload = await fetchJson(`/getMovies?status=${status}&page=${page}&size=${size}`);
+  const currentPage = Number(payload.page ?? 0);
+  const totalPages = Number(payload.totalPages ?? 0);
 
-export const getComingSoonMovies = cache(async () =>
-  (await fetchJson('/getMovies?status=UPCOMING')).map(mapMovie)
-);
+  return {
+    items: (payload.content ?? []).map(mapMovie),
+    page: currentPage,
+    size: Number(payload.size ?? size),
+    total: Number(payload.totalElements ?? 0),
+    totalPages,
+    hasMore: currentPage + 1 < totalPages,
+    facets: (payload.genreFacets ?? []).map((facet) => ({
+      id: facet.genreId,
+      name: facet.name,
+      count: Number(facet.count ?? 0),
+    })),
+  };
+});
 
-export const getGenres = cache(async () => (await fetchJson('/getGenres')).map(mapGenre));
+/** Ten phim dang chieu cho o goi y tim kiem. */
+export const getMovieTitles = cache(async () => {
+  const data = await fetchJson('/getMovieTitles?status=SHOWING');
+  return Array.isArray(data) ? data : [];
+});
 
-export const getCinemas = cache(async () => (await fetchJson('/getCinemas')).map(mapCinema));
+/** Mot trang rap cho lan render dau, kem tong so rap de biet con trang sau khong. */
+export const getCinemaPage = cache(async ({ page = 0, size = 9, city } = {}) => {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  const path = city
+    ? `/getCinemasByCity?city=${encodeURIComponent(city)}&${params.toString()}`
+    : `/getCinemas?${params.toString()}`;
+
+  const payload = await fetchJson(path);
+  const currentPage = Number(payload.page ?? 0);
+  const totalPages = Number(payload.totalPages ?? 0);
+
+  return {
+    items: (payload.content ?? []).map(mapCinema),
+    page: currentPage,
+    size: Number(payload.size ?? size),
+    total: Number(payload.totalElements ?? 0),
+    totalPages,
+    hasMore: currentPage + 1 < totalPages,
+  };
+});
+
+export const getCities = cache(async () => {
+  const data = await fetchJson('/getCities');
+  return Array.isArray(data) ? data : [];
+});
 
 export const getMovieReviews = cache(async (movieId) => {
   try {
@@ -34,19 +75,3 @@ export const getMovieReviews = cache(async (movieId) => {
 });
 
 export const getMovieById = cache(async (id) => mapMovie(await fetchJson(`/getMovieById?id=${id}`)));
-
-// Trang chủ và trang thư viện dùng chung một lần tải, lỗi ở mục nào chỉ ảnh hưởng mục đó.
-export async function getMovieLists() {
-  const [showing, upcoming, genres] = await Promise.allSettled([
-    getNowShowingMovies(),
-    getComingSoonMovies(),
-    getGenres(),
-  ]);
-
-  return {
-    nowShowing: showing.status === 'fulfilled' ? showing.value : [],
-    comingSoon: upcoming.status === 'fulfilled' ? upcoming.value : [],
-    genres: genres.status === 'fulfilled' ? genres.value : [],
-    error: showing.status === 'rejected',
-  };
-}

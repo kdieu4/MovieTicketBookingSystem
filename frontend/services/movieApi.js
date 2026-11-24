@@ -67,37 +67,6 @@ function mapShowtime(showtime) {
   };
 }
 
-export async function fetchNowShowingMovies({ genreIds, title } = {}) {
-  const params = new URLSearchParams({ status: 'SHOWING' });
-  if (genreIds?.length) params.set('genreIds', genreIds.join(','));
-  if (title) params.set('title', title);
-
-  const url = `${API_BASE_URL}/getMovies?${params.toString()}`;
-
-  if (genreIds?.length || title) {
-    const res = await fetch(url, { cache: 'no-store' });
-    const data = await handleResponse(res);
-    return data.map(mapMovie);
-  }
-
-  const data = await fetchWithCache('movies-showing', url);
-  return data.map(mapMovie);
-}
-
-export async function fetchComingSoonMovies() {
-  const params = new URLSearchParams({ status: 'UPCOMING' });
-  const url = `${API_BASE_URL}/getMovies?${params.toString()}`;
-
-  const data = await fetchWithCache('movies-upcoming', url);
-  return data.map(mapMovie);
-}
-
-export async function fetchGenres() {
-  const url = `${API_BASE_URL}/getGenres`;
-  const data = await fetchWithCache('genres', url);
-  return data.map(mapGenre);
-}
-
 export function mapCinema(cinema) {
   return {
     id: cinema.cinemaId ?? cinema.id,
@@ -108,10 +77,79 @@ export function mapCinema(cinema) {
   };
 }
 
-export async function fetchCinemas() {
-  const url = `${API_BASE_URL}/getCinemas`;
-  const data = await fetchWithCache('cinemas', url);
-  return data.map(mapCinema);
+// ---------------------------------------------------------------------------
+// Phân trang: các hàm dưới đây luôn gửi page/size nên API trả về một trang kèm
+// tổng số bản ghi. Số bản ghi mỗi trang do trang gọi quyết định.
+// ---------------------------------------------------------------------------
+
+export const MOVIE_PAGE_SIZE = 12;
+export const CINEMA_PAGE_SIZE = 9;
+
+/** Chuyển một trang của API thành dạng thống nhất cho hook usePagedGrid. */
+function mapPage(payload, mapper) {
+  const page = Number(payload?.page ?? 0);
+  const totalPages = Number(payload?.totalPages ?? 0);
+
+  return {
+    items: (payload?.content ?? []).map(mapper),
+    page,
+    size: Number(payload?.size ?? 0),
+    total: Number(payload?.totalElements ?? 0),
+    totalPages,
+    hasMore: page + 1 < totalPages,
+  };
+}
+
+function movieFacets(payload) {
+  return (payload?.genreFacets ?? []).map((facet) => ({
+    id: facet.genreId,
+    name: facet.name,
+    count: Number(facet.count ?? 0),
+  }));
+}
+
+async function fetchMoviePage(status, { genreIds, page = 0, size = MOVIE_PAGE_SIZE } = {}) {
+  const params = new URLSearchParams({ status, page: String(page), size: String(size) });
+  if (genreIds?.length) params.set('genreIds', genreIds.join(','));
+
+  const res = await fetch(`${API_BASE_URL}/getMovies?${params.toString()}`, { cache: 'no-store' });
+  const payload = await handleResponse(res);
+
+  return { ...mapPage(payload, mapMovie), facets: movieFacets(payload) };
+}
+
+export function fetchNowShowingMoviesPage(options) {
+  return fetchMoviePage('SHOWING', options);
+}
+
+export function fetchComingSoonMoviesPage(options) {
+  return fetchMoviePage('UPCOMING', options);
+}
+
+/** Tên phim đang chiếu, dùng cho ô gợi ý tìm kiếm. */
+export async function fetchMovieTitles() {
+  const res = await fetch(`${API_BASE_URL}/getMovieTitles?status=SHOWING`);
+  const data = await handleResponse(res);
+  return Array.isArray(data) ? data : [];
+}
+
+/** Một trang rạp; truyền city để lọc theo thành phố. */
+export async function fetchCinemasPage({ city, page = 0, size = CINEMA_PAGE_SIZE } = {}) {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  const path = city
+    ? `/getCinemasByCity?city=${encodeURIComponent(city)}&${params.toString()}`
+    : `/getCinemas?${params.toString()}`;
+
+  const res = await fetch(`${API_BASE_URL}${path}`, { cache: 'no-store' });
+  const payload = await handleResponse(res);
+  return mapPage(payload, mapCinema);
+}
+
+/** Danh sách thành phố có rạp, dùng cho bộ lọc. */
+export async function fetchCities() {
+  const res = await fetch(`${API_BASE_URL}/getCities`);
+  const data = await handleResponse(res);
+  return Array.isArray(data) ? data : [];
 }
 
 export async function fetchMovieById(id) {

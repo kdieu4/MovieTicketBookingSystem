@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ShowMoreButton from '@/components/common/ShowMoreButton';
 import PaymentQrModal from '@/components/booking/PaymentQrModal';
-import { useRowPagination } from '@/utils/useRowPagination';
+import { usePagedGrid } from '@/utils/usePagedGrid';
 
 const TIME_ZONE = 'Asia/Ho_Chi_Minh';
-// Vé xếp một cột: 3 vé đầu, mỗi lần bấm mở thêm 2 vé.
+// Vé xếp một cột: 3 vé đầu, mỗi lần bấm mở thêm 2 vé; mỗi lần chỉ tải 10 vé.
 const FIRST_ROWS = 3;
 const STEP_ROWS = 2;
+const TICKET_PAGE_SIZE = 10;
 
 const currency = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -90,11 +91,6 @@ function toSeatObjects(labels, seatIds) {
 }
 
 export default function MyTicketsPage() {
-  // status: 'loading' | 'ready' | 'unauth' | 'error'
-  const [status, setStatus] = useState('loading');
-  const [tickets, setTickets] = useState([]);
-  const [error, setError] = useState('');
-
   // Thanh toán lại vé còn hiệu lực
   const [payingTicket, setPayingTicket] = useState(null);
   const [payment, setPayment] = useState(null);
@@ -109,49 +105,58 @@ export default function MyTicketsPage() {
     return () => clearInterval(timer);
   }, []);
 
-  async function loadTickets() {
-    try {
-      const res = await fetch('/api/bookings', { cache: 'no-store' });
+  // Mỗi lần chỉ tải một trang vé; "Xem thêm" tự gọi trang kế tiếp khi cần.
+  const fetchTickets = useCallback(async (page, size) => {
+    const res = await fetch(`/api/bookings?page=${page}&size=${size}`, { cache: 'no-store' });
 
-      if (res.status === 401) {
-        setStatus('unauth');
-        return;
-      }
-
-      const body = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        throw new Error(body?.message || 'Không tải được danh sách vé.');
-      }
-
-      setTickets(Array.isArray(body) ? body : []);
-      setStatus('ready');    } catch (err) {
-      setError(err.message);
-      setStatus('error');
+    if (res.status === 401) {
+      const unauth = new Error('Vui lòng đăng nhập để xem vé.');
+      unauth.code = 'unauth';
+      throw unauth;
     }
-  }
 
-  useEffect(() => {
-    let alive = true;
+    const body = await res.json().catch(() => null);
 
-    (async () => {
-      await loadTickets();
-      if (!alive) return;
-    })();
+    if (!res.ok) {
+      throw new Error(body?.message || 'Không tải được danh sách vé.');
+    }
 
-    return () => {
-      alive = false;
+    // Server cũ trả mảng: gói lại thành một trang.
+    const payload = Array.isArray(body)
+      ? { content: body, page: 0, size, totalElements: body.length, totalPages: 1 }
+      : body;
+
+    const currentPage = Number(payload?.page ?? page);
+    const totalPages = Number(payload?.totalPages ?? 1);
+
+    return {
+      items: payload?.content ?? [],
+      page: currentPage,
+      total: Number(payload?.totalElements ?? 0),
+      totalPages,
+      hasMore: currentPage + 1 < totalPages,
     };
   }, []);
 
-  const ticketPager = useRowPagination(tickets.length, { initialRows: FIRST_ROWS, stepRows: STEP_ROWS });
-  const { reset: resetTicketRows } = ticketPager;
-  const shownTickets = tickets.slice(0, ticketPager.visibleCount);
+  const grid = usePagedGrid({
+    fetchPage: fetchTickets,
+    pageSize: TICKET_PAGE_SIZE,
+    initialRows: FIRST_ROWS,
+    stepRows: STEP_ROWS,
+  });
 
-  // Tải lại danh sách (sau khi thanh toán) thì thu về 3 vé đầu.
-  useEffect(() => {
-    resetTicketRows();
-  }, [tickets.length, resetTicketRows]);
+  const tickets = grid.items;
+  const { reload: reloadTickets } = grid;
+
+  // status: 'loading' | 'ready' | 'unauth' | 'error'
+  const status = grid.error
+    ? grid.error.code === 'unauth'
+      ? 'unauth'
+      : 'error'
+    : grid.loading && tickets.length === 0
+      ? 'loading'
+      : 'ready';
+  const error = grid.error && grid.error.code !== 'unauth' ? grid.error.message : '';
 
   // Vé còn thanh toán được: chưa trả tiền, chưa huỷ, còn trong hạn giữ chỗ và
   // suất chiếu chưa bắt đầu. Hạn này KHÔNG được gia hạn khi quay lại sau.
@@ -271,8 +276,8 @@ export default function MyTicketsPage() {
 
         {status === 'ready' && tickets.length > 0 && (
           <>
-          <ul ref={ticketPager.gridRef} id="danh-sach-ve" className="mt-8 scroll-mt-24 space-y-4">
-            {shownTickets.map((ticket, index) => {
+          <ul ref={grid.gridRef} id="danh-sach-ve" className="mt-8 scroll-mt-24 space-y-4">
+            {tickets.slice(0, grid.visibleCount).map((ticket, index) => {
               const badge = statusBadge(ticket, now);
               const remaining = holdRemainingMs(ticket, now);
 
@@ -388,8 +393,8 @@ export default function MyTicketsPage() {
               );
             })}
           </ul>
-          {ticketPager.hasMore && (
-            <ShowMoreButton onClick={ticketPager.showMore} />
+          {grid.canShowMore && (
+            <ShowMoreButton onClick={grid.showMore} />
           )}
           </>
         )}
@@ -399,7 +404,7 @@ export default function MyTicketsPage() {
         open={paymentOpen}
         onClose={() => {
           setPaymentOpen(false);
-          loadTickets();
+          reloadTickets();
         }}
         bookingId={payingTicket?.bookingId}
         showtime={

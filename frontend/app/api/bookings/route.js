@@ -93,7 +93,10 @@ const USER_SERVICE_URL =
   process.env.USER_SERVICE_URL || "http://localhost:8081";
 const INTERNAL_API_KEY = process.env.USER_SERVICE_INTERNAL_API_KEY || "";
 
-const ENRICH_LIMIT = 30;
+/** Vé mỗi trang khi client không truyền size. */
+const VOUCHER_PAGE_SIZE = 10;
+/** Chặn trên để mỗi lần tải chỉ ghép thông tin cho một số vé nhất định. */
+const MAX_PAGE_SIZE = 20;
 
 async function getJson(url, { token, internal } = {}) {
   const headers = {};
@@ -132,6 +135,15 @@ export async function GET(request) {
     );
   }
 
+  // Mỗi lần chỉ nạp một trang vé để không phải ghép thông tin cho cả danh sách.
+  const searchParams = new URL(request.url).searchParams;
+  const requestedPage = Number(searchParams.get("page") ?? 0);
+  const requestedSize = Number(searchParams.get("size") ?? VOUCHER_PAGE_SIZE);
+  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 0;
+  const size = Number.isFinite(requestedSize)
+    ? Math.min(Math.max(Math.floor(requestedSize), 1), MAX_PAGE_SIZE)
+    : VOUCHER_PAGE_SIZE;
+
   try {
     // Booking cũ lưu userId theo id hồ sơ, booking mới lưu theo auth user id.
     // Lấy hồ sơ để chấp nhận cả hai cách đánh số.
@@ -146,37 +158,45 @@ export async function GET(request) {
     // Booking Service lưu userId theo id hồ sơ, nên ưu tiên truy vấn theo id đó
     const primaryUserId = profile?.id != null ? Number(profile.id) : authUserId;
 
-    let bookings = await getJson(
-      `${BOOKING_SERVICE_URL}/api/bookings/user/${primaryUserId}`,
+    const payload = await getJson(
+      `${BOOKING_SERVICE_URL}/api/bookings/user/${primaryUserId}?page=${page}&size=${size}`,
       { token: accessToken },
     );
 
-    // Dự phòng khi endpoint theo người dùng không dùng được
-    if (!Array.isArray(bookings)) {
-      const all = await getJson(`${BOOKING_SERVICE_URL}/api/bookings`, {
-        token: accessToken,
-      });
-      bookings = Array.isArray(all)
-        ? all.filter((booking) => allowedUserIds.has(Number(booking.userId)))
-        : null;
-    }
+    // Server cũ trả mảng: gói lại thành một trang để phía trên xử lý thống nhất.
+    const pageInfo = Array.isArray(payload)
+      ? {
+          content: payload,
+          page,
+          size,
+          totalElements: payload.length,
+          totalPages: 1,
+        }
+      : payload;
 
-    if (!Array.isArray(bookings)) {
+    if (!pageInfo || !Array.isArray(pageInfo.content)) {
       return NextResponse.json(
         { message: "Không tải được danh sách vé." },
         { status: 502, headers: { "Cache-Control": "no-store" } },
       );
     }
 
-    const mine = bookings
-      .filter((booking) => allowedUserIds.has(Number(booking.userId)))
-      .sort((a, b) => Number(b.bookingId) - Number(a.bookingId))
-      .slice(0, ENRICH_LIMIT);
+    const mine = pageInfo.content.filter((booking) =>
+      allowedUserIds.has(Number(booking.userId)),
+    );
+
+    const pageMeta = {
+      page: Number(pageInfo.page ?? page),
+      size: Number(pageInfo.size ?? size),
+      totalElements: Number(pageInfo.totalElements ?? mine.length),
+      totalPages: Number(pageInfo.totalPages ?? 1),
+    };
+
     if (mine.length === 0) {
-      return NextResponse.json([], {
-        status: 200,
-        headers: { "Cache-Control": "no-store" },
-      });
+      return NextResponse.json(
+        { ...pageMeta, content: [] },
+        { status: 200, headers: { "Cache-Control": "no-store" } },
+      );
     }
 
     // Gọi song song từng tầng để giảm số vòng round-trip (Supabase ở xa).
@@ -272,10 +292,13 @@ export async function GET(request) {
       };
     });
 
-    return NextResponse.json(items, {
-      status: 200,
-      headers: { "Cache-Control": "no-store" },
-    });
+    return NextResponse.json(
+      { ...pageMeta, content: items },
+      {
+        status: 200,
+        headers: { "Cache-Control": "no-store" },
+      },
+    );
   } catch (error) {
     return NextResponse.json(
       {

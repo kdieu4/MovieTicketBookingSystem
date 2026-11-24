@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import MovieCard from '@/components/movie/MovieCard';
 import { IconFilter } from '@/components/common/Icons';
 import ShowMoreButton from '@/components/common/ShowMoreButton';
 import Skeleton from '@/components/common/Skeleton';
-import { useRowPagination } from '@/utils/useRowPagination';
-import { SegmentedControl } from 'glisse';
+import { usePagedGrid } from '@/utils/usePagedGrid';
+import {
+  MOVIE_PAGE_SIZE,
+  fetchComingSoonMoviesPage,
+  fetchNowShowingMoviesPage,
+} from '@/services/movieApi';
+import { GlassTabs } from '@/components/liquid-glass';
 
 // 3 hàng đầu, mỗi lần bấm mở thêm 2 hàng; số cột do lưới thực tế quyết định.
 const FIRST_ROWS = 3;
@@ -19,30 +24,40 @@ const TABS = [
   { id: 'upcoming', label: 'Sắp chiếu' },
 ];
 
-export default function MoviesSection({
-  movies = [],
-  comingSoon = [],
-  loading,
-  onSelectShowtime,
-}) {
+export default function MoviesSection({ onSelectShowtime }) {
   const [tab, setTab] = useState('showing');
+  // Thể loại đang lọc, lưu theo genreId vì bộ lọc chạy ở server.
   const [selectedGenres, setSelectedGenres] = useState([]);
 
   const isShowing = tab === 'showing';
   const isAllSelected = selectedGenres.length === 0;
 
-  // Lấy thể loại từ chính danh sách đang chiếu: chip nào cũng có kết quả, kèm số phim.
-  const genreOptions = useMemo(() => {
-    const counts = new Map();
-    for (const movie of movies) {
-      for (const genre of movie.genres ?? []) {
-        if (genre) counts.set(genre, (counts.get(genre) ?? 0) + 1);
-      }
+  const fetchPage = useCallback(
+    (page, size) =>
+      isShowing
+        ? fetchNowShowingMoviesPage({ genreIds: selectedGenres, page, size })
+        : fetchComingSoonMoviesPage({ page, size }),
+    [isShowing, selectedGenres],
+  );
+
+  const grid = usePagedGrid({
+    fetchPage,
+    pageSize: MOVIE_PAGE_SIZE,
+    initialRows: FIRST_ROWS,
+    stepRows: STEP_ROWS,
+  });
+  const { reload } = grid;
+
+  // Bộ lọc thể loại (genreId, tên, số phim) do server trả về theo từng trang.
+  const genreOptions = grid.facets;
+
+  // Tổng số phim đang chiếu, giữ lại khi đang lọc để chip "Tất cả" vẫn đúng.
+  const [allShowingTotal, setAllShowingTotal] = useState(0);
+  useEffect(() => {
+    if (isShowing && isAllSelected && !grid.loading) {
+      setAllShowingTotal(grid.total);
     }
-    return [...counts.entries()]
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'vi'))
-      .map(([name, count]) => ({ name, count }));
-  }, [movies]);
+  }, [isShowing, isAllSelected, grid.loading, grid.total]);
 
   function selectTab(id) {
     setTab(id);
@@ -53,31 +68,24 @@ export default function MoviesSection({
     setSelectedGenres([]);
   }
 
-  function handleToggleGenre(genreName) {
-    setSelectedGenres((prev) => {
-      if (prev.includes(genreName)) {
-        return prev.filter((name) => name !== genreName);
-      }
-      return [...prev, genreName];
-    });
+  function handleToggleGenre(genreId) {
+    setSelectedGenres((prev) =>
+      prev.includes(genreId) ? prev.filter((id) => id !== genreId) : [...prev, genreId],
+    );
   }
 
-  const filteredMovies = useMemo(() => {
-    if (isAllSelected) return movies;
-    return movies.filter((movie) =>
-      selectedGenres.some((genre) => movie.genres?.includes(genre))
-    );
-  }, [movies, selectedGenres, isAllSelected]);
-
-  // Lọc trước rồi mới cắt theo hàng để "3 hàng đầu" luôn tính trên danh sách đang xem.
-  const rowPager = useRowPagination(filteredMovies.length, { initialRows: FIRST_ROWS, stepRows: STEP_ROWS });
-  const { reset: resetRows } = rowPager;
-  const visibleMovies = filteredMovies.slice(0, rowPager.visibleCount);
-
-  // Đổi tab hoặc đổi bộ lọc thì thu về 3 hàng đầu.
+  // Đổi tab hoặc đổi bộ lọc thì tải lại từ trang đầu (bỏ qua lần chạy đầu tiên,
+  // vì hook đã tự tải trang 0).
+  const isFirstRun = useRef(true);
   useEffect(() => {
-    resetRows();
-  }, [tab, selectedGenres, resetRows]);
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      return;
+    }
+    reload();
+  }, [tab, selectedGenres, reload]);
+
+  const movies = grid.items;
 
   return (
     <section id="phim" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
@@ -87,11 +95,11 @@ export default function MoviesSection({
 
       {/* Tab chuyển giữa phim đang chiếu và sắp chiếu */}
       <div className="mt-6 flex flex-wrap items-center gap-2">
-        <SegmentedControl
+        <GlassTabs
           aria-label="Danh sách phim"
           value={tab}
           onValueChange={selectTab}
-          items={TABS.map(({ id, label }) => ({ value: id, label }))}
+          options={TABS.map(({ id, label }) => ({ value: id, label }))}
         />
       </div>
 
@@ -119,7 +127,7 @@ export default function MoviesSection({
                     aria-live="polite"
                     className="px-1 text-xs font-medium tabular-nums text-[var(--color-text-tertiary)]"
                   >
-                    {loading ? 'Đang tải phim…' : `${filteredMovies.length} phim`}
+                    {grid.loading ? 'Đang tải phim…' : `${grid.total} phim`}
                   </span>
                   {!isAllSelected && (
                     <button
@@ -146,17 +154,17 @@ export default function MoviesSection({
                   className="chip"
                 >
                   Tất cả
-                  <span className="chip-count">{movies.length}</span>
+                  <span className="chip-count">{isAllSelected ? grid.total : allShowingTotal}</span>
                 </button>
 
-                {genreOptions.map(({ name, count }) => {
-                  const isSelected = selectedGenres.includes(name);
+                {genreOptions.map(({ id, name, count }) => {
+                  const isSelected = selectedGenres.includes(id);
 
                   return (
                     <button
-                      key={name}
+                      key={id}
                       type="button"
-                      onClick={() => handleToggleGenre(name)}
+                      onClick={() => handleToggleGenre(id)}
                       data-active={isSelected}
                       aria-pressed={isSelected}
                       className="chip"
@@ -171,12 +179,12 @@ export default function MoviesSection({
           )}
 
           <div
-            ref={rowPager.gridRef}
+            ref={grid.gridRef}
             className="mt-8 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-5"
           >
-            {loading
+            {grid.loading && movies.length === 0
               ? Array.from({ length: 5 }).map((_, i) => <CardSkeleton key={i} />)
-              : visibleMovies.map((movie, index) => (
+              : movies.slice(0, grid.visibleCount).map((movie, index) => (
                   <MovieCard
                     key={movie.id}
                     movie={movie}
@@ -186,7 +194,7 @@ export default function MoviesSection({
                 ))}
           </div>
 
-          {!loading && filteredMovies.length === 0 && (
+          {!grid.loading && movies.length === 0 && (
             <div className="animate-fade-in mt-8 rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border-separator)] px-6 py-12 text-center">
               <p className="text-sm font-medium text-[var(--color-text-primary)]">
                 {isAllSelected ? 'Hiện chưa có phim đang chiếu.' : 'Không có phim thuộc thể loại đã chọn.'}
@@ -203,8 +211,8 @@ export default function MoviesSection({
             </div>
           )}
 
-          {!loading && rowPager.hasMore && (
-            <ShowMoreButton onClick={rowPager.showMore} />
+          {!grid.loading && grid.canShowMore && (
+            <ShowMoreButton onClick={grid.showMore} />
           )}
         </div>
       ) : (
@@ -215,7 +223,7 @@ export default function MoviesSection({
           aria-labelledby="phim-tab-upcoming"
           className="animate-fade-in mt-8"
         >
-          {loading ? (
+          {grid.loading && movies.length === 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={`coming-soon-skeleton-${i}`} className="surface flex items-center gap-4 p-4">
@@ -226,15 +234,15 @@ export default function MoviesSection({
                 </div>
               ))}
             </div>
-          ) : comingSoon.length === 0 ? (
+          ) : movies.length === 0 ? (
             <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border-separator)] px-6 py-12 text-center">
               <p className="text-sm font-medium text-[var(--color-text-primary)]">
                 Hiện chưa có phim sắp chiếu.
               </p>
             </div>
           ) : (
-            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {comingSoon.map((movie, index) => (
+            <ul ref={grid.gridRef} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {movies.slice(0, grid.visibleCount).map((movie, index) => (
                 <li
                   key={movie.id ?? `coming-soon-${index}`}
                   style={{ animationDelay: `${Math.min(index * 55, 330)}ms`, animationFillMode: 'both' }}
@@ -271,6 +279,10 @@ export default function MoviesSection({
                 </li>
               ))}
             </ul>
+          )}
+
+          {!grid.loading && grid.canShowMore && movies.length > 0 && (
+            <ShowMoreButton onClick={grid.showMore} />
           )}
         </div>
       )}
