@@ -6,6 +6,7 @@ import com.mtbs.booking_service.client.MovieSeatClaimClient;
 import com.mtbs.booking_service.client.UserServiceClient;
 import com.mtbs.booking_service.domain.dto.request.CreateBookingRequest;
 import com.mtbs.booking_service.domain.dto.response.BookingResponse;
+import com.mtbs.booking_service.domain.dto.response.PageResponse;
 import com.mtbs.booking_service.domain.dto.response.SeatResponse;
 import com.mtbs.booking_service.domain.dto.response.ShowtimeResponse;
 import com.mtbs.booking_service.domain.entity.Booking;
@@ -21,6 +22,9 @@ import com.mtbs.booking_service.service.BookingService;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +41,13 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
+
+        /** So booking moi trang khi client khong truyen size. */
+        private static final int DEFAULT_PAGE_SIZE = 10;
+        private static final int MAX_PAGE_SIZE = 50;
+        /** Vé mới nhất trước, giữ đúng thứ tự danh sách cũ. */
+        private static final Sort NEWEST_FIRST = Sort.by(Sort.Direction.DESC, "bookingId");
+
 
         private final UserServiceClient userServiceClient;
         private final MovieServiceClient movieServiceClient;
@@ -187,6 +198,27 @@ public class BookingServiceImpl implements BookingService {
 
         @Override
         @Transactional(readOnly = true)
+        public PageResponse<BookingResponse> getBookingsPaged(Long authUserId, boolean admin, int page, int size) {
+
+                PageRequest pageRequest = pageRequest(page, size);
+
+                Page<Booking> bookings;
+
+                if (admin) {
+                        bookings = bookingRepository.findAll(pageRequest);
+                } else {
+                        // User Service loi thi van doc duoc booking cu theo id auth.
+                        Long profileId = resolveProfileId(authUserId);
+                        bookings = bookingRepository.findByUserIdIn(
+                                        distinctOwnerIds(profileId != null ? profileId : authUserId, authUserId),
+                                        pageRequest);
+                }
+
+                return PageResponse.from(bookings, this::convertToResponse);
+        }
+
+        @Override
+        @Transactional(readOnly = true)
         public List<BookingResponse> getBookingsByUser(Long userId, Long authUserId, boolean admin) {
 
                 if (admin) {
@@ -211,6 +243,49 @@ public class BookingServiceImpl implements BookingService {
                                 .stream()
                                 .map(this::convertToResponse)
                                 .collect(Collectors.toList());
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public PageResponse<BookingResponse> getBookingsByUserPaged(Long userId, Long authUserId, boolean admin,
+                        int page, int size) {
+
+                PageRequest pageRequest = pageRequest(page, size);
+
+                if (admin) {
+                        return PageResponse.from(
+                                        bookingRepository.findByUserId(userId, pageRequest),
+                                        this::convertToResponse);
+                }
+
+                Long profileId = resolveProfileId(authUserId);
+
+                boolean owner = authUserId.equals(userId)
+                                || (profileId != null && profileId.equals(userId));
+
+                if (!owner) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                        "Không có quyền xem booking của người dùng khác");
+                }
+
+                return PageResponse.from(
+                                bookingRepository.findByUserIdIn(
+                                                distinctOwnerIds(userId, authUserId), pageRequest),
+                                this::convertToResponse);
+        }
+
+        /** Hai id có thể trùng nhau (hồ sơ trùng tài khoản auth) nên phải loại trùng. */
+        private static List<Long> distinctOwnerIds(Long profileId, Long authUserId) {
+                if (profileId == null || profileId.equals(authUserId)) {
+                        return List.of(authUserId);
+                }
+                return List.of(profileId, authUserId);
+        }
+
+        private static PageRequest pageRequest(int page, int size) {
+                int safePage = Math.max(page, 0);
+                int safeSize = size <= 0 ? DEFAULT_PAGE_SIZE : Math.min(size, MAX_PAGE_SIZE);
+                return PageRequest.of(safePage, safeSize, NEWEST_FIRST);
         }
 
         @Override

@@ -40,23 +40,37 @@ public class BookingController {
 
     // GET: Lấy danh sách booking
     @GetMapping
-    public ResponseEntity<List<BookingResponse>> getAllBookings(
-            @AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<?> getAllBookings(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
 
-        return ResponseEntity.ok(
-                bookingService.getAllBookings(authUserId(jwt), isAdmin(jwt))
-        );
+        // Khong truyen page/size thi tra mang nhu cu de khong lam vo client cu.
+        if (page == null && size == null) {
+            return ResponseEntity.ok(bookingService.getAllBookings(authUserId(jwt), isAdmin(jwt)));
+        }
+
+        return ResponseEntity.ok(bookingService.getBookingsPaged(
+                authUserId(jwt), isAdmin(jwt),
+                page == null ? 0 : page, size == null ? 0 : size));
     }
 
     // GET: Lấy booking của một người dùng
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<BookingResponse>> getBookingsByUser(
+    public ResponseEntity<?> getBookingsByUser(
             @PathVariable Long userId,
-            @AuthenticationPrincipal Jwt jwt) {
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
 
-        return ResponseEntity.ok(
-                bookingService.getBookingsByUser(userId, authUserId(jwt), isAdmin(jwt))
-        );
+        if (page == null && size == null) {
+            return ResponseEntity.ok(
+                    bookingService.getBookingsByUser(userId, authUserId(jwt), isAdmin(jwt)));
+        }
+
+        return ResponseEntity.ok(bookingService.getBookingsByUserPaged(
+                userId, authUserId(jwt), isAdmin(jwt),
+                page == null ? 0 : page, size == null ? 0 : size));
     }
 
     // GET: Lấy booking theo ID

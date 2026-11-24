@@ -2,6 +2,7 @@ package com.mtbs.booking_service.service;
 
 import com.mtbs.booking_service.domain.dto.request.CreateBookingRequest;
 import com.mtbs.booking_service.domain.dto.response.BookingResponse;
+import com.mtbs.booking_service.domain.dto.response.PageResponse;
 
 import java.util.List;
 
@@ -13,8 +14,14 @@ public interface BookingService {
     // Lấy danh sách booking: ADMIN xem tất cả, người dùng chỉ xem của mình
     List<BookingResponse> getAllBookings(Long authUserId, boolean admin);
 
+    // Như trên nhưng trả theo trang, mới nhất trước
+    PageResponse<BookingResponse> getBookingsPaged(Long authUserId, boolean admin, int page, int size);
+
     // Lấy danh sách booking của một người dùng (mới nhất trước)
     List<BookingResponse> getBookingsByUser(Long userId, Long authUserId, boolean admin);
+
+    // Như trên nhưng trả theo trang, mới nhất trước
+    PageResponse<BookingResponse> getBookingsByUserPaged(Long userId, Long authUserId, boolean admin, int page, int size);
 
     // Lấy booking theo ID
     BookingResponse getBookingById(Long id, Long authUserId, boolean admin);
