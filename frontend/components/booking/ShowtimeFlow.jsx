@@ -5,7 +5,8 @@ import { createPortal } from 'react-dom';
 import SeatPicker, { SEAT_ANIMATIONS } from './SeatPicker';
 import { Reveal, Skeleton } from '@/components/common/Ascii';
 import { IconClose } from '@/components/common/Icons';
-import { Button } from 'glisse';
+import { GlassButton } from '@/components/liquid-glass';
+import { BrandGlassButton } from '@/components/common/BrandButton';
 import { getCachedSeats, getSessionId, invalidateSeats, loadSeats } from '@/services/seatApi';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
@@ -665,34 +666,43 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
               const n = i + 1;
               const isActive = n === step;
               const isDone = n < step;
-              // Cùng bảng màu với ghế: đang chọn, ghế đôi (đã qua, bấm được), đã bán (chưa tới)
-              const cls = isActive
-                ? 'sp-pop border-[var(--color-brand-primary)] bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] shadow-[var(--shadow-low)]'
-                : isDone
-                  ? 'cursor-pointer border-[var(--color-brand-primary)] bg-[var(--color-bg-primary)] text-[var(--color-brand-primary)] hover:scale-105 hover:bg-[var(--color-fill-tertiary)] active:scale-90'
-                  : 'cursor-not-allowed border-[var(--color-border-separator)] bg-[var(--color-fill-secondary)] text-[var(--color-text-tertiary)]';
               return (
                 <li key={label}>
-                  <button
+                  <GlassButton
                     type="button"
-                    disabled={!isDone}
+                    size="sm"
+                    material={isActive ? 'clear' : 'tinted'}
+                    tint={isActive ? 1 : undefined}
+                    // Chỉ khoá các bước chưa tới: bước đang chọn phải giữ nguyên màu thương hiệu,
+                    // nếu disabled thì opacity-40 làm xanh bị lạt.
+                    disabled={n > step}
                     aria-current={isActive ? 'step' : undefined}
                     aria-label={isDone ? `Quay lại bước ${n}: ${label}` : `Bước ${n}: ${label}`}
                     onClick={() => handleGoToStep(n)}
-                    className={`rounded-[var(--radius-sm)] border px-3.5 py-1.5 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] ${cls}`}
+                    className={
+                      // Bước đang chọn: kính trong tô đúng --color-brand-fill, không pha sáng
+                      // nên xanh khớp với các nút khác của trang.
+                      isActive
+                        ? '[--glass-tint:#0066cc] hover:[--glass-tint:#0055b3] bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)]'
+                        : isDone
+                          ? 'bg-[var(--color-bg-primary)] text-[var(--color-brand-primary)]'
+                          : 'bg-[var(--color-fill-secondary)] text-[var(--color-text-tertiary)]'
+                    }
                   >
                     {n} {label}
-                  </button>
+                  </GlassButton>
                 </li>
               );
             })}
           </ol>
-          <Button
+          <BrandGlassButton
             ref={closeButtonRef}
             type="button"
+            size="md"
             aria-label="Đóng"
             onClick={closeModal}
-            className="shrink-0"
+            className="bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] hover:bg-[var(--color-brand-fill-hover)]"
+            style={{ width: 40, padding: 0 }}
             icon={<IconClose />}
           />
         </div>
@@ -953,15 +963,17 @@ export default function ShowtimeFlow({ filters, searchId, onSearchSettled, onCon
                         </div>
                       </div>
 
-                      <button
+                      <BrandGlassButton
                         type="button"
+                        size="md"
                         onClick={handleContinue}
                         disabled={!hasSeats}
-                        className="mt-5 flex h-11 w-full items-center justify-center gap-1.5 rounded-full bg-[var(--color-brand-fill)] text-[13px] font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-fill-hover)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2"
+                        className="mt-5 w-full text-[13px]"
+                        style={{ height: 44 }}
+                        icon={<span aria-hidden="true">→</span>}
                       >
                         Tiếp tục
-                        <span aria-hidden="true">→</span>
-                      </button>
+                      </BrandGlassButton>
                     </aside>
                   </div>
                 </div>

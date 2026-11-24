@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import TermsModal from '@/components/legal/TermsModal';
-import { SegmentedControl } from 'glisse';
+import { GlassTabs } from '@/components/liquid-glass';
+import { GlassCheckbox } from '@/components/common/GlassCheckbox';
+import { BrandGlassButton } from '@/components/common/BrandButton';
 import { CheckIcon } from '@/components/common/Icons';
 
 // Đổi cho khớp backend của bạn. Hai endpoint dự kiến: POST /auth/login và POST /auth/register
@@ -129,14 +131,15 @@ export default function AuthPage() {
     setRegisterBanner((prev) => (prev.message ? { ...prev, message: '' } : prev));
   }
 
-  async function handleLogin(event) {
-    event.preventDefault();
+  // Trả về promise để action button biết khi nào xong: ném lỗi thì droplet tách ra lại,
+  // còn thông báo lỗi/ô sai đã hiện trong form.
+  async function handleLogin() {
     if (loading) return;
 
     setSubmitTick((t) => t + 1);
     const errors = validateLogin(login);
     setLoginErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) throw new Error('invalid-login-form');
 
     setLoading(true);
     setLoginBanner({ tone: 'error', message: '' });
@@ -149,19 +152,19 @@ export default function AuthPage() {
       router.push('/');
     } catch (err) {
       setLoginBanner({ tone: 'error', message: err.message });
+      throw err;
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleRegister(event) {
-    event.preventDefault();
+  async function handleRegister() {
     if (loading) return;
 
     setSubmitTick((t) => t + 1);
     const errors = validateRegister(register);
     setRegisterErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) throw new Error('invalid-register-form');
 
     setLoading(true);
     setRegisterBanner({ tone: 'error', message: '' });
@@ -182,6 +185,7 @@ export default function AuthPage() {
       setTab('login');
     } catch (err) {
       setRegisterBanner({ tone: 'error', message: err.message });
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -213,11 +217,13 @@ export default function AuthPage() {
         <div className="relative">
           {/* Thanh chuyển floating: nổi phía trên thẻ, đè lên mép trên của thẻ */}
           <div className="sticky top-20 z-20 mx-auto -mb-5 flex w-fit">
-            <SegmentedControl
+            <GlassTabs
               aria-label="Đăng nhập hoặc đăng ký"
+              size="lg"
+              className="bg-black/10! dark:bg-black/40!"
               value={tab}
               onValueChange={switchTab}
-              items={[
+              options={[
                 { value: 'login', label: 'Đăng nhập' },
                 { value: 'register', label: 'Đăng ký' },
               ]}
@@ -235,7 +241,13 @@ export default function AuthPage() {
             <div className="mt-6">
               {/* Panel đăng nhập */}
               <Panel active={isLogin} side="left">
-                <form onSubmit={handleLogin} noValidate>
+                <form
+                  noValidate
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    handleLogin().catch(() => {});
+                  }}
+                >
                   <Banner tone={loginBanner.tone} message={loginBanner.message} />
 
                   <div className="space-y-4">
@@ -266,16 +278,24 @@ export default function AuthPage() {
                     </Field>
 
                     <div className="flex items-center justify-between gap-3">
-                      <label className="flex cursor-pointer items-center gap-2 text-xs text-[var(--color-text-secondary)]">
-                        <input
-                          type="checkbox"
+                      <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+                        <GlassCheckbox
                           checked={login.remember}
-                          onChange={(e) => updateLogin('remember', e.target.checked)}
+                          onChange={(checked) => updateLogin('remember', checked)}
                           disabled={loading}
-                          className="h-4 w-4 accent-[var(--color-brand-fill)]"
+                          color="#0066cc"
+                          size="sm"
+                          label="Ghi nhớ đăng nhập"
                         />
-                        Ghi nhớ đăng nhập
-                      </label>
+                        <button
+                          type="button"
+                          onClick={() => updateLogin('remember', !login.remember)}
+                          disabled={loading}
+                          className="cursor-pointer disabled:cursor-not-allowed"
+                        >
+                          Ghi nhớ đăng nhập
+                        </button>
+                      </div>
                       <Link
                         href="/ho-tro"
                         title="Liên hệ hỗ trợ để khôi phục mật khẩu"
@@ -285,7 +305,28 @@ export default function AuthPage() {
                       </Link>
                     </div>
 
-                    <SubmitButton loading={loading} idleLabel="Đăng nhập" loadingLabel="Đang đăng nhập..." />
+                    {/* Nút gọn, căn giữa form; chữ giữa thân kính, droplet nằm cuối nút */}
+                    <div className="flex justify-center">
+                      <BrandGlassButton
+                        type="submit"
+                        size="md"
+                        disabled={loading}
+                        aria-busy={loading}
+                        className="text-sm"
+                        style={{ height: 40 }}
+                        icon={
+                          loading ? (
+                            <span
+                              aria-hidden="true"
+                              className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white motion-reduce:animate-none"
+                            />
+                          ) : null
+                        }
+                        iconPosition="start"
+                      >
+                        {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                      </BrandGlassButton>
+                    </div>
                   </div>
 
                   <p className="mt-5 text-center text-xs text-[var(--color-text-secondary)]">
@@ -303,7 +344,13 @@ export default function AuthPage() {
 
               {/* Panel đăng ký */}
               <Panel active={!isLogin} side="right">
-                <form onSubmit={handleRegister} noValidate>
+                <form
+                  noValidate
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    handleRegister().catch(() => {});
+                  }}
+                >
                   <Banner tone={registerBanner.tone} message={registerBanner.message} />
 
                   <div className="space-y-4">
@@ -384,19 +431,29 @@ export default function AuthPage() {
                     <StrengthMeter password={register.password} />
 
                     <div>
-                      <label className="flex cursor-pointer items-start gap-2 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-                        <input
-                          type="checkbox"
+                      <div className="flex items-start gap-2 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                        <GlassCheckbox
                           checked={register.agree}
-                          onChange={(e) => updateRegister('agree', e.target.checked)}
+                          onChange={(checked) => updateRegister('agree', checked)}
                           disabled={loading}
-                          className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-brand-fill)]"
+                          color="#0066cc"
+                          size="sm"
+                          label="Tôi đồng ý với điều khoản và quy định"
                         />
-                        <span>
+                        {/* Chạm vào câu chữ cũng bật/tắt ô, trừ link điều khoản */}
+                        <span
+                          className="cursor-pointer pt-0.5"
+                          onClick={() => {
+                            if (!loading) updateRegister('agree', !register.agree);
+                          }}
+                        >
                           Tôi đã đọc và đồng ý với{' '}
                           <button
                             type="button"
-                            onClick={() => setTermsOpen(true)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setTermsOpen(true);
+                            }}
                             aria-haspopup="dialog"
                             className="font-semibold text-[var(--color-brand-primary)] hover:underline"
                           >
@@ -404,11 +461,32 @@ export default function AuthPage() {
                           </button>{' '}
                           của Seenema.
                         </span>
-                      </label>
+                      </div>
                       <FieldError id="register-agree-error" message={registerErrors.agree} />
                     </div>
 
-                    <SubmitButton loading={loading} idleLabel="Tạo tài khoản" loadingLabel="Đang tạo tài khoản..." />
+                    {/* Nút gọn, căn giữa form; chữ giữa thân kính, droplet nằm cuối nút */}
+                    <div className="flex justify-center">
+                      <BrandGlassButton
+                        type="submit"
+                        size="md"
+                        disabled={loading}
+                        aria-busy={loading}
+                        className="text-sm"
+                        style={{ height: 40 }}
+                        icon={
+                          loading ? (
+                            <span
+                              aria-hidden="true"
+                              className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white motion-reduce:animate-none"
+                            />
+                          ) : null
+                        }
+                        iconPosition="start"
+                      >
+                        {loading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}
+                      </BrandGlassButton>
+                    </div>
                   </div>
 
                   <p className="mt-5 text-center text-xs text-[var(--color-text-secondary)]">
@@ -612,25 +690,6 @@ function StrengthMeter({ password }) {
         </div>
       </div>
     </div>
-  );
-}
-
-function SubmitButton({ loading, idleLabel, loadingLabel }) {
-  return (
-    <button
-      type="submit"
-      disabled={loading}
-      aria-busy={loading}
-      className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[var(--color-brand-fill)] text-sm font-semibold text-[var(--color-brand-on-primary)] transition-all duration-200 hover:bg-[var(--color-brand-fill-hover)] active:scale-[0.98] disabled:cursor-wait disabled:opacity-80 disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-tertiary)]"
-    >
-      {loading && (
-        <span
-          aria-hidden="true"
-          className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white motion-reduce:animate-none"
-        />
-      )}
-      <span>{loading ? loadingLabel : idleLabel}</span>
-    </button>
   );
 }
 

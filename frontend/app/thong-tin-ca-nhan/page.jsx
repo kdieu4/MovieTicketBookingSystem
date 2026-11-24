@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { BrandGlassButton } from '@/components/common/BrandButton';
 
 const INPUT_OK =
   'mt-1.5 h-11 w-full rounded-[var(--radius-sm)] border border-[var(--color-border-separator)] bg-[var(--color-bg-secondary)] px-3.5 text-sm text-[var(--color-text-primary)] transition-[border-color,box-shadow] duration-200 focus:border-[var(--color-brand-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-primary)]/20 disabled:cursor-not-allowed disabled:bg-[var(--color-fill-tertiary)] disabled:text-[var(--color-text-secondary)]';
@@ -213,13 +214,15 @@ export default function ProfilePage() {
                     {notice?.text ?? ''}
                   </p>
 
-                  <button
+                  <BrandGlassButton
                     type="submit"
+                    size="md"
                     disabled={saving}
-                    className="h-10 shrink-0 rounded-full bg-[var(--color-brand-fill)] px-6 text-xs font-semibold text-[var(--color-brand-on-primary)] transition-all hover:bg-[var(--color-brand-fill-hover)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-tertiary)]"
+                    style={{ fontSize: 12 }}
+                    className="bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] hover:bg-[var(--color-brand-fill-hover)]"
                   >
                     {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-                  </button>
+                  </BrandGlassButton>
                 </div>
               </form>
             </div>

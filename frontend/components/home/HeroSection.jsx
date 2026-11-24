@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Button } from 'glisse';
+import { GlassButton } from '@/components/liquid-glass';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
@@ -509,17 +509,19 @@ export default function HeroSection({
         )}
 
         {/* 4. Tìm suất chiếu */}
-        <Button
+        <GlassButton
           type="submit"
-          variant="filled"
+          size="lg"
+          material="tinted"
+          iconPosition="start"
           disabled={searching}
           aria-busy={searching}
-          style={{ height: 48, borderRadius: 24, padding: '0 24px', fontSize: 13 }}
-          className={`!flex sm:self-end ${showCinema ? '' : 'sm:col-span-2'} lg:col-span-1`}
+          style={{ fontSize: 13 }}
+          className={`bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] hover:bg-[var(--color-brand-fill-hover)] !flex sm:self-end ${showCinema ? '' : 'sm:col-span-2'} lg:col-span-1`}
+          icon={searching ? <span className="bm-spinner" aria-hidden="true" /> : <SearchIcon />}
         >
-          {searching ? <span className="bm-spinner" aria-hidden="true" /> : <SearchIcon />}
-          <span>{searching ? 'Đang tìm...' : 'Tìm suất chiếu'}</span>
-        </Button>
+          {searching ? 'Đang tìm...' : 'Tìm suất chiếu'}
+        </GlassButton>
       </form>
 
       {activeMissing.length > 0 && (

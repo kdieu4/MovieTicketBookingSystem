@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { IconStar } from '@/components/common/Icons';
-import { Button } from 'glisse';
+import { BrandGlassButton } from '@/components/common/BrandButton';
 import { formatRating, formatVoteCount } from '@/utils/movieHelpers';
 
 export default function MovieCard({ movie, onSelectShowtime, index = 0 }) {
@@ -12,8 +12,9 @@ export default function MovieCard({ movie, onSelectShowtime, index = 0 }) {
   const rating = formatRating(movie.tmdbRating);
   const votes = formatVoteCount(movie.tmdbVoteCount);
 
-  // Nút phụ đề kính của glisse: cao 40px mặc định, thu lại 32px cho vừa hàng chữ của card.
+  // Nút kính của liquid-glass, thu còn 32px cho vừa hàng chữ của card.
   const cardButtonStyle = { height: 32, borderRadius: 16, padding: '0 14px', fontSize: 12, flex: 'none' };
+  const cardButtonClass = 'bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)]';
 
   // Nút "Đặt vé" nằm ngoài vùng Link, nên chỉ cần chặn sự kiện khi bấm.
   function handleSelect(event) {
@@ -75,18 +76,19 @@ export default function MovieCard({ movie, onSelectShowtime, index = 0 }) {
         </div>
 
         {isUpcoming || !onSelectShowtime ? (
-          <Link
-            href={`/phim/${movie.id}`}
-            className="lg-glass lg-button"
-            data-variant={isUpcoming ? undefined : 'filled'}
-            style={cardButtonStyle}
-          >
-            {isUpcoming ? 'Chi tiết' : 'Đặt vé'}
-          </Link>
+          <BrandGlassButton asChild size="sm" className={cardButtonClass} style={cardButtonStyle}>
+            <Link href={`/phim/${movie.id}`}>{isUpcoming ? 'Chi tiết' : 'Đặt vé'}</Link>
+          </BrandGlassButton>
         ) : (
-          <Button type="button" variant="filled" onClick={handleSelect} style={cardButtonStyle}>
+          <BrandGlassButton
+            type="button"
+            size="sm"
+            className={cardButtonClass}
+            style={cardButtonStyle}
+            onClick={handleSelect}
+          >
             Đặt vé
-          </Button>
+          </BrandGlassButton>
         )}
       </div>
     </article>

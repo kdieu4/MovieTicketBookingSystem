@@ -1,22 +1,23 @@
 'use client';
 
-import { Button } from 'glisse';
+import { BrandGlassButton } from '@/components/common/BrandButton';
 
 /**
- * Nút mở thêm hàng cho các danh sách dài, dùng đúng nút kính của glisse như
- * nút "Đặt vé" (glass + nền xanh thương hiệu) để cả trang chỉ có một kiểu nút.
+ * Nút mở thêm hàng cho các danh sách dài, dùng nút kính liquid-glass để đồng bộ
+ * với nút "Đặt vé" trên card phim.
  */
 export default function ShowMoreButton({ onClick }) {
   return (
-    <div className="mt-8 flex justify-center border-t border-[var(--color-border-separator)] pt-6">
-      <Button
+    <div className="mt-8 flex justify-center">
+      <BrandGlassButton
         type="button"
-        variant="filled"
+        size="md"
         onClick={onClick}
-        style={{ height: 40, borderRadius: 20, padding: '0 22px', fontSize: 13 }}
+        className="bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)]"
+        style={{ fontSize: 13 }}
       >
         Xem thêm
-      </Button>
+      </BrandGlassButton>
     </div>
   );
 }

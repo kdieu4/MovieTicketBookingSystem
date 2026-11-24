@@ -10,6 +10,8 @@ import BookingFlow from '@/components/booking/BookingFlow';
 import TrailerModal from '@/components/movie/TrailerModal';
 import TmdbReviews from '@/components/movie/TmdbReviews';
 import { IconArrowLeft, IconClock, IconCalendar, IconPlay, IconStar } from '@/components/common/Icons';
+import { GlassButton } from '@/components/liquid-glass';
+import { BrandGlassButton } from '@/components/common/BrandButton';
 import { Reveal } from '@/components/common/Ascii';
 import { AGE_LABEL, STATUS_LABEL, formatDuration, formatRating, formatVoteCount } from '@/utils/movieHelpers';
 import '@/styles/booking-motion.css';
@@ -188,13 +190,16 @@ export default function MovieDetailClient({ movie, reviews = [] }) {
             )}
 
             {movie.trailerUrl && (
-              <button
+              <BrandGlassButton
                 type="button"
+                size="sm"
+                iconPosition="start"
                 onClick={() => setIsTrailerOpen(true)}
-                className="mt-4 inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--color-brand-fill)] bg-[var(--color-brand-fill)] px-4 py-2 text-[13px] font-medium text-[var(--color-brand-on-primary)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--color-brand-fill-hover)] hover:bg-[var(--color-brand-fill-hover)] active:scale-95"
+                className="mt-4 bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)] hover:bg-[var(--color-brand-fill-hover)]"
+                icon={<IconPlay />}
               >
-                <IconPlay /> Xem trailer
-              </button>
+                Xem trailer
+              </BrandGlassButton>
             )}
           </div>
         </div>

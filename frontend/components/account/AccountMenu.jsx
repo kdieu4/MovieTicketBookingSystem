@@ -1,16 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
-import { Button, Glass, SegmentedControl } from 'glisse';
+import {
+  GlassTabs,
+  GlassDropdownMenu,
+  GlassDropdownMenuTrigger,
+  GlassDropdownMenuContent,
+  GlassDropdownMenuItem,
+  GlassDropdownMenuSeparator,
+} from '@/components/liquid-glass';
 
 export default function AccountMenu() {
-  const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState('');
-  const containerRef = useRef(null);
   const { theme, setTheme } = useTheme();
   const router = useRouter();
 
@@ -25,7 +30,6 @@ export default function AccountMenu() {
       setLogoutError('Không kết nối được máy chủ, nhưng đã xoá phiên trên máy.');
     } finally {
       setLoggingOut(false);
-      setOpen(false);
       // Báo cho Header/RequireAuth biết phiên đã mất, không phải chờ đổi trang.
       window.dispatchEvent(new Event('mtbs-auth-changed'));
       router.push('/');
@@ -33,105 +37,64 @@ export default function AccountMenu() {
     }
   }
 
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setOpen(false);
-      }
-    }
-    function handleEscape(event) {
-      if (event.key === 'Escape') setOpen(false);
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, []);
-
   return (
-    <div className="relative" ref={containerRef}>
-      {/* Nút kính của glisse: 40x40, chỉ icon nên bắt buộc có aria-label. */}
-      <Button
-        type="button"
-        data-menu-trigger=""
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="menu"
-        aria-expanded={open}
+    <GlassDropdownMenu>
+      {/* Trigger là nút kính của kit: bấm vào menu "nở" ra từ chính nút này.
+          Chỉ có icon nên bắt buộc aria-label. */}
+      <GlassDropdownMenuTrigger
         aria-label="Tài khoản"
-        icon={<UserIcon />}
-      />
+        className="h-10 w-10 gap-0 rounded-full px-0 [&_svg]:size-[18px]"
+      >
+        <UserIcon />
+      </GlassDropdownMenuTrigger>
 
-      {(
-        // Bề mặt menu dùng token --lg-surface của glisse để khớp với menu gốc thư viện.
-        <Glass
-          role="menu"
-          aria-hidden={!open}
-          className={`glass-panel absolute right-0 top-full z-50 mt-2 w-60 origin-top-right overflow-hidden rounded-[20px] p-1.5 transition-all duration-200 ease-out ${
-            open
-              ? 'visible translate-y-0 scale-100 opacity-100'
-              : 'invisible pointer-events-none -translate-y-1 scale-95 opacity-0'
-          }`}
+      <GlassDropdownMenuContent align="end" sideOffset={10} className="w-60 text-[13px]">
+        <GlassDropdownMenuItem render={<Link href="/thong-tin-ca-nhan" />}>
+          Thông tin cá nhân
+        </GlassDropdownMenuItem>
+        <GlassDropdownMenuItem render={<Link href="/ve-cua-toi" />}>Vé của tôi</GlassDropdownMenuItem>
+        <GlassDropdownMenuItem render={<Link href="/cai-dat" />}>
+          Cài đặt tài khoản
+        </GlassDropdownMenuItem>
+
+        {/* Theme vẫn là GlassTabs: menu chỉ là khung, không tự vẽ chữ hay ô chọn. */}
+        <GlassDropdownMenuSeparator />
+        <div role="group" aria-label="Giao diện" className="px-3.5 py-2">
+          <p className="text-[11px] font-semibold tracking-wider text-[var(--color-text-secondary)] uppercase">
+            Giao diện
+          </p>
+
+          <div className="mt-2">
+            <GlassTabs
+              aria-label="Chế độ hiển thị"
+              size="sm"
+              value={theme}
+              onValueChange={setTheme}
+              options={[
+                { value: 'light', label: 'Sáng' },
+                { value: 'dark', label: 'Tối' },
+              ]}
+            />
+          </div>
+        </div>
+
+        <GlassDropdownMenuSeparator />
+
+        {logoutError && (
+          <p className="px-3.5 pb-1 text-[11px] text-[var(--color-system-warning)]">{logoutError}</p>
+        )}
+
+        <GlassDropdownMenuItem
+          disabled={loggingOut}
+          onSelect={handleLogout}
+          // Không dùng `destructive` của kit (đỏ cố định): token lỗi của app tự đổi theo theme.
+          className="font-semibold text-[var(--color-system-error)]"
         >
-          <Link
-            href="/thong-tin-ca-nhan"
-            onClick={() => setOpen(false)}
-            className="block w-full rounded-[var(--radius-xs)] px-3 py-2 text-left text-xs font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-fill-tertiary)]"
-          >
-            Thông tin cá nhân
-          </Link>
-          <Link
-            href="/ve-cua-toi"
-            onClick={() => setOpen(false)}
-            className="block w-full rounded-[var(--radius-xs)] px-3 py-2 text-left text-xs font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-fill-tertiary)]"
-          >
-            Vé của tôi
-          </Link>
-          <Link
-            href="/cai-dat"
-            onClick={() => setOpen(false)}
-            className="block w-full rounded-[var(--radius-xs)] px-3 py-2 text-left text-xs font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-fill-tertiary)]"
-          >
-            Cài đặt tài khoản
-          </Link>
-
-          <div className="mt-1 border-t border-[var(--color-border-separator)] px-2.5 pt-2.5 pb-1">
-            <p className="text-[11px] font-semibold tracking-wider text-[var(--color-text-secondary)] uppercase">Giao diện</p>
-
-            <div className="mt-2">
-              <SegmentedControl
-                aria-label="Chế độ hiển thị"
-                value={theme}
-                onValueChange={setTheme}
-                items={[
-                  { value: 'light', label: 'Sáng' },
-                  { value: 'dark', label: 'Tối' },
-                ]}
-              />
-            </div>
-          </div>
-
-          <div className="mt-1 border-t border-[var(--color-border-separator)] px-1.5 pt-1.5">
-            {logoutError && (
-              <p className="px-2 pb-1 text-[11px] text-[var(--color-system-warning)]">
-                {logoutError}
-              </p>
-            )}
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="flex w-full items-center gap-2 rounded-[var(--radius-xs)] px-3 py-2 text-left text-xs font-semibold text-[var(--color-system-error)] transition-colors hover:bg-[var(--color-system-error)]/10 disabled:opacity-60"
-            >
-              <LogoutIcon />
-              {loggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}
-            </button>
-          </div>
-        </Glass>
-      )}
-    </div>
+          <LogoutIcon />
+          {loggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}
+        </GlassDropdownMenuItem>
+      </GlassDropdownMenuContent>
+    </GlassDropdownMenu>
   );
 }
 

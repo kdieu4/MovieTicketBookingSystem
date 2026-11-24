@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { DistortionWave } from "distortion-waves";
-import { Button } from "glisse";
+import { BrandGlassActionButton, BrandGlassButton } from "@/components/common/BrandButton";
 import { clearPaymentSnapshot } from "@/utils/paymentSnapshot";
 
 const TIME_ZONE = "Asia/Ho_Chi_Minh";
@@ -430,12 +431,13 @@ export default function PaymentQrModal({
         >
           {/* Nút đóng: chỉ dùng khi hiển thị dạng dialog */}
           {!inline && (
-            <Button
+            <BrandGlassButton
               type="button"
+              size="md"
               onClick={() => requestClose()}
               aria-label="Đóng cửa sổ thanh toán"
               className="absolute right-4 top-4"
-              style={{ position: "absolute" }}
+              style={{ position: "absolute", width: 40, padding: 0 }}
               icon={<CloseIcon />}
             />
           )}
@@ -545,28 +547,32 @@ export default function PaymentQrModal({
           ) : (
             <>
               {!hasPayment && !expired && (
-                <Button
-                  type="button"
-                  variant="filled"
-                  onClick={onCreateQr}
+                // Thao tác async: droptlet gộp vào thân khi bấm và tách ra nếu tạo giao dịch lỗi.
+                <BrandGlassActionButton
+                  size="md"
+                  onAction={onCreateQr}
+                  pendingLabel="Đang tạo giao dịch..."
                   disabled={!onCreateQr || loading}
-                  style={{ height: 44, width: "100%", maxWidth: 280, borderRadius: 22, fontSize: 13 }}
+                  className="w-full"
+                  // Height do trang đặt; paddingRight giữ chỗ cho droplet (size md = 46)
+                  style={{ height: 44, paddingRight: 46, maxWidth: 280, fontSize: 13 }}
                 >
-                  {loading ? "Đang tạo giao dịch..." : "Tạo mã QR thanh toán"}
-                </Button>
+                  Tạo mã QR thanh toán
+                </BrandGlassActionButton>
               )}
 
               {safePayUrl && !expired && (
                 // Điều hướng ngay trong tab hiện tại: VNPay sẽ redirect về /payment/return
                 // rồi trang đó tự chuyển tiếp sang màn hình xác nhận.
-                <a
-                  href={safePayUrl}
-                  className="lg-glass lg-button"
-                  data-variant="filled"
-                  style={{ height: 44, width: "100%", maxWidth: 280, borderRadius: 22, fontSize: 13 }}
+                <BrandGlassButton
+                  asChild
+                  size="md"
+                  className="w-full"
+                  // Height do trang đặt; paddingRight giữ chỗ cho droplet (size md = 46)
+                  style={{ height: 44, paddingRight: 46, maxWidth: 280, fontSize: 13 }}
                 >
-                  Thanh toán qua VNPay
-                </a>
+                  <a href={safePayUrl}>Thanh toán qua VNPay</a>
+                </BrandGlassButton>
               )}
             </>
           )}
@@ -629,7 +635,8 @@ export default function PaymentQrModal({
         Mã đặt vé {bookingId ? `#${bookingId}` : "đang cập nhật"}
       </p>
 
-      <a
+      {/* Link của next: tránh tải lại cả trang khi về trang chủ (lint no-html-link-for-pages) */}
+      <Link
         href="/"
         onClick={() => clearPaymentSnapshot()}
         className="lg-glass lg-button"
@@ -647,7 +654,7 @@ export default function PaymentQrModal({
         }}
       >
         Trang chủ
-      </a>
+      </Link>
 
       <p className="text-[12px] text-[var(--color-text-secondary)]" aria-live="polite">
         Tự động chuyển sang Vé của tôi sau {countdown}s

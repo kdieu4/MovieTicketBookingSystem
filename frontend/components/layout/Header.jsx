@@ -8,6 +8,8 @@ import { BRAND_NAME } from '@/styles/tokens';
 import AccountMenu from '@/components/account/AccountMenu';
 import { getSession } from '@/services/authApi';
 import { Button, Glass } from 'glisse';
+import { GlassTabs } from '@/components/liquid-glass';
+import { BrandGlassButton } from '@/components/common/BrandButton';
 import { Reveal, Skeleton } from '@/components/common/Ascii';
 
 const NAV_LINKS = [
@@ -37,23 +39,11 @@ const SEARCH_ANIMATIONS = `
   from { transform: translateX(-100%); }
   to { transform: translateX(260%); }
 }
-@keyframes hdr-nav-in {
-  from { opacity: 0; transform: scale(0.92); }
-  to { opacity: 1; transform: scale(1); }
-}
 .hdr-item { animation: hdr-item-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .hdr-fade { animation: hdr-fade-in 240ms ease-out both; }
 .hdr-bar { animation: hdr-load 1s ease-in-out infinite; }
-.hdr-nav-in { animation: hdr-nav-in var(--motion-base) var(--ease-out) both; }
-.hdr-indicator {
-  transition:
-    transform var(--motion-base) var(--ease-out),
-    width var(--motion-base) var(--ease-out),
-    opacity var(--motion-base) var(--ease-out);
-}
 @media (prefers-reduced-motion: reduce) {
-  .hdr-item, .hdr-fade, .hdr-bar, .hdr-nav-in { animation: none !important; }
-  .hdr-indicator { transition: none; }
+  .hdr-item, .hdr-fade, .hdr-bar { animation: none !important; }
 }
 `;
 
@@ -124,7 +114,6 @@ export default function Header() {
     ? [NAV_LINKS[0], MOVIE_TAB, ...NAV_LINKS.slice(1)]
     : NAV_LINKS;
 
-  const [hoverIndex, setHoverIndex] = useState(null);
   const searchBoxRef = useRef(null);
   const panelInnerRef = useRef(null);
 
@@ -136,28 +125,6 @@ export default function Header() {
         : pathname?.startsWith(link.href)
   );
 
-  // Thanh có 3 hoặc 4 mục nên phải đo mục đang chọn thay vì chia đều.
-  const itemRefs = useRef([]);
-  const [indicator, setIndicator] = useState({ left: 0, width: 0, ready: false });
-
-  const targetIndex = hoverIndex !== null ? hoverIndex : activeIndex;
-  const indicatorIndex = Math.max(targetIndex, 0);
-
-  useLayoutEffect(() => {
-    const el = itemRefs.current[indicatorIndex];
-    if (!el) return;
-    const measure = () =>
-      setIndicator({ left: el.offsetLeft, width: el.offsetWidth, ready: true });
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [indicatorIndex, pathname]);
-
-  // Đổi trang thì bỏ hover để viên chỉ báo không trỏ nhầm mục.
-  useEffect(() => {
-    setHoverIndex(null);
-  }, [pathname]);
 
   // ---- Tìm kiếm qua API ----
   const keyword = searchValue.trim();
@@ -316,47 +283,13 @@ export default function Header() {
 
         {/* Floating Navigation Bar Center */}
         <nav className="hidden md:flex items-center" aria-label="Điều hướng chính">
-          <div
-            onMouseLeave={() => setHoverIndex(null)}
-            className="relative flex items-center rounded-full border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-1 backdrop-blur-md"
-          >
-            <div
-              aria-hidden="true"
-              className={`pointer-events-none absolute bottom-1 left-0 top-1 rounded-full bg-[var(--color-fill-secondary)] ${
-                indicator.ready ? 'hdr-indicator' : ''
-              }`}
-              style={{
-                width: indicator.width,
-                transform: `translateX(${indicator.left}px)`,
-                opacity: indicator.ready && targetIndex >= 0 ? 1 : 0,
-              }}
-            />
-
-            {navLinks.map((link, idx) => {
-              const isActive = activeIndex === idx;
-
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  ref={(el) => {
-                    itemRefs.current[idx] = el;
-                  }}
-                  onMouseEnter={() => setHoverIndex(idx)}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={`relative z-10 flex h-8 items-center justify-center rounded-full px-4 text-[13px] font-medium transition-colors duration-200 ${
-                    link.detailOnly ? 'hdr-nav-in' : ''
-                  } ${
-                    isActive
-                      ? 'text-[var(--color-brand-primary)]'
-                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </div>
+          <GlassTabs
+            aria-label="Điều hướng chính"
+            size="md"
+            value={activeIndex >= 0 ? navLinks[activeIndex].href : null}
+            onValueChange={(href) => router.push(href)}
+            options={navLinks.map((link) => ({ value: link.href, label: link.label }))}
+          />
         </nav>
 
         {/* Search & Actions Right */}
@@ -513,16 +446,11 @@ export default function Header() {
           </div>
 
           {hasSession === false && pathname !== '/dang-nhap' && (
-            // Link CTA dựng bằng class của glisse để vẫn là thẻ <a> đúng nghĩa.
+            // asChild giữ nguyên thẻ <a> của Link, kính nằm trên chính thẻ đó.
             <div className="hidden sm:block">
-              <Link
-                href="/dang-nhap"
-                className="lg-glass lg-button"
-                data-variant="filled"
-                style={{ height: 36, borderRadius: 18, padding: '0 16px', fontSize: 12 }}
-              >
-                Đăng nhập
-              </Link>
+              <BrandGlassButton asChild size="sm" style={{ height: 36, padding: '0 16px', fontSize: 12 }}>
+                <Link href="/dang-nhap">Đăng nhập</Link>
+              </BrandGlassButton>
             </div>
           )}
 
@@ -584,13 +512,15 @@ export default function Header() {
           </nav>
 
           {hasSession === false && pathname !== '/dang-nhap' && (
-            <Link
-              href="/dang-nhap"
+            <BrandGlassButton
+              asChild
+              size="md"
               onClick={() => setMenuOpen(false)}
-              className="mt-3 flex h-10 items-center justify-center rounded-full bg-[var(--color-brand-fill)] text-sm font-semibold text-[var(--color-brand-on-primary)] transition-colors hover:bg-[var(--color-brand-fill-hover)] active:scale-[0.98]"
+              className="mt-3 w-full text-sm"
+              style={{ height: 40 }}
             >
-              Đăng nhập
-            </Link>
+              <Link href="/dang-nhap">Đăng nhập</Link>
+            </BrandGlassButton>
           )}
 
           {hasSession === true && (

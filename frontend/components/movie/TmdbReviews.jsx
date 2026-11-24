@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { IconStar } from '@/components/common/Icons';
-import { Button } from 'glisse';
+import { GlassButton } from '@/components/liquid-glass';
 
 const PAGE_SIZE = 4;
 
@@ -68,9 +68,15 @@ export default function TmdbReviews({ reviews = [] }) {
 
       {hasMore && (
         <div className="mt-6 flex justify-center">
-          <Button variant="filled" type="button" onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}>
+          <GlassButton
+            type="button"
+            size="md"
+            material="tinted"
+            className="bg-[var(--color-brand-fill)] text-[var(--color-brand-on-primary)]"
+            onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+          >
             Xem thêm đánh giá
-          </Button>
+          </GlassButton>
         </div>
       )}
     </section>

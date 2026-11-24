@@ -5,6 +5,8 @@ import Image from 'next/image';
 import TrailerModal from '../movie/TrailerModal';
 import BookingFlow, { prefetchCities } from '@/components/booking/BookingFlow';
 import { IconStar } from '@/components/common/Icons';
+import { GlassButton } from '@/components/liquid-glass';
+import { BrandGlassButton } from '@/components/common/BrandButton';
 import { formatRating, formatVoteCount } from '@/utils/movieHelpers';
 
 // Mỗi phần tử của hero vào lần lượt, tổng thời gian dưới 300ms để không bắt người dùng chờ.
@@ -72,7 +74,9 @@ export default function FeaturedSection({
                 alt=""
                 fill
                 priority
-                sizes="100vw"
+                // Nền này bị blur-2xl + opacity 35% nên không cần bản 1440px: xin bản nhỏ,
+                // vừa nhẹ vừa tránh phóng ảnh poster dọc 375px lên 1336px.
+                sizes="(min-width: 768px) 560px, 100vw"
                 className="scale-110 object-cover opacity-35 blur-2xl saturate-125 animate-fade-in"
               />
             )}
@@ -123,34 +127,44 @@ export default function FeaturedSection({
               )}
 
               <div style={stagger(240)} className="animate-fade-in mt-8 flex flex-wrap items-center gap-3">
-                <button
+                <BrandGlassButton
                   type="button"
+                  size="lg"
                   onClick={handleBook}
                   onPointerEnter={() => prefetchCities(activeTitle)}
                   onFocus={() => prefetchCities(activeTitle)}
                   disabled={searching}
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--color-brand-fill)] px-7 text-sm font-semibold text-[var(--color-brand-on-primary)] transition-[background-color,transform] duration-200 ease-[var(--ease-out)] hover:bg-[var(--color-brand-fill-hover)] active:scale-[0.98] disabled:cursor-wait disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-stage-bg)]"
+                  className="bg-[var(--color-brand-fill)] px-7 text-[var(--color-brand-on-primary)] hover:bg-[var(--color-brand-fill-hover)]"
+                  icon={
+                    !searching && (
+                      // Nét mũi tên được kéo rộng gần hết viewBox để mực icon ~12px, cân với
+                      // vòng tròn play 16px của nút bên cạnh thay vì trông nhỏ hơn hẳn.
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <line x1="4" y1="12" x2="20" y2="12" />
+                        <polyline points="13 5 20 12 13 19" />
+                      </svg>
+                    )
+                  }
                 >
-                  <span>{searching ? 'Đang tải suất chiếu...' : 'Đặt vé ngay'}</span>
-                  {!searching && (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                      <polyline points="12 5 19 12 12 19" />
-                    </svg>
-                  )}
-                </button>
+                  {searching ? 'Đang tải suất chiếu...' : 'Đặt vé ngay'}
+                </BrandGlassButton>
 
                 {activeMovie.trailerUrl && (
-                  <button
+                  <GlassButton
                     type="button"
+                    size="lg"
+                    material="tinted"
+                    iconPosition="start"
                     onClick={() => setIsTrailerOpen(true)}
-                    className="inline-flex h-12 items-center justify-center gap-2.5 rounded-full border border-[var(--color-stage-border)] bg-[var(--color-stage-fill)] px-6 text-sm font-semibold text-[var(--color-stage-text)] backdrop-blur-md transition-[background-color,border-color,transform] duration-200 ease-[var(--ease-out)] hover:border-white/35 hover:bg-white/15 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-stage-bg)]"
+                    className="border border-[var(--color-stage-border)] bg-[var(--color-stage-fill)] text-[var(--color-stage-text)] hover:bg-white/15"
+                    icon={
+                      <span className="flex h-4 w-4 items-center justify-center rounded-full border border-current">
+                        <PlayIconSmall />
+                      </span>
+                    }
                   >
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full border border-current">
-                      <PlayIconSmall />
-                    </span>
-                    <span>Xem trailer</span>
-                  </button>
+                    Xem trailer
+                  </GlassButton>
                 )}
               </div>
 
@@ -247,7 +261,18 @@ export default function FeaturedSection({
 
 function PlayIconSmall() {
   return (
-    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    // width/height đặt bằng style: class [&_svg]:size-* của GlassButton ép mọi svg trong nút
+    // về cùng cỡ, nếu không tam giác sẽ to bằng cả vòng tròn. Dịch phải 1px để quang học cân giữa.
+    <svg
+      viewBox="0 0 24 24"
+      style={{ width: 7, height: 7, marginLeft: 0.5 }}
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="1"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <polygon points="5 3 19 12 5 21 5 3" />
     </svg>
   );

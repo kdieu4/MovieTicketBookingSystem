@@ -2,12 +2,16 @@
 
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useTheme } from '@/context/ThemeContext';
-import { SegmentedControl, Switch } from 'glisse';
+import { GlassTabs } from '@/components/liquid-glass';
+import { GlassCheckbox } from '@/components/common/GlassCheckbox';
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
+  const [notifyShowtime, setNotifyShowtime] = useState(true);
+  const [notifyNews, setNotifyNews] = useState(true);
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] transition-colors duration-200">
@@ -58,11 +62,11 @@ export default function SettingsPage() {
             <h2 className="text-base font-semibold">Giao diện ứng dụng</h2>
 
             <div className="mt-4">
-              <SegmentedControl
+              <GlassTabs
                 aria-label="Chế độ hiển thị"
                 value={theme}
                 onValueChange={setTheme}
-                items={[
+                options={[
                   { value: 'light', label: 'Sáng' },
                   { value: 'dark', label: 'Tối' },
                 ]}
@@ -73,20 +77,30 @@ export default function SettingsPage() {
           <section className="rounded-[var(--radius-lg)] border border-[var(--color-border-separator)] bg-[var(--color-bg-tertiary)] p-6 shadow-[var(--shadow-low)]">
             <h2 className="text-base font-semibold">Thông báo</h2>
             <div className="mt-4 space-y-4">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium">Nhắc nhở lịch chiếu</p>
-                  <p className="text-xs text-[var(--color-text-secondary)]">Nhận thông báo trước giờ chiếu 1 tiếng</p>
-                </div>
-                <Switch aria-label="Nhắc nhở lịch chiếu" defaultChecked />
+              <div className="flex items-center justify-between gap-4 [&_label>span]:sr-only">
+                <span>
+                  <span className="block text-sm font-medium">Nhắc nhở lịch chiếu</span>
+                  <span className="block text-xs text-[var(--color-text-secondary)]">Nhận thông báo trước giờ chiếu 1 tiếng</span>
+                </span>
+                <GlassCheckbox
+                  checked={notifyShowtime}
+                  onChange={setNotifyShowtime}
+                  label="Nhắc nhở lịch chiếu"
+                  color="#0066cc"
+                />
               </div>
 
-              <div className="flex items-center justify-between gap-4 border-t border-[var(--color-border-separator)] pt-4">
-                <div>
-                  <p className="text-sm font-medium">Email tin tức &amp; Khuyến mãi</p>
-                  <p className="text-xs text-[var(--color-text-secondary)]">Cập nhật ưu đãi vé hàng tuần</p>
-                </div>
-                <Switch aria-label="Email tin tức và khuyến mãi" defaultChecked />
+              <div className="flex items-center justify-between gap-4 border-t border-[var(--color-border-separator)] pt-4 [&_label>span]:sr-only">
+                <span>
+                  <span className="block text-sm font-medium">Email tin tức &amp; Khuyến mãi</span>
+                  <span className="block text-xs text-[var(--color-text-secondary)]">Cập nhật ưu đãi vé hàng tuần</span>
+                </span>
+                <GlassCheckbox
+                  checked={notifyNews}
+                  onChange={setNotifyNews}
+                  label="Email tin tức và khuyến mãi"
+                  color="#0066cc"
+                />
               </div>
             </div>
           </section>
