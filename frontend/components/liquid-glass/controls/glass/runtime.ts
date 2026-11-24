@@ -369,6 +369,8 @@ async function createRuntime() {
   // Cursor light, shared by every view. `mix` fades in on the first move and out when the
   // pointer leaves the window, so touch-only or idle pages keep the original fixed lighting.
   const pointer = { x: 0, y: 0, active: false, moved: false, mix: 0 }
+  const NEAR_FULL = 48
+  const NEAR_FADE = 140
   window.addEventListener(
     'pointermove',
     (e) => {
@@ -406,10 +408,17 @@ async function createRuntime() {
     const dx = pointer.x - (rect.left + v.lensX * spec.unit)
     const dy = pointer.y - (rect.top + v.lensY * spec.unit)
     const d = Math.hypot(dx, dy)
+    // The light only follows the pointer from close by: full while the cursor is on the control or
+    // within NEAR_FULL px of its edge, gone from NEAR_FADE px. Same rule as engine.ts.
+    const gap = Math.hypot(
+      Math.max(0, rect.left - pointer.x, pointer.x - rect.right),
+      Math.max(0, rect.top - pointer.y, pointer.y - rect.bottom),
+    )
+    const near = gap <= NEAR_FULL ? 1 : gap >= NEAR_FADE ? 0 : (NEAR_FADE - gap) / (NEAR_FADE - NEAR_FULL)
     // The light turns in half-degree steps (one step is less than a level of rim light on an
     // 8-bit screen): a cursor moving far from a control leaves it as it is.
     const aim = d > 0.5 ? Math.round(Math.atan2(dy, dx) * (360 / Math.PI)) : v.aim
-    const mix = spec.cursorLight ? pointer.mix : 0
+    const mix = spec.cursorLight ? pointer.mix * near : 0
     const same = mix === v.u.lightMix.value && (mix === 0 || aim === v.aim)
     if (aim !== v.aim) {
       v.aim = aim

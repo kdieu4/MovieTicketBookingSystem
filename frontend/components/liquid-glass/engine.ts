@@ -860,6 +860,12 @@ function createEngine(): GlassEngine | null {
   // Cursor light: shared, fades in on the first mouse move, out when the pointer leaves.
   const pointer = { x: 0, y: 0, active: false, moved: false, mix: 0 }
 
+  // The light only follows the pointer from close by: full strength while the cursor is over the
+  // surface or within NEAR_FULL px of its edge, then it fades out and is gone at NEAR_FADE px.
+  // Without this a mouse moving anywhere on the page tips the rim light of every control at once.
+  const NEAR_FULL = 48
+  const NEAR_FADE = 140
+
   const draw = (v: GlassView, refresh: boolean, repaint: boolean) => {
     const m = v.lens(refresh)
     let on = shown.get(v)
@@ -1078,10 +1084,16 @@ function createEngine(): GlassEngine | null {
     const dx = pointer.x - m.screenX
     const dy = pointer.y - m.screenY
     const d = Math.hypot(dx, dy)
+    // Distance from the pointer to the nearest edge of the surface, 0 while the cursor is on it.
+    const gap = Math.hypot(
+      Math.max(0, Math.abs(pointer.x - m.screenX) - m.width / 2),
+      Math.max(0, Math.abs(pointer.y - m.screenY) - m.height / 2),
+    )
+    const near = gap <= NEAR_FULL ? 1 : gap >= NEAR_FADE ? 0 : (NEAR_FADE - gap) / (NEAR_FADE - NEAR_FULL)
     // The light turns in half-degree steps (one step is less than a level of rim light on an
     // 8-bit screen), and stays put while it is off: a cursor moving far away, or over glass
     // without cursor light, leaves the frame as it is.
-    const lightMix = m.cursorLight ? pointer.mix : 0
+    const lightMix = m.cursorLight ? pointer.mix * near : 0
     const aim = lightMix > 0 && d > 0.5 ? (Math.round(Math.atan2(dy, dx) * (360 / Math.PI)) * Math.PI) / 360 : -Math.PI / 2
     set('uLightDir', Math.cos(aim), Math.sin(aim))
     set('uLightMix', lightMix)
