@@ -36,7 +36,7 @@ export function usePagedGrid({
   const requestRef = useRef(0);
 
   const pager = useRowPagination(items.length, { initialRows, stepRows });
-  const { reset: resetRows, visibleCount, gridRef, showMore: revealMore } = pager;
+  const { reset: resetRows, visibleCount, desiredCount, gridRef, showMore: revealMore } = pager;
 
   const loadPage = useCallback(
     async (nextPage, { replace = false } = {}) => {
@@ -81,16 +81,20 @@ export function usePagedGrid({
     return loadPage(0, { replace: true });
   }, [loadPage, resetRows]);
 
-  // Mở thêm hàng; thiếu dữ liệu thì effect bên dưới tự tải trang kế tiếp.
-  const showMore = revealMore;
+  // Mở thêm hàng. Đang hiện hết dữ liệu đã tải thì gọi luôn trang kế tiếp, nếu không
+  // người dùng bấm mà danh sách không dài thêm.
+  const showMore = useCallback(() => {
+    revealMore();
+    if (hasMore && items.length <= visibleCount) loadPage(page + 1);
+  }, [revealMore, hasMore, items.length, visibleCount, loadPage, page]);
 
+  // Đủ số hàng đang mở thì thôi; thiếu thì nạp thêm trang để hàng cuối không bị hụt.
+  // Ví dụ 5 cột, trang đầu 12 phim: 3 hàng cần 15 ô nên phải lấy thêm trang 1.
   useEffect(() => {
     if (loading || !hasMore) return;
-    if (items.length === 0) return;
-    if (visibleCount >= items.length) {
-      loadPage(page + 1);
-    }
-  }, [visibleCount, items.length, hasMore, loading, page, loadPage]);
+    if (desiredCount === null) return;
+    if (desiredCount > items.length) loadPage(page + 1);
+  }, [desiredCount, items.length, hasMore, loading, page, loadPage]);
 
   // Lần đầu chưa có dữ liệu sẵn thì tải trang 0.
   useEffect(() => {
