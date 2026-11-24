@@ -571,9 +571,14 @@ export function GlassLayer({
       attributeFilter: ['class', 'disabled', 'aria-pressed', 'aria-checked', 'aria-selected', 'aria-expanded', 'data-state'],
     })
     // A scroll changes what lies behind, never the glass: sizes and colours are not read again.
+    // The new backdrop is taken once the page settles, not on every scroll frame.
+    let scrollTimer = 0
     const onScroll = () => {
-      view.repaint = true
-      engine.wake()
+      clearTimeout(scrollTimer)
+      scrollTimer = window.setTimeout(() => {
+        view.repaint = true
+        engine.wake()
+      }, 140)
     }
     if (clear) addEventListener('scroll', onScroll, { passive: true, capture: true })
     engine.add(view)
@@ -584,6 +589,7 @@ export function GlassLayer({
       io.disconnect()
       ro.disconnect()
       mo.disconnect()
+      clearTimeout(scrollTimer)
       removeEventListener('scroll', onScroll, { capture: true })
       target.removeEventListener('pointerdown', onDown)
       target.removeEventListener('pointerup', onUp)
