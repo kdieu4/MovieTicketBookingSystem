@@ -1,18 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
-import { DistortionWave } from "distortion-waves";
 import { BrandGlassActionButton, BrandGlassButton } from "@/components/common/BrandButton";
-import { clearPaymentSnapshot } from "@/utils/paymentSnapshot";
 
 const TIME_ZONE = "Asia/Ho_Chi_Minh";
-
-// Số giây chờ trên màn hình "Thanh toán thành công" trước khi tự mở trang vé.
-const AUTO_LEAVE_SECONDS = 5;
 
 function formatVND(value) {
   return `${Number(value || 0).toLocaleString("vi-VN")}đ`;
@@ -85,76 +78,10 @@ export default function PaymentQrModal({
   loading = false,
   error = "",
   onCreateQr,
-  paid = false,
 }) {
   const dialogRef = useRef(null);
   const [mounted, setMounted] = useState(false);
   const [remaining, setRemaining] = useState(null);
-
-  // Sau khi VNPay xác nhận thanh toán: nút đổi thành "Đang thanh toán",
-  // đợi 1 giây cho người dùng kịp đọc rồi mới cho sóng distortion quét qua
-  // và mang bảng thanh toán sang màn hình kết quả.
-  const [paying, setPaying] = useState(false);
-  const [revealed, setRevealed] = useState(false);
-  // Sóng chạy xong thì bỏ hẳn lớp canvas, chỉ còn màn hình kết quả.
-  const [finished, setFinished] = useState(false);
-  // Đếm ngược trên màn hình kết quả trước khi tự mở trang vé.
-  const [countdown, setCountdown] = useState(AUTO_LEAVE_SECONDS);
-  const waveRef = useRef(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!paid) {
-      setPaying(false);
-      setRevealed(false);
-      setFinished(false);
-      setCountdown(AUTO_LEAVE_SECONDS);
-      return;
-    }
-
-    setPaying(true);
-
-    const timer = window.setTimeout(() => setRevealed(true), 1000);
-
-    return () => window.clearTimeout(timer);
-  }, [paid]);
-
-  // Rời màn hình xác nhận, mở thẳng trang vé.
-  const openMyTickets = useCallback(() => {
-    clearPaymentSnapshot();
-    router.push("/ve-cua-toi");
-  }, [router]);
-
-  // Bỏ lớp canvas khi sóng đã chạy xong: giữ lại canvas sẽ thấy ảnh cũ chồng
-  // lên chữ của màn hình kết quả (các ô vuông mờ).
-  const finishWave = useCallback(() => setFinished(true), []);
-
-  // Dự phòng: nếu onFinish của sóng không chạy thì vẫn kết thúc hiệu ứng.
-  useEffect(() => {
-    if (!revealed) return;
-
-    // Sóng mặc định chạy khoảng 2,7 giây.
-    const settle = window.setTimeout(() => setFinished(true), 3200);
-
-    return () => window.clearTimeout(settle);
-  }, [revealed]);
-
-  // Đếm ngược 5 giây trên màn hình kết quả, hết giờ thì tự mở trang vé.
-  useEffect(() => {
-    if (!finished) return;
-
-    setCountdown(AUTO_LEAVE_SECONDS);
-    const tick = window.setInterval(() => {
-      setCountdown((value) => Math.max(0, value - 1));
-    }, 1000);
-
-    return () => window.clearInterval(tick);
-  }, [finished]);
-
-  useEffect(() => {
-    if (!finished || countdown > 0) return;
-    openMyTickets();
-  }, [finished, countdown, openMyTickets]);
 
   // Chỉ sử dụng Portal sau khi component được mount
   useEffect(() => {
@@ -508,62 +435,24 @@ export default function PaymentQrModal({
           </div>
 
           {/* TẠO GIAO DỊCH */}
-          {paid ? (
-            // Đang chờ hiệu ứng: giữ đúng kích thước nút cũ để bố cục không nhảy
-            <button
-              type="button"
-              disabled
-              aria-live="polite"
-              className="lg-glass lg-button"
-              data-variant="filled"
-              style={{
-                height: 44,
-                width: "100%",
-                maxWidth: 280,
-                borderRadius: 22,
-                fontSize: 13,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                cursor: "progress",
-              }}
+          {!hasPayment && !expired && (
+            // Thao tác async: droplet gộp vào thân khi bấm và tách ra nếu tạo giao dịch lỗi.
+            <BrandGlassActionButton
+              size="md"
+              onAction={onCreateQr}
+              pendingLabel="Đang tạo giao dịch..."
+              disabled={!onCreateQr || loading}
+              className="w-full"
+              // Height do trang đặt; paddingRight giữ chỗ cho droplet (size md = 46)
+              style={{ height: 44, paddingRight: 46, maxWidth: 280, fontSize: 13 }}
             >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                className="animate-spin"
-                aria-hidden="true"
-              >
-                <path d="M21 12a9 9 0 1 1-6.2-8.6" />
-              </svg>
-              Đang thanh toán
-            </button>
-          ) : (
-            <>
-              {!hasPayment && !expired && (
-                // Thao tác async: droptlet gộp vào thân khi bấm và tách ra nếu tạo giao dịch lỗi.
-                <BrandGlassActionButton
-                  size="md"
-                  onAction={onCreateQr}
-                  pendingLabel="Đang tạo giao dịch..."
-                  disabled={!onCreateQr || loading}
-                  className="w-full"
-                  // Height do trang đặt; paddingRight giữ chỗ cho droplet (size md = 46)
-                  style={{ height: 44, paddingRight: 46, maxWidth: 280, fontSize: 13 }}
-                >
-                  Tạo mã QR thanh toán
-                </BrandGlassActionButton>
-              )}
+              Tạo mã QR thanh toán
+            </BrandGlassActionButton>
+          )}
 
               {safePayUrl && !expired && (
                 // Điều hướng ngay trong tab hiện tại: VNPay sẽ redirect về /payment/return
-                // rồi trang đó tự chuyển tiếp sang màn hình xác nhận.
+                // rồi trang đó tự chuyển tiếp sang /ve-cua-toi.
                 <BrandGlassButton
                   asChild
                   size="md"
@@ -574,8 +463,6 @@ export default function PaymentQrModal({
                   <a href={safePayUrl}>Thanh toán qua VNPay</a>
                 </BrandGlassButton>
               )}
-            </>
-          )}
 
           {error && (
             <p
@@ -600,89 +487,9 @@ export default function PaymentQrModal({
       </div>
   );
 
-  // Màn hình kết quả: sóng distortion mang bảng thanh toán sang đây
-  const successView = (
-    <div className="flex h-full min-h-[420px] w-full flex-col items-center justify-center gap-3 bg-[var(--color-bg-primary)] p-8 text-center">
-      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-brand-primary-container)] text-[var(--color-system-success)]">
-        <svg
-          width="34"
-          height="34"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M4.5 12.5l5 5 10-11" />
-        </svg>
-      </span>
-
-      <p className="text-[12px] font-semibold uppercase tracking-widest text-[var(--color-text-secondary)]">
-        Seenema Payment
-      </p>
-
-      <h2 className="text-[22px] font-semibold text-[var(--color-text-primary)]">
-        Thanh toán thành công
-      </h2>
-
-      <p className="max-w-[320px] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
-        {showtime.movieTitle} · {seats.length} ghế · {formatVND(total)}
-      </p>
-
-      <p className="text-[12px] text-[var(--color-text-secondary)]">
-        Mã đặt vé {bookingId ? `#${bookingId}` : "đang cập nhật"}
-      </p>
-
-      {/* Link của next: tránh tải lại cả trang khi về trang chủ (lint no-html-link-for-pages) */}
-      <Link
-        href="/"
-        onClick={() => clearPaymentSnapshot()}
-        className="lg-glass lg-button"
-        data-variant="filled"
-        style={{
-          height: 44,
-          width: "100%",
-          maxWidth: 280,
-          borderRadius: 22,
-          fontSize: 13,
-          marginTop: 8,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        Trang chủ
-      </Link>
-
-      <p className="text-[12px] text-[var(--color-text-secondary)]" aria-live="polite">
-        Tự động chuyển sang Vé của tôi sau {countdown}s
-      </p>
-    </div>
-  );
-
-  const content = finished ? (
-    // Sóng đã chạy xong: gỡ canvas để không còn ảnh cũ chồng lên chữ của màn hình kết quả.
-    <div className="block w-full bg-[var(--color-bg-primary)]">{successView}</div>
-  ) : (
-    <DistortionWave
-      ref={waveRef}
-      revealed={revealed}
-      type="vertical"
-      palette="colorful"
-      // Chỉ vẽ màu, không chụp ảnh hai lớp view: tránh ảnh cũ chồng lên chữ
-      capture={false}
-      className="block w-full bg-[var(--color-bg-primary)]"
-      revealedContent={successView}
-      onFinish={(isRevealed) => {
-        if (!isRevealed) return;
-        finishWave();
-      }}
-    >
-      {payView}
-    </DistortionWave>
-  );
+  // Thanh toán xong thì rời trang ngay sang "Vé của tôi" (banner thông báo nằm ở đó),
+  // nên bảng thanh toán chỉ còn một dạng duy nhất.
+  const content = payView;
 
   if (inline) {
     return (

@@ -48,44 +48,4 @@ export function clearPaymentSnapshot() {
   }
 }
 
-// URL quay về sau khi thanh toán xong: đúng trang đã đặt vé + cờ payment=success
-// để BookingFlow biết cần khôi phục bước xác nhận và chạy hiệu ứng.
-export function paymentReturnUrl(snapshot) {
-  // Đặt vé nhanh từ trang chủ (modal): quay lại trang chủ kèm thông tin phim để
-  // mở lại đúng modal đó, thay vì đẩy người dùng sang giao diện trong trang phim.
-  if (snapshot?.variant === "modal" && snapshot?.movieTitle) {
-    const params = new URLSearchParams();
 
-    params.set("payment", "success");
-    params.set("movieTitle", snapshot.movieTitle);
-
-    if (snapshot.bookingId) params.set("booking", String(snapshot.bookingId));
-    if (snapshot.filterCity) params.set("city", snapshot.filterCity);
-    if (snapshot.filterCinema) params.set("cinema", snapshot.filterCinema);
-
-    return `/?${params.toString()}`;
-  }
-
-  // Đặt vé trong trang phim là nơi BookingFlow luôn dựng được bước xác nhận
-  // (nó có sẵn filters theo phim).
-  if (snapshot?.movieId) {
-    return `/phim/${snapshot.movieId}?payment=success`;
-  }
-
-  // Không có snapshot (ví dụ thanh toán từ trang Vé của tôi): giữ nguyên hành vi cũ
-  if (!snapshot?.pathname) return "/ve-cua-toi";
-
-  // Trang chủ mất filters khi tải lại nên không dựng lại được bước xác nhận,
-  // đưa về danh sách vé thay vì để người dùng ở trang chủ mà không thấy gì.
-  if (snapshot.pathname === "/") return "/ve-cua-toi";
-
-  const params = new URLSearchParams(snapshot.search || "");
-
-  params.set("payment", "success");
-
-  if (snapshot.bookingId) {
-    params.set("booking", String(snapshot.bookingId));
-  }
-
-  return `${snapshot.pathname}?${params.toString()}`;
-}

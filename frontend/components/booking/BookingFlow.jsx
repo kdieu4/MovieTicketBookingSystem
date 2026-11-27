@@ -11,7 +11,7 @@ import { BrandGlassButton } from '@/components/common/BrandButton';
 import { getCachedSeats, getSessionId, invalidateSeats, loadSeats } from '@/services/seatApi';
 import { createBooking } from '@/services/bookingApi';
 import { createVNPayPayment, waitForPayment } from '@/services/paymentApi';
-import { clearPaymentSnapshot, readPaymentSnapshot, savePaymentSnapshot } from '@/utils/paymentSnapshot';
+import { clearPaymentSnapshot, savePaymentSnapshot } from '@/utils/paymentSnapshot';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 const TIME_ZONE = 'Asia/Ho_Chi_Minh';
@@ -305,9 +305,6 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   const [payment, setPayment] = useState(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState('');
-  // VNPay đã xác nhận thanh toán: bảng thanh toán chuyển sang trạng thái chờ hiệu ứng rồi mở trang vé
-  const [paid, setPaid] = useState(false);
-  const restoredRef = useRef(false);
   // Giữ nguyên requestId để backend chống tạo trùng khi người dùng bấm lại
   const bookingRequestIdRef = useRef(null);
 
@@ -617,8 +614,6 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
   // Chế độ nội tuyến: khung không tự cuộn, nên chỉ cuộn trang khi đầu luồng đã trôi lên khỏi màn hình.
   useEffect(() => {
     if (inline) {
-      // Vừa thanh toán xong: để hiệu ứng bên dưới tự cuộn tới thẻ thanh toán
-      if (paid) return;
       if (firstStepRef.current) {
         firstStepRef.current = false;
         return;
@@ -632,72 +627,8 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     scrollRef.current?.scrollTo({ top: 0 });
   }, [step, selectedShowtime, inline]);
 
-  // Vừa khôi phục sau khi thanh toán ở trang phim: trang mới mở ở đầu trang nên
-  // phải cuộn xuống đúng khung thanh toán, nơi hiệu ứng sóng đang chạy.
-  // Cuộn lại vài lần vì ảnh poster/đánh giá phía trên tải xong có thể làm khung trôi đi.
-  useEffect(() => {
-    if (!inline || !paid) return;
-
-    const target = payPanelRef.current ?? panelRef.current;
-    if (!target) return;
-
-    // Căn giữa để thấy trọn thẻ thanh toán, nơi hiệu ứng sóng chạy
-    const align = (smooth) =>
-      target.scrollIntoView({
-        behavior: smooth && !prefersReducedMotion() ? 'smooth' : 'auto',
-        block: payPanelRef.current ? 'center' : 'start',
-      });
-
-    const raf = requestAnimationFrame(() => align(true));
-    const timers = [400, 900, 1600, 2400].map((delay) => window.setTimeout(() => align(false), delay));
-
-    return () => {
-      cancelAnimationFrame(raf);
-      timers.forEach((timer) => window.clearTimeout(timer));
-    };
-  }, [inline, paid]);
-
-  // VNPay redirect về kèm ?payment=success: khôi phục bước xác nhận để hiệu ứng chạy đúng
-  // nơi người dùng đã đặt vé (đặt vé nhanh ở trang chủ hoặc luồng trong trang phim).
-  useEffect(() => {
-    if (restoredRef.current) return;
-    if (typeof window === 'undefined') return;
-
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('payment') !== 'success') return;
-
-    const snapshot = readPaymentSnapshot();
-    if (!snapshot) return;
-
-    // Khớp trang đã đặt vé, hoặc trang phim của đúng bộ phim đó
-    const samePage = snapshot.pathname === window.location.pathname;
-    const sameMovie = snapshot.movieId && window.location.pathname === `/phim/${snapshot.movieId}`;
-    if (!samePage && !sameMovie) return;
-
-    // Chưa có filters thì chưa dựng được luồng đặt vé (trang chủ đọc filters từ URL)
-    if (!filters) return;
-
-    restoredRef.current = true;
-    clearPaymentSnapshot();
-
-    // Bỏ tham số của lần thanh toán khỏi URL để tải lại không mở lại hiệu ứng
-    window.history.replaceState(null, '', window.location.pathname);
-
-    // Ghế đã được đặt, không trả lại khi component bị gỡ
-    handedOffRef.current = true;
-
-    setCity(snapshot.city || null);
-    setCinema(snapshot.cinema || null);
-    setSelectedShowtime(snapshot.showtime || null);
-    setSelectedSeats(Array.isArray(snapshot.seats) ? snapshot.seats : []);
-    setHoldUntil(snapshot.holdUntil || null);
-    setBooking(snapshot.booking || null);
-    setPayment(null);
-    setPaymentError('');
-    setOpen(true);
-    setConfirming(true);
-    setPaid(true);
-  }, [filters]);
+  // VNPay trả về /payment/return, trang đó xác nhận rồi chuyển sang /ve-cua-toi kèm
+  // banner thông báo; luồng đặt vé ở đây không còn phải dựng lại màn hình xác nhận nữa.
 
   // Đo chiều cao nội dung để khung tự giãn, co lại mượt (không vượt quá 92% chiều cao màn hình)
   const hasFilters = Boolean(filters);
@@ -939,6 +870,10 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
     } catch (err) {
       setPaymentError(err.message || 'Không thể tạo giao dịch thanh toán.');
       setNotice({ type: 'error', text: err.message || 'Không thể tạo Booking.' });
+      // Ném lại để BrandGlassActionButton biết thao tác thất bại mà trở về trạng thái chờ:
+      // nút chỉ vẽ dấu ✓ khi onCreateQr() promise resolve, nên nuốt lỗi ở đây sẽ hiện
+      // "thành công" dù chưa có mã QR nào được tạo.
+      throw err;
     } finally {
       setPaymentLoading(false);
     }
@@ -1509,7 +1444,6 @@ export default function BookingFlow({ filters, searchId, onSearchSettled, onCont
                       loading={paymentLoading}
                       error={paymentError}
                       onCreateQr={handlePay}
-                      paid={paid}
                     />
                   </div>
                 </div>

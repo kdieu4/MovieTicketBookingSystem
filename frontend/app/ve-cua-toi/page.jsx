@@ -6,6 +6,8 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ShowMoreButton from '@/components/common/ShowMoreButton';
 import PaymentQrModal from '@/components/booking/PaymentQrModal';
+import PaymentSuccessBanner from '@/components/booking/PaymentSuccessBanner';
+import PaymentGlimmerWash from '@/components/booking/PaymentGlimmerWash';
 import { usePagedGrid } from '@/utils/usePagedGrid';
 
 const TIME_ZONE = 'Asia/Ho_Chi_Minh';
@@ -97,8 +99,21 @@ export default function MyTicketsPage() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState('');
+  // VNPay xác nhận xong thì trang này nhận cờ ?payment=success: bật banner thông báo
+  // (hiệu ứng quầng sáng azure) và bỏ cờ khỏi URL để tải lại không hiện lại.
+  const [paidBanner, setPaidBanner] = useState(false);
   // Đồng hồ chung để hạn giữ chỗ trên thẻ vé và trong modal luôn khớp nhau
   const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') !== 'success') return;
+
+    window.history.replaceState(null, '', window.location.pathname);
+    setPaidBanner(true);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -192,6 +207,9 @@ export default function MyTicketsPage() {
       setPayment({ payUrl: body.payUrl });
     } catch (err) {
       setPaymentError(err.message);
+      // Ném lại: GlassActionButton chỉ vẽ dấu ✓ khi promise resolve, nên lỗi phải thoát ra
+      // để nút trở về "Tạo mã QR thanh toán" và cho bấm lại.
+      throw err;
     } finally {
       setPaymentLoading(false);
     }
@@ -202,12 +220,32 @@ export default function MyTicketsPage() {
     setPayment(null);
     setPaymentError('');
     setPaymentOpen(true);
-    createPayment(ticket);
+    // Mở modal là chủ động tạo giao dịch luôn; lỗi đã được setPaymentError, ở đây chỉ
+    // nuốt promise rejection để không thành unhandled rejection.
+    createPayment(ticket).catch(() => {});
   }
+
+  // Vé vừa thanh toán xong, dùng cho dòng phụ của banner (mã vé + số tiền)
+  const justPaid = tickets.find((t) => t.paymentStatus === 'SUCCESS' || t.status === 'PAID');
+  const paidDetail = justPaid
+    ? `Mã đặt vé #${justPaid.bookingId} · ${formatVND(justPaid.amount)}`
+    : 'Vé đã được cập nhật vào danh sách bên dưới.';
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] transition-colors duration-200">
       <Header />
+
+      {paidBanner && (
+        <>
+          <PaymentGlimmerWash />
+          <PaymentSuccessBanner
+            movieTitle={justPaid?.movieTitle}
+            posterUrl={justPaid?.posterUrl}
+            detail={paidDetail}
+            onDismiss={() => setPaidBanner(false)}
+          />
+        </>
+      )}
 
       <main className="animate-fade-in mx-auto w-full max-w-4xl flex-1 px-4 py-12 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-end justify-between gap-3">

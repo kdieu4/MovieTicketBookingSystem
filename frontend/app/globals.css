@@ -811,3 +811,159 @@
     transform: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Banner "Thanh toán thành công" trên Vé của tôi
+   Trượt xuống từ mép trên, kèm quầng sáng azure loé lên rồi tan.
+   --------------------------------------------------------------------------- */
+
+@keyframes pay-toast-in {
+  from {
+    opacity: 0;
+    translate: 0 -14px;
+    scale: 0.98;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+
+@keyframes pay-toast-out {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    translate: 0 -10px;
+  }
+}
+
+/* Quầng sáng azure: loé nhanh, giữ một nhịp rồi tắt hẳn. */
+@keyframes pay-glow-bloom {
+  0% {
+    opacity: 0;
+    scale: 0.8;
+  }
+  18% {
+    opacity: 1;
+    scale: 1;
+  }
+  55% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.14;
+  }
+}
+
+/* Quầng sáng "lan" như mẫu: loé lên ngay sau banner rồi loang rộng xuống dưới
+   và mờ dần; hết nhịp lại loé lại, nên thông báo cứ nhấp nháy tới khi bấm tắt. */
+@keyframes pay-glow-spread {
+  0% {
+    opacity: 0;
+    scale: 0.4 0.28;
+    translate: 0 -8px;
+  }
+  12% {
+    opacity: 1;
+    scale: 0.72 0.58;
+  }
+  55% {
+    opacity: 0.75;
+  }
+  100% {
+    opacity: 0;
+    scale: 2.1 1.8;
+    translate: 0 32px;
+  }
+}
+
+/* Huy hiệu tick azure: vòng sáng lan ra mạnh hơn + phồng nhẹ theo cùng nhịp. */
+@keyframes pay-badge-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 127, 255, 0.8);
+    scale: 1;
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(0, 127, 255, 0);
+    scale: 1.12;
+  }
+}
+
+.pay-toast {
+  animation: pay-toast-in var(--motion-base) var(--ease-out) both;
+}
+
+.pay-toast[data-closing] {
+  animation: pay-toast-out var(--motion-fast) var(--ease-in-out) both;
+}
+
+.pay-toast-glow {
+  animation: pay-glow-bloom 1400ms var(--ease-out) both;
+}
+
+/* Chưa bấm tắt thì quầng sáng nhấp nháy nhè nhàng (bắt đầu sau nhịp loé đầu). */
+.pay-toast-glow-pulse {
+  transform-origin: 50% 0%;
+  animation: pay-glow-spread 2400ms var(--ease-out) 1200ms infinite both;
+}
+
+/* Huy hiệu tick thở theo cùng nhịp, nhanh và rõ hơn. */
+.pay-toast-badge {
+  animation: pay-badge-pulse 1600ms var(--ease-in-out) 1400ms infinite both;
+}
+
+/* ---------------------------------------------------------------------------
+   Glimmer toả từ trên xuống khi banner thanh toán hiện ra
+   Dải sáng phủ ngang màn hình, trượt từ mép trên xuống hết khung rồi tan.
+   --------------------------------------------------------------------------- */
+
+@keyframes pay-glimmer-fall {
+  0% {
+    translate: 0 0;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.85;
+  }
+  100% {
+    translate: 0 150vh;
+    opacity: 0;
+  }
+}
+
+.pay-glimmer {
+  animation: pay-glimmer-fall 1200ms var(--ease-out) both;
+  will-change: translate, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pay-toast,
+  .pay-toast[data-closing] {
+    animation: none;
+  }
+
+  .pay-toast-glow,
+  .pay-toast-glow-pulse {
+    animation: none;
+    opacity: 0;
+  }
+
+  .pay-glimmer {
+    animation: none;
+    opacity: 0;
+  }
+
+  .pay-toast-badge {
+    animation: none;
+  }
+}
+

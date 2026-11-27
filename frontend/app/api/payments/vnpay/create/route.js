@@ -92,9 +92,15 @@ export async function POST(request) {
 
     const data = await response.json().catch(() => null);
     if (!response.ok) {
+      // Payment Service/Gateway đôi khi trả message tiếng Anh (vd "The operation timed out.")
+      // khi gọi VNPay quá lâu; đổi sang câu tiếng Việt để người dùng hiểu phải làm gì.
+      const upstream = typeof data?.message === "string" ? data.message.trim() : "";
+      const timedOut = /timed out|timeout/i.test(upstream);
       return NextResponse.json(
         {
-          message: data?.message || "Không thể tạo thanh toán VNPay.",
+          message: timedOut
+            ? "Cổng thanh toán VNPay phản hồi quá lâu. Vui lòng thử tạo lại mã QR."
+            : upstream || "Không thể tạo thanh toán VNPay.",
         },
         { status: response.status },
       );
