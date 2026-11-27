@@ -80,8 +80,8 @@ function taintsFrom(source: Drawable): boolean | null {
   }
   if (source instanceof HTMLCanvasElement) {
     // Đọc 1 điểm từ canvas do GPU giữ (1440×900 chẳng hạn) là một lần chờ đồng bộ GPU: đo được
-    // 524 ms cho một lần. Mọi canvas trong trang này đều do chính app vẽ (kit, distortion-waves)
-    // nên không thể bẩn; coi như sạch thay vì trả giá đó mỗi lần snapshot.
+    // 524 ms cho một lần. Mọi canvas trong trang này đều do chính app vẽ (kit liquid-glass,
+    // canvas hiệu ứng nội bộ) nên không thể bẩn; coi như sạch thay vì trả giá đó mỗi lần snapshot.
     return false
   }
   return null

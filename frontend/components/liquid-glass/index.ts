@@ -5,37 +5,16 @@
 //   GlassButton        press   — swells under the pointer, bends the page behind it
 //   GlassActionButton  merge   — its arrow is a droplet that melts in when pressed, and stays
 //   GlassTabs          travel  — the selection travels as a magnifying lens
-//   GlassBadge         flow    — text flows through the glass
-//   GlassSlideToConfirm drag  — drag the glass thumb to the end to confirm
 //   GlassCard          hold    — a card of glass: holds your content, its rim bends what slides behind
-//   GlassButtonGroup   share   — related actions share one body of glass
+//   GlassMenu          grow    — the button's glass grows into the menu
+//
+// Repo chỉ giữ những phần đang dùng: GlassBadge, GlassSlideToConfirm, GlassButtonGroup và
+// GlassDropdownMenu đã bỏ khỏi thư mục này (không file nào import). Cần lại thì copy từ
+// upstream bilalgursen/liquid-glass, commit dbccc13.
 export { GlassButton, type GlassButtonProps, type GlassButtonSize } from './glass-button'
 export { GlassActionButton, type GlassActionButtonProps, type GlassActionState } from './glass-action-button'
 export { GlassTabs, type GlassTabsProps, type GlassTabOption } from './glass-tabs'
-export { GlassBadge, type GlassBadgeProps } from './glass-badge'
-export { GlassSlideToConfirm, type GlassSlideToConfirmProps, type GlassSlideState, type GlassSlideSize } from './glass-slide-to-confirm'
 export { GlassCard, type GlassCardProps } from './glass-card'
-export {
-  GlassButtonGroup,
-  GlassButtonGroupItem,
-  GlassButtonGroupSeparator,
-  GlassButtonGroupText,
-  type GlassButtonGroupProps,
-  type GlassButtonGroupItemProps,
-  type GlassButtonGroupSize,
-  type GlassButtonGroupOrientation,
-} from './glass-button-group'
-export {
-  GlassDropdownMenu,
-  GlassDropdownMenuTrigger,
-  GlassDropdownMenuContent,
-  GlassDropdownMenuItem,
-  GlassDropdownMenuSeparator,
-  type GlassDropdownMenuProps,
-  type GlassDropdownMenuTriggerProps,
-  type GlassDropdownMenuContentProps,
-  type GlassDropdownMenuItemProps,
-} from './glass-dropdown-menu'
 export {
   GlassMenu,
   GlassMenuTrigger,
