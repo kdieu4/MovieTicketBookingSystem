@@ -21,6 +21,22 @@ const NAV_LINKS = [
 // Chỉ hiện khi đang xem chi tiết phim, chèn giữa "Trang chủ" và "Rạp chiếu".
 const MOVIE_TAB = { label: 'Phim', href: '/#phim', detailOnly: true };
 
+// Màn không có tab riêng trên thanh điều hướng: hiện tên màn đang mở ngay cạnh cụm tab
+// (trượt vào từ bên phải) để người dùng vẫn biết mình đang ở đâu.
+const PAGE_TITLES = [
+  { match: /^\/ve-cua-toi/, label: 'Vé của tôi' },
+  { match: /^\/cai-dat/, label: 'Quản lý tài khoản' },
+  { match: /^\/thong-tin-ca-nhan/, label: 'Thông tin cá nhân' },
+  { match: /^\/phim\//, label: 'Chi tiết phim' },
+  { match: /^\/dat-ve/, label: 'Đặt vé' },
+  { match: /^\/payment\//, label: 'Thanh toán' },
+  { match: /^\/dang-nhap/, label: 'Đăng nhập' },
+  { match: /^\/ho-tro/, label: 'Hỗ trợ' },
+  { match: /^\/huong-dan-dat-ve/, label: 'Hướng dẫn đặt vé' },
+  { match: /^\/faq/, label: 'Câu hỏi thường gặp' },
+  { match: /^\/dieu-khoan/, label: 'Điều khoản' },
+];
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api';
 const SEARCH_LIMIT = 6;
 const SEARCH_DEBOUNCE_MS = 250;
@@ -42,8 +58,22 @@ const SEARCH_ANIMATIONS = `
 .hdr-item { animation: hdr-item-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .hdr-fade { animation: hdr-fade-in 240ms ease-out both; }
 .hdr-bar { animation: hdr-load 1s ease-in-out infinite; }
+/* Thanh tab nở ra để chứa nhãn: khung rộng dần từ 0 nên kính của thanh tab
+   (GlassLens theo dõi kích thước host) lớn ra cùng, nhãn mới trượt vào bên trong. */
+@keyframes hdr-tab-label-grow {
+  from { max-width: 0; }
+  to { max-width: 22rem; }
+}
+/* Nhãn trượt sang phải, từ phía sau các tab, vào chỗ của nó trong thân kính. */
+@keyframes hdr-page-label-in {
+  from { opacity: 0; translate: -100% 0; filter: blur(2px); }
+  55% { opacity: 1; }
+  to { opacity: 1; translate: 0 0; filter: blur(0); }
+}
+.hdr-tab-label { animation: hdr-tab-label-grow 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.hdr-page-label { animation: hdr-page-label-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 @media (prefers-reduced-motion: reduce) {
-  .hdr-item, .hdr-fade, .hdr-bar { animation: none !important; }
+  .hdr-item, .hdr-fade, .hdr-bar, .hdr-tab-label, .hdr-page-label { animation: none !important; }
 }
 `;
 
@@ -124,6 +154,9 @@ export default function Header() {
         ? pathname === '/'
         : pathname?.startsWith(link.href)
   );
+
+  // Tên màn đang mở cho các trang không có tab riêng (vé của tôi, quản lý tài khoản, chi tiết phim…)
+  const pageLabel = PAGE_TITLES.find((page) => page.match.test(pathname ?? ''))?.label ?? '';
 
 
   // ---- Tìm kiếm qua API ----
@@ -289,7 +322,36 @@ export default function Header() {
             value={activeIndex >= 0 ? navLinks[activeIndex].href : null}
             onValueChange={(href) => router.push(href)}
             options={navLinks.map((link) => ({ value: link.href, label: link.label }))}
-          />
+            // Kit vẽ kính cho ô đang chọn; thân thanh để trong suốt để lớp .nav-glass-body lo
+            className="bg-transparent dark:bg-transparent"
+          >
+            {/* Thân kính của thanh tab: nằm trong chính thanh tab, sau các nhãn */}
+            <span
+              aria-hidden="true"
+              className="nav-glass-body pointer-events-none absolute inset-0 -z-10 rounded-full"
+            />
+
+            {/* Trang không có tab riêng: tên màn nằm NGAY TRONG thân kính của thanh tab.
+                Khung max-width chạy từ 0 nên thanh tab nở dần ra để chứa, còn nhãn thì
+                trượt sang phải từ phía sau các tab — tức là trồi ra khỏi chính thanh tab.
+                key={pathname} để mỗi lần đổi trang hiệu ứng chạy lại. */}
+            {pageLabel && (
+              <span className="hdr-tab-label relative overflow-hidden">
+                <span
+                  key={pathname}
+                  className="hdr-page-label flex items-center gap-2.5 pl-2.5 pr-1.5 whitespace-nowrap"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="h-3.5 w-px bg-[var(--color-border-opaque-separator)]"
+                  />
+                  <span className="text-[12px] font-semibold tracking-tight text-[var(--color-text-secondary)]">
+                    {pageLabel}
+                  </span>
+                </span>
+              </span>
+            )}
+          </GlassTabs>
         </nav>
 
         {/* Search & Actions Right */}

@@ -33,6 +33,8 @@ export type GlassTabsProps<T extends string> = {
   /** Classes of the selected (resting) pill; its background colour is the lens colour. */
   highlightClassName?: string
   className?: string
+  /** Nội dung phụ nằm ngay trong thân kính của thanh tab (patch riêng của dự án: tên màn đang mở). */
+  children?: ReactNode
 }
 
 const sizes = {
@@ -49,6 +51,7 @@ export function GlassTabs<T extends string>({
   size = 'md',
   highlightClassName = 'bg-[var(--color-brand-fill)]',
   className = '',
+  children,
   ...aria
 }: GlassTabsProps<T>) {
   return (
@@ -88,6 +91,8 @@ export function GlassTabs<T extends string>({
           </SegmentedControlItem>
         )
       })}
+      {/* Con nằm trong thân kính: thanh tab rộng ra để chứa, kính tự vẽ lại theo kích thước mới. */}
+      {children}
     </SegmentedControl>
   )
 }
