@@ -6,11 +6,11 @@ import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import {
   GlassTabs,
-  GlassDropdownMenu,
-  GlassDropdownMenuTrigger,
-  GlassDropdownMenuContent,
-  GlassDropdownMenuItem,
-  GlassDropdownMenuSeparator,
+  GlassMenu,
+  GlassMenuTrigger,
+  GlassMenuContent,
+  GlassMenuItem,
+  GlassMenuSeparator,
 } from '@/components/liquid-glass';
 
 export default function AccountMenu() {
@@ -38,27 +38,28 @@ export default function AccountMenu() {
   }
 
   return (
-    <GlassDropdownMenu>
-      {/* Trigger là nút kính của kit: bấm vào menu "nở" ra từ chính nút này.
-          Chỉ có icon nên bắt buộc aria-label. */}
-      <GlassDropdownMenuTrigger
+    <GlassMenu>
+      {/* Trigger của kit: bấm vào menu "nở" ra từ chính nút này. Chỉ có icon nên bắt buộc aria-label.
+          Giữ nguyên chất liệu gốc của kit (kính trong, tự lấy màu nền trang); chỉ ép lại kích thước
+          40x40 tròn bằng `!` vì class mặc định h-12 px-5 của GlassMenuTrigger sẽ thắng. */}
+      <GlassMenuTrigger
         aria-label="Tài khoản"
-        className="h-10 w-10 gap-0 rounded-full px-0 [&_svg]:size-[18px]"
+        className="h-10! w-10! gap-0 rounded-full px-0! [&_svg]:size-[18px]"
       >
         <UserIcon />
-      </GlassDropdownMenuTrigger>
+      </GlassMenuTrigger>
 
-      <GlassDropdownMenuContent align="end" sideOffset={10} className="w-60 text-[13px]">
-        <GlassDropdownMenuItem render={<Link href="/thong-tin-ca-nhan" />}>
+      <GlassMenuContent align="end" sideOffset={10} className="w-60 text-[13px]">
+        <GlassMenuItem render={<Link href="/thong-tin-ca-nhan" />}>
           Thông tin cá nhân
-        </GlassDropdownMenuItem>
-        <GlassDropdownMenuItem render={<Link href="/ve-cua-toi" />}>Vé của tôi</GlassDropdownMenuItem>
-        <GlassDropdownMenuItem render={<Link href="/cai-dat" />}>
+        </GlassMenuItem>
+        <GlassMenuItem render={<Link href="/ve-cua-toi" />}>Vé của tôi</GlassMenuItem>
+        <GlassMenuItem render={<Link href="/cai-dat" />}>
           Cài đặt tài khoản
-        </GlassDropdownMenuItem>
+        </GlassMenuItem>
 
         {/* Theme vẫn là GlassTabs: menu chỉ là khung, không tự vẽ chữ hay ô chọn. */}
-        <GlassDropdownMenuSeparator />
+        <GlassMenuSeparator />
         <div role="group" aria-label="Giao diện" className="px-3.5 py-2">
           <p className="text-[11px] font-semibold tracking-wider text-[var(--color-text-secondary)] uppercase">
             Giao diện
@@ -78,13 +79,13 @@ export default function AccountMenu() {
           </div>
         </div>
 
-        <GlassDropdownMenuSeparator />
+        <GlassMenuSeparator />
 
         {logoutError && (
           <p className="px-3.5 pb-1 text-[11px] text-[var(--color-system-warning)]">{logoutError}</p>
         )}
 
-        <GlassDropdownMenuItem
+        <GlassMenuItem
           disabled={loggingOut}
           onSelect={handleLogout}
           // Không dùng `destructive` của kit (đỏ cố định): token lỗi của app tự đổi theo theme.
@@ -92,9 +93,9 @@ export default function AccountMenu() {
         >
           <LogoutIcon />
           {loggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}
-        </GlassDropdownMenuItem>
-      </GlassDropdownMenuContent>
-    </GlassDropdownMenu>
+        </GlassMenuItem>
+      </GlassMenuContent>
+    </GlassMenu>
   );
 }
 

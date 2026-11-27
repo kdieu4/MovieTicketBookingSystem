@@ -61,6 +61,10 @@ export type GlassSlideToConfirmProps = {
   size?: GlassSlideSize
   /** Classes of the fill the thumb pulls behind it: its `bg-*` and the `text-*` written on it. */
   fillClassName?: string
+  /** `false` leaves the track bare: the thumb pulls no fill behind it, and `fillClassName` colours the success alone. */
+  fill?: boolean
+  /** The held thumb's rim mirrors the page around the track: a colourful neighbour lights the rim that faces it, and the icon glows. */
+  mirror?: boolean
   disabled?: boolean
   className?: string
 }
@@ -104,6 +108,8 @@ const WALL_GIVE = 0.75
 const SQUASH_RATE = 1.15
 const SQUASH = 0.2
 const SQUASH_TALL = 0.6
+/** With `mirror`, the thumb's mark glows while the glass is clear: a faint white light, just around itself. */
+const MARK_GLOW = 'transition-[filter] duration-200 [[data-glass-traveling]_&]:[filter:drop-shadow(0_0_5px_rgb(255_255_255/0.35))]'
 /** The fill swells with the track, by this share of the track's bell. */
 const FILL_BULGE = 0.8
 /** Reaching this far (px) out from under the thumb, the fill is fully shown. */
@@ -121,9 +127,26 @@ const SPIN = { omega: 18, zeta: 1 }
 const DISSOLVE = { omega: 40, zeta: 1 }
 /** …and the chevron's three points travel to the check's. */
 const MORPH = { omega: 20, zeta: 1 }
+/**
+ * A custom `icon` cannot bend into the check: the two swap in place instead. The one that leaves
+ * shrinks to this scale, blurs by this many px and fades, while the other comes in the same way
+ * reversed, both at once and in about 0.3 s.
+ */
+const SWAP = { omega: 30, zeta: 1 }
+const SWAP_SCALE = 0.25
+const SWAP_BLUR = 4
 /** Opening again, the dissolved disc stays until the track is this far drawn in, and the thumb waits at the end until it is this close to open. */
 const REFORM = 0.75
 const REOPEN = 0.09
+/**
+ * As the check appears the thumb swells and settles, as a button does under the pointer: by this
+ * share of its width at most, on the button's own two springs (a kick that peaks at about 1 on each).
+ */
+const POP = 0.12
+const POP_KICK_X = 29
+const POP_KICK_Y = 18.7
+/** The track counts as drawn in around the thumb from here on (0–1 of the way): a success shows only then. */
+const DRAWN = 0.99
 /** The track draws into the thumb, and opens out of it again, in one glide that does not rebound. */
 const DRAW = { omega: 13.4, zeta: 1 }
 /** Once the track is open again the thumb flies home, quicker than an early release springs back. */
@@ -167,6 +190,8 @@ export function GlassSlideToConfirm({
   icon,
   size = 'md',
   fillClassName = 'bg-[#3291FF] text-white',
+  fill = true,
+  mirror = false,
   disabled = false,
   className = '',
 }: GlassSlideToConfirmProps) {
@@ -199,8 +224,8 @@ export function GlassSlideToConfirm({
     }
   }
   // What the gesture reads: always the latest props, without rebuilding the glass.
-  const live = useRef({ run, threshold, hint, disabled, state })
-  live.current = { run, threshold, hint, disabled, state }
+  const live = useRef({ run, threshold, hint, disabled, state, fill, mirror })
+  live.current = { run, threshold, hint, disabled, state, fill, mirror }
 
   useEffect(() => {
     alive.current = true
@@ -234,6 +259,7 @@ export function GlassSlideToConfirm({
     const disc = part('disc')
     const done = part('done')
     const mark = part('mark')
+    const glyph = part('glyph')
     const spinner = part('spinner')
     const check = part('check')
     if (!track || !bed || !label || !fill || !copy || !status || !thumb || !disc || !done || !mark || !spinner || !check) return
@@ -288,6 +314,11 @@ export function GlassSlideToConfirm({
     const spin: Spring = { x: 0, v: 0 }
     const dissolve: Spring = { x: 0, v: 0 }
     const morph: Spring = { x: 0, v: 0 }
+    const swap: Spring = { x: 0, v: 0 }
+    // The swell that greets the check, wider and taller on springs of their own.
+    const popX: Spring = { x: 0, v: 0 }
+    const popY: Spring = { x: 0, v: 0 }
+    let greeted = live.current.state === 'success'
     let marks = ''
 
     const measure = () => {
@@ -334,8 +365,8 @@ export function GlassSlideToConfirm({
       // Against the start the wall gives a little; past the end the track stretches after the thumb.
       const lead = Math.min(OVERFLOW, WALL_GIVE * Math.min(pad, Math.max(0, -at)))
       const stretch = Math.min(OVERFLOW, RUBBER_TRACK * Math.max(0, at - travel))
-      stretchX = (1 + STRETCH_W * speed) * (1 - squash)
-      stretchY = (1 - STRETCH_H * speed) * (1 + SQUASH_TALL * squash)
+      stretchX = (1 + STRETCH_W * speed) * (1 - squash) * (1 + POP * popX.x)
+      stretchY = (1 - STRETCH_H * speed) * (1 + SQUASH_TALL * squash) * (1 + POP * popY.x)
       disc.style.scale = Math.abs(stretchX - 1) > 0.004 || Math.abs(stretchY - 1) > 0.004 ? `${stretchX.toFixed(3)} ${stretchY.toFixed(3)}` : ''
       const fade = String(+((1 - 0.7 * p) * (1 - smooth(0, 1 / 3, c))).toFixed(3))
       // The membrane: how far the held thumb pushes the track outward, and how wide that bell is.
@@ -387,7 +418,8 @@ export function GlassSlideToConfirm({
       // waits hidden, and under the glass it shows only as far as the glass is clear, so the
       // frosting lens never rims itself in blue. It comes out over its first few pixels of reach.
       const out = Math.max(tailAt, headAt) - 0.5
-      const show = lerp(lensOn ? clamp(press.x) : 0, 1, clamp(out / FILL_SHOWN))
+      // A bare track (`fill={false}`) never shows it.
+      const show = live.current.fill ? lerp(lensOn ? clamp(press.x) : 0, 1, clamp(out / FILL_SHOWN)) : 0
       const veil = show < 0.01 ? 'hidden' : show > 0.99 ? '' : String(+show.toFixed(3))
       if (veil !== fillVeil) {
         fillVeil = veil
@@ -427,7 +459,9 @@ export function GlassSlideToConfirm({
       const s = +clamp(spin.x).toFixed(3)
       const u = +clamp(dissolve.x).toFixed(3)
       const k = +clamp(morph.x).toFixed(3)
-      const next = `${s} ${u} ${k} ${lensOn}`
+      // How far the check has taken the icon's place.
+      const v = +clamp(swap.x).toFixed(3)
+      const next = `${s} ${u} ${k} ${v} ${lensOn}`
       if (next !== marks) {
         marks = next
         // Without the glass the success colour comes in a little ahead of the disc's fading, and
@@ -437,13 +471,20 @@ export function GlassSlideToConfirm({
         bed.style.opacity = u > 0 ? String(+(1 - u).toFixed(3)) : ''
         // Left to its classes until it dissolves, so the glass can still hide it.
         disc.style.opacity = u > 0 && !lensOn ? String(+(1 - u).toFixed(3)) : ''
-        mark.style.opacity = String(+((1 - s) * (1 - u)).toFixed(3))
+        mark.style.opacity = String(+((1 - s) * (1 - v)).toFixed(3))
         spinner.style.opacity = String(s)
-        check.style.opacity = String(+((1 - s) * u).toFixed(3))
+        check.style.opacity = String(+((1 - s) * v).toFixed(3))
         if (ink && checkPath) {
           const d = markPath(k)
           ink.setAttribute('d', d)
           checkPath.setAttribute('d', d)
+        } else if (glyph) {
+          // A custom icon and the check swap in place: one shrinks, blurs and fades as the other comes in.
+          const leave = v > 0 && v < 1
+          glyph.style.scale = leave ? String(+lerp(1, SWAP_SCALE, v).toFixed(3)) : ''
+          glyph.style.filter = leave ? `blur(${+(SWAP_BLUR * v).toFixed(2)}px)` : ''
+          check.style.scale = leave ? String(+lerp(SWAP_SCALE, 1, v).toFixed(3)) : ''
+          check.style.filter = leave ? `blur(${+(SWAP_BLUR * (1 - v)).toFixed(2)}px)` : ''
         }
       }
       const now = String(Math.round(p * 100))
@@ -500,8 +541,11 @@ export function GlassSlideToConfirm({
         const open = lensOn && (following || Math.abs(x.x - goal) > d * 0.06)
         const b = lensOn && stepSpring(press, open ? 1 : 0, SPRINGS.press, dt)
         if (lensOn) {
-          // While the lens is clear the icon is written in the fill's text colour.
-          if (!open) delete root.dataset.glassTraveling
+          // While the lens is clear the icon is written in the fill's text colour. On a bare track
+          // the clear glass shows the page itself, so a thumb that has landed keeps that colour
+          // until the lens is half frosted over: the icon then never sits dark on dark glass.
+          const landing = locked && input === 'none' && !live.current.fill && press.x > 0.5
+          if (!open && !landing) delete root.dataset.glassTraveling
           else if ('glassMoving' in root.dataset) root.dataset.glassTraveling = ''
         }
         const c = stepSpring(tail, x.x, TAIL, dt)
@@ -527,8 +571,15 @@ export function GlassSlideToConfirm({
         freed = homing = true
       }
       const now = live.current.state
-      // A success colours the glass as soon as the lens has frosted over again, not once it has settled.
-      const confirmed = now === 'success' && input === 'none' && (!lensOn || Math.abs(press.x) < 0.05)
+      // A success shows once the track has drawn in around the thumb, however soon it came: the
+      // glass takes the fill's colour and the icon turns into the check only then.
+      const confirmed = now === 'success' && input === 'none' && collapse.x > DRAWN
+      // The check's first frame kicks the swell, once per success.
+      if (confirmed && !greeted && !still) {
+        popX.v += POP_KICK_X
+        popY.v += POP_KICK_Y
+      }
+      greeted = confirmed
       const spinGoal = now === 'pending' && collapse.x > SPIN_AT ? 1 : 0
       // Opening again, the disc forms back once the track has let go of the thumb.
       const dissolveGoal = confirmed || (now !== 'success' && dissolve.x > 0.5 && collapse.x > REFORM) ? 1 : 0
@@ -536,15 +587,20 @@ export function GlassSlideToConfirm({
       let marking = false
       if (still) {
         spin.x = spinGoal
-        dissolve.x = dissolveGoal
+        dissolve.x = swap.x = dissolveGoal
         morph.x = morphGoal
-        spin.v = dissolve.v = morph.v = 0
+        popX.x = popY.x = 0
+        spin.v = dissolve.v = morph.v = swap.v = popX.v = popY.v = 0
       } else {
         // The spinner comes in softly and leaves as fast as the disc dissolves.
         const a = stepSpring(spin, spinGoal, spinGoal ? SPIN : DISSOLVE, dt)
         const b = stepSpring(dissolve, dissolveGoal, DISSOLVE, dt)
         const c = stepSpring(morph, morphGoal, MORPH, dt)
-        marking = a || b || c
+        // The default chevron bends into the check as the disc dissolves; a custom icon swaps with it at its own pace.
+        const e = stepSpring(swap, dissolveGoal, ink ? DISSOLVE : SWAP, dt)
+        const f = stepSpring(popX, 0, SPRINGS.hoverX, dt)
+        const g = stepSpring(popY, 0, SPRINGS.hoverY, dt)
+        marking = a || b || c || e || f || g
       }
       write()
       return moving || closing || marking || freed || (input === 'hold' && !still)
@@ -570,12 +626,17 @@ export function GlassSlideToConfirm({
       dirty: false,
       visible: false,
       step: tick,
-      lens: () => {
+      lens: (refresh) => {
         if (!lensOn || !engine) return null
+        // A theme switch (or anything else that asks for the colours again): the thumb is glass at
+        // rest too, so it re-reads its own colour, the fill's and the page's here.
+        if (refresh) measure()
         const p = clamp(press.x, -0.12, 1.15)
         const pc = clamp(press.x)
         const frost = 1 - pc
-        const padX = 16 + OVERFLOW
+        // Room for the thumb's shadow on either side: its far, soft part reaches about 0.6 of the
+        // thumb's width past its edge while it is held, and the canvas fades out over its last 14 px.
+        const padX = Math.round(d * 0.75 + 12) + OVERFLOW
         const padTop = Math.round(d * 0.3 + 6)
         const padBottom = Math.round(d * 1.1 + 8)
         const box = root.getBoundingClientRect()
@@ -622,19 +683,22 @@ export function GlassSlideToConfirm({
             frost,
           },
           cursorLight: true,
-          // What the thumb's rim mirrors while it is held (clear): the page around the track.
-          reflection: {
-            height: d,
-            paint: (around, reach) => {
-              drawAround(around, document.body, { left: box.left - padX, top: box.top - padTop, width: W + 2 * padX, height: h + padTop + padBottom }, reach, {
-                skip: (el) => el === canvas || el === thumb || el.hasAttribute('data-glass-skip'),
-                onStale: () => {
-                  view.dirty = true
-                  gl.wake()
+          pointerLight: true,
+          // With `mirror`, what the thumb's rim mirrors while it is held (clear): the page around the track.
+          reflection: live.current.mirror
+            ? {
+                height: d,
+                paint: (around, reach) => {
+                  drawAround(around, document.body, { left: box.left - padX, top: box.top - padTop, width: W + 2 * padX, height: h + padTop + padBottom }, reach, {
+                    skip: (el) => el === canvas || el === thumb || el.hasAttribute('data-glass-skip'),
+                    onStale: () => {
+                      view.dirty = true
+                      gl.wake()
+                    },
+                  })
                 },
-              })
-            },
-          },
+              }
+            : undefined,
           screenX: box.left + cx,
           screenY: box.top + h / 2,
         }
@@ -833,23 +897,26 @@ export function GlassSlideToConfirm({
         </span>
       </span>
       {/* The thumb: frosted white glass with a dark icon, drawn by the glass engine (the flat disc is
-          only its fallback). It clears while it moves, the icon on top in the fill's text colour. Once
+          only its fallback). It clears while it moves, the icon on top in the fill's text colour (on a
+          bare track: dark on a light page, white on a dark one). Once
           confirmed the spinner takes the icon's place; on a success the glass takes the fill's colour. */}
       <span
         aria-hidden
         data-glass-slide="thumb"
-        className={`absolute top-1 left-1 z-40 flex items-center justify-center text-neutral-900 transition-colors duration-150 [[data-glass-traveling]_&]:text-[color:var(--glass-slide-ink)] [&_svg]:shrink-0 ${s.thumb}`}
+        className={`absolute top-1 left-1 z-40 flex items-center justify-center text-neutral-900 transition-colors duration-150 ${fill ? '[[data-glass-traveling]_&]:text-[color:var(--glass-slide-ink)]' : 'dark:[[data-glass-traveling]_&]:text-white'} [&_svg]:shrink-0 ${s.thumb}`}
       >
         <span
           data-glass-slide="disc"
           className={`absolute inset-0 rounded-full bg-white shadow-[0_1px_2px_rgb(0_0_0/0.14),0_3px_8px_rgb(0_0_0/0.12)] [[data-glass-moving]_&]:opacity-0`}
         />
-        <span data-glass-slide="mark" className="relative flex">
-          {icon ?? (
-            <svg {...svg} strokeWidth="2.25">
-              <path data-glass-slide="ink" d={markPath(0)} />
-            </svg>
-          )}
+        <span data-glass-slide="mark" className={`relative flex ${mirror ? MARK_GLOW : ''}`}>
+          <span data-glass-slide="glyph" className="flex">
+            {icon ?? (
+              <svg {...svg} strokeWidth="2.25">
+                <path data-glass-slide="ink" d={markPath(0)} />
+              </svg>
+            )}
+          </span>
         </span>
         <span data-glass-slide="spinner" className={stacked}>
           <Spinner />
